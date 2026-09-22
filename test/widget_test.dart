@@ -54,6 +54,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Classic Leather Backpack'), findsOneWidget);
+    expect(find.byTooltip('Delete from cart'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Delete from cart'));
+    await tester.pump(const Duration(milliseconds: 500));
+
     expect(find.text('Your cart is empty'), findsOneWidget);
+    expect(find.text('Undo'), findsOneWidget);
+
+    final undoButton = tester.widget<TextButton>(find.byType(TextButton));
+    undoButton.onPressed!();
+    await tester.pump();
+
+    expect(find.text('Classic Leather Backpack'), findsOneWidget);
   });
 }
