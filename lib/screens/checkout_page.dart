@@ -27,26 +27,7 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
-  // ========== Mock Addresses (replace later with real data) ==========
-  final List<Address> _addresses = [
-    Address(
-      id: '1',
-      fullName: 'John Doe',
-      phone: '+255 712 345 678',
-      addressLine: '123 Uhuru Street, Kinondoni',
-      city: 'Dar es Salaam',
-      region: 'Dar es Salaam',
-      isDefault: true,
-    ),
-    Address(
-      id: '2',
-      fullName: 'John Doe',
-      phone: '+255 712 345 678',
-      addressLine: '45 Nyerere Road',
-      city: 'Arusha',
-      region: 'Arusha',
-    ),
-  ];
+  final List<Address> _addresses = [];
 
   Address? _selectedAddress;
   String _selectedPaymentMethod = 'Cash on Delivery';
@@ -58,15 +39,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
   ];
 
   bool _isSubmitting = false;
+  final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _regionController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Select default address
-    _selectedAddress = _addresses.firstWhere(
-      (address) => address.isDefault,
-      orElse: () => _addresses.first,
-    );
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _regionController.dispose();
+    super.dispose();
   }
 
   @override
@@ -166,6 +157,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Widget _buildAddressSection() {
     return Column(
       children: [
+        if (_addresses.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: const Text(
+              'No delivery address added yet. Add one to continue.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         ..._addresses.map((address) {
           final isSelected = _selectedAddress?.id == address.id;
           return GestureDetector(
@@ -230,12 +235,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
         // Add New Address Button
         OutlinedButton.icon(
-          onPressed: () {
-            // TODO: Navigate to Add Address Page
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Add new address coming soon')),
-            );
-          },
+          onPressed: _showAddAddressDialog,
           icon: const Icon(Icons.add),
           label: const Text('Add New Address'),
           style: OutlinedButton.styleFrom(
@@ -246,6 +246,92 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showAddAddressDialog() async {
+    final formKey = GlobalKey<FormState>();
+    _fullNameController.clear();
+    _phoneController.clear();
+    _addressController.clear();
+    _cityController.clear();
+    _regionController.clear();
+
+    final address = await showDialog<Address>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add delivery address'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _addressField(_fullNameController, 'Full name'),
+                _addressField(_phoneController, 'Phone number', keyboardType: TextInputType.phone),
+                _addressField(_addressController, 'Street address'),
+                _addressField(_cityController, 'City'),
+                _addressField(_regionController, 'Region'),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!formKey.currentState!.validate()) {
+                return;
+              }
+              FocusScope.of(dialogContext).unfocus();
+              Navigator.pop(
+                dialogContext,
+                Address(
+                  id: DateTime.now().microsecondsSinceEpoch.toString(),
+                  fullName: _fullNameController.text.trim(),
+                  phone: _phoneController.text.trim(),
+                  addressLine: _addressController.text.trim(),
+                  city: _cityController.text.trim(),
+                  region: _regionController.text.trim(),
+                  isDefault: _addresses.isEmpty,
+                ),
+              );
+            },
+            child: const Text('Save address'),
+          ),
+        ],
+      ),
+    );
+
+    if (address != null && mounted) {
+      setState(() {
+        _addresses.add(address);
+        _selectedAddress = address;
+      });
+    }
+  }
+
+  Widget _addressField(
+    TextEditingController controller,
+    String label, {
+    TextInputType? keyboardType,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        validator: (value) => value == null || value.trim().isEmpty
+            ? 'Enter $label'
+            : null,
+      ),
     );
   }
 
