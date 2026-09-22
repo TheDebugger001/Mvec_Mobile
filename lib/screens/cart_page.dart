@@ -53,13 +53,13 @@ class _CartPageState extends State<CartPage> {
                       Container(
                         width: double.infinity,
                         height: 72,
-                        color: Colors.red,
+                        color: Colors.white,
                         alignment: Alignment.centerRight,
                         child: IconButton(
                           tooltip: 'Delete from cart',
                           icon: const Icon(
                             Icons.delete_outline,
-                            color: Colors.white,
+                            color: Colors.black54,
                           ),
                           onPressed: offset == 0
                               ? null
