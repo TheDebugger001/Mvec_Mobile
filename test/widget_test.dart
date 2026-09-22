@@ -50,6 +50,20 @@ void main() {
 
     await tester.drag(
       find.text('Classic Leather Backpack'),
+      const Offset(400, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Delete from cart'), findsOneWidget);
+
+    await tester.drag(
+      find.text('Classic Leather Backpack'),
+      const Offset(-100, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Delete from cart'), findsNothing);
+
+    await tester.drag(
+      find.text('Classic Leather Backpack'),
       const Offset(-400, 0),
     );
     await tester.pumpAndSettle();

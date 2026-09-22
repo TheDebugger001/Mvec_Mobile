@@ -48,22 +48,21 @@ class _CartPageState extends State<CartPage> {
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Stack(
-                    alignment: Alignment.centerRight,
                     children: [
-                      Container(
-                        width: double.infinity,
-                        height: 72,
-                        color: Colors.white,
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          tooltip: 'Delete from cart',
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.black54,
-                          ),
-                          onPressed: offset == 0
-                              ? null
-                              : () => _deleteProduct(product),
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          ignoring: offset == 0,
+                          child: offset == 0
+                              ? const SizedBox.shrink()
+                              : offset < 0
+                              ? Align(
+                                  alignment: Alignment.centerRight,
+                                  child: _buildDeleteButton(product),
+                                )
+                              : Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: _buildDeleteButton(product),
+                                ),
                         ),
                       ),
                       GestureDetector(
@@ -73,16 +72,16 @@ class _CartPageState extends State<CartPage> {
                                 (_itemOffsets[product.id] ?? 0) +
                                 details.delta.dx;
                             _itemOffsets[product.id] = nextOffset
-                                .clamp(-_actionWidth, 0)
+                              .clamp(-_actionWidth, _actionWidth)
                                 .toDouble();
                           });
                         },
                         onHorizontalDragEnd: (_) {
                           setState(() {
                             final currentOffset = _itemOffsets[product.id] ?? 0;
-                            _itemOffsets[product.id] = currentOffset < -44
-                                ? -_actionWidth
-                                : 0;
+                            _itemOffsets[product.id] = currentOffset.abs() >= 44
+                              ? currentOffset.sign * _actionWidth
+                              : 0;
                           });
                         },
                         child: AnimatedContainer(
@@ -115,6 +114,17 @@ class _CartPageState extends State<CartPage> {
             ),
       title: Text(product.name),
       subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
+    );
+  }
+
+  Widget _buildDeleteButton(Product product) {
+    return SizedBox(
+      width: _actionWidth,
+      child: IconButton(
+        tooltip: 'Delete from cart',
+        icon: const Icon(Icons.delete_outline, color: Colors.black54),
+        onPressed: () => _deleteProduct(product),
+      ),
     );
   }
 
