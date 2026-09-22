@@ -1,4 +1,29 @@
 import 'package:flutter/material.dart';
+import 'models/product.dart';
+import 'screens/product_detail_page.dart';
+
+final demoProduct = Product(
+  id: 'demo-backpack',
+  name: 'Classic Leather Backpack',
+  description:
+      'A durable everyday backpack with a clean design, padded laptop sleeve, and room for all your essentials.',
+  price: 79.99,
+  oldPrice: 99.99,
+  stock: 8,
+  images: [
+    'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=1200',
+    'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=1200',
+  ],
+  colors: ['Black', 'Brown', 'Navy'],
+  sizes: ['Standard'],
+  vendor: Vendor(
+    id: 'demo-vendor',
+    name: 'Mvec Outfitters',
+    logo: '',
+    rating: 4.8,
+    totalProducts: 42,
+  ),
+);
 
 void main() {
   runApp(const MyApp());
@@ -30,7 +55,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: ProductDetailPage(product: demoProduct),
     );
   }
 }
