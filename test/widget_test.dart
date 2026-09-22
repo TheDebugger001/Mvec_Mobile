@@ -139,16 +139,18 @@ void main() {
       of: find.byType(AlertDialog),
       matching: find.byType(TextFormField),
     );
-    await tester.enterText(addressFields.at(0), 'Amina Hassan');
-    await tester.enterText(addressFields.at(1), '+255 700 000 000');
-    await tester.enterText(addressFields.at(2), '12 Mlimani Road');
-    await tester.enterText(addressFields.at(3), 'Dar es Salaam');
-    await tester.enterText(addressFields.at(4), 'Dar es Salaam');
+    await tester.enterText(addressFields.at(0), '');
+    await tester.enterText(addressFields.at(1), '');
+    await tester.enterText(addressFields.at(2), '');
+    await tester.enterText(addressFields.at(3), '');
+    await tester.enterText(addressFields.at(4), '');
     await tester.tap(find.text('Save address'));
     await tester.pumpAndSettle();
 
-    expect(find.text('No delivery address added yet. Add one to continue.'),
-      findsNothing);
-    expect(find.text('Amina Hassan'), findsOneWidget);
+    expect(
+      find.text('No delivery address added yet. Add one to continue.'),
+      findsOneWidget,
+    );
+    expect(find.text('Enter Full name'), findsOneWidget);
   });
 }

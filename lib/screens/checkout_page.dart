@@ -475,7 +475,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             : TextInputType.number,
         decoration: InputDecoration(
           labelText: isMobileMoney ? 'Mobile money phone number' : 'Card number',
-          hintText: isMobileMoney ? '+255 700 000 000' : '1234 5678 9012 3456',
+          hintText: isMobileMoney ? '+2507 -------' : '1234 5678 9012 3456',
           prefixIcon: Icon(
             isMobileMoney ? Icons.phone_outlined : Icons.credit_card_outlined,
           ),
