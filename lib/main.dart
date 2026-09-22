@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'models/cart_item.dart';
 import 'models/product.dart';
 import 'screens/product_detail_page.dart';
 import 'screens/wishlist_page.dart';
@@ -41,7 +42,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final List<Product> _wishlistItems = [];
-  final List<Product> _cartItems = [];
+  final List<CartItem> _cartItems = [];
 
   void _toggleWishlist(Product product) {
     setState(() {
@@ -63,24 +64,37 @@ class _MyAppState extends State<MyApp> {
   void _moveToCart(Product product) {
     setState(() {
       _wishlistItems.removeWhere((item) => item.id == product.id);
-      if (!_cartItems.any((item) => item.id == product.id)) {
-        _cartItems.add(product);
-      }
+      _addToCart(product);
     });
   }
 
   void _addToCart(Product product) {
     setState(() {
-      if (!_cartItems.any((item) => item.id == product.id)) {
-        _cartItems.add(product);
+      final existingItem = _cartItems.where(
+        (item) => item.product.id == product.id,
+      );
+      if (existingItem.isEmpty) {
+        _cartItems.add(CartItem(product: product));
+      } else if (existingItem.first.quantity < product.stock) {
+        existingItem.first.quantity++;
       }
     });
   }
 
-  void _removeFromCart(Product product) {
+  void _updateCartQuantity(CartItem item) {
+    setState(() {});
+  }
+
+  void _removeCartItem(CartItem item) {
     setState(() {
-      _cartItems.removeWhere((item) => item.id == product.id);
+      _cartItems.removeWhere((cartItem) => cartItem.product.id == item.product.id);
     });
+  }
+
+  void _proceedToCheckout() {
+    ScaffoldMessenger.of(_navigatorKey.currentContext!).showSnackBar(
+      const SnackBar(content: Text('Checkout is coming soon')),
+    );
   }
 
   // This widget is the root of your application.
@@ -124,8 +138,9 @@ class _MyAppState extends State<MyApp> {
                     MaterialPageRoute(
                       builder: (context) => CartPage(
                         cartItems: _cartItems,
-                        onRemoveFromCart: _removeFromCart,
-                        onAddToCart: _addToCart,
+                        onUpdateQuantity: _updateCartQuantity,
+                        onRemoveItem: _removeCartItem,
+                        onProceedToCheckout: _proceedToCheckout,
                       ),
                     ),
                   );
@@ -141,8 +156,9 @@ class _MyAppState extends State<MyApp> {
             MaterialPageRoute(
               builder: (context) => CartPage(
                 cartItems: _cartItems,
-                onRemoveFromCart: _removeFromCart,
-                onAddToCart: _addToCart,
+                onUpdateQuantity: _updateCartQuantity,
+                onRemoveItem: _removeCartItem,
+                onProceedToCheckout: _proceedToCheckout,
               ),
             ),
           );
