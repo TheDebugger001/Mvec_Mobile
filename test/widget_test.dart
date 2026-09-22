@@ -9,6 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mvec_mobile/main.dart';
+import 'package:mvec_mobile/models/address.dart';
+import 'package:mvec_mobile/models/cart_item.dart';
+import 'package:mvec_mobile/models/order.dart';
+import 'package:mvec_mobile/screens/track_order_page.dart';
 
 void main() {
   testWidgets('product detail screen loads', (WidgetTester tester) async {
@@ -152,5 +156,41 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Enter Full name'), findsOneWidget);
+  });
+
+  testWidgets('track order page displays the placed order',
+      (WidgetTester tester) async {
+    final order = Order(
+      id: 'order-1',
+      orderNumber: 'MV-1001',
+      orderDate: DateTime(2026, 9, 22),
+      status: OrderStatus.confirmed,
+      items: [CartItem(product: demoProduct)],
+      deliveryAddress: Address(
+        id: 'address-1',
+        fullName: 'Amina Hassan',
+        phone: '+2507 -------',
+        addressLine: '12 Mlimani Road',
+        city: 'Kigali',
+        region: 'Kigali',
+      ),
+      paymentMethod: 'Mobile Money',
+      subtotal: demoProduct.price,
+      shippingFee: 5,
+      serviceFee: 2.5,
+      tax: demoProduct.price * 0.08,
+      total: demoProduct.price + 5 + 2.5 + demoProduct.price * 0.08,
+      trackingNumber: 'TRK-1001',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: TrackOrderPage(order: order)),
+    );
+
+    expect(find.text('Track Order'), findsOneWidget);
+    expect(find.text('Order #MV-1001'), findsOneWidget);
+    expect(find.text('Confirmed'), findsAtLeastNWidgets(1));
+    expect(find.text('Amina Hassan'), findsOneWidget);
+    expect(find.textContaining('TRK-1001'), findsOneWidget);
   });
 }

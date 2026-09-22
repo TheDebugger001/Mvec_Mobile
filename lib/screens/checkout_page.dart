@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/cart_item.dart';
 import '../models/address.dart';
+import '../models/order.dart';
 
 class CheckoutPage extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -9,7 +10,7 @@ class CheckoutPage extends StatefulWidget {
   final double serviceFee;
   final double tax;
   final double total;
-  final VoidCallback onOrderPlaced;
+  final ValueChanged<Order> onOrderPlaced;
 
   const CheckoutPage({
     super.key,
@@ -589,7 +590,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // close dialog
-                widget.onOrderPlaced(); // callback to clear cart & go back
+                widget.onOrderPlaced(_buildOrder());
               },
               child: const Text('OK'),
             ),
@@ -597,5 +598,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
       );
     }
+  }
+
+  Order _buildOrder() {
+    return Order(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      orderNumber: 'MV-${DateTime.now().millisecondsSinceEpoch}',
+      orderDate: DateTime.now(),
+      status: OrderStatus.confirmed,
+      items: List<CartItem>.from(widget.cartItems),
+      deliveryAddress: _selectedAddress!,
+      paymentMethod: _selectedPaymentMethod,
+      subtotal: widget.subtotal,
+      shippingFee: widget.shippingFee,
+      serviceFee: widget.serviceFee,
+      tax: widget.tax,
+      total: widget.total,
+      trackingNumber: 'TRK-${DateTime.now().millisecondsSinceEpoch}',
+    );
   }
 }

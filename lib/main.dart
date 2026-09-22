@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'models/cart_item.dart';
+import 'models/order.dart';
 import 'models/product.dart';
 import 'screens/product_detail_page.dart';
 import 'screens/wishlist_page.dart';
 import 'screens/cart_page.dart';
 import 'screens/checkout_page.dart';
+import 'screens/track_order_page.dart';
 
 final demoProduct = Product(
   id: 'demo-backpack',
@@ -110,11 +112,16 @@ class _MyAppState extends State<MyApp> {
           serviceFee: serviceFee,
           tax: tax,
           total: subtotal + shippingFee + serviceFee + tax,
-          onOrderPlaced: () {
+          onOrderPlaced: (Order order) {
             setState(() {
               _cartItems.clear();
             });
             _navigatorKey.currentState!.pop();
+            _navigatorKey.currentState!.push(
+              MaterialPageRoute(
+                builder: (context) => TrackOrderPage(order: order),
+              ),
+            );
           },
         ),
       ),
