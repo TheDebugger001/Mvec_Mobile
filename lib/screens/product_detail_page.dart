@@ -6,6 +6,8 @@ class ProductDetailPage extends StatefulWidget {
   final bool isWishlisted;
   final ValueChanged<Product>? onToggleWishlist;
   final VoidCallback? onOpenWishlist;
+  final ValueChanged<Product>? onAddToCart;
+  final VoidCallback? onOpenCart;
 
   const ProductDetailPage({
     super.key,
@@ -13,6 +15,8 @@ class ProductDetailPage extends StatefulWidget {
     this.isWishlisted = false,
     this.onToggleWishlist,
     this.onOpenWishlist,
+    this.onAddToCart,
+    this.onOpenCart,
   });
 
   @override
@@ -103,6 +107,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   icon: const Icon(Icons.list_alt_outlined),
                   tooltip: 'Open wishlist',
                   onPressed: widget.onOpenWishlist,
+                ),
+              if (widget.onOpenCart != null)
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart_outlined),
+                  tooltip: 'Open cart',
+                  onPressed: widget.onOpenCart,
                 ),
               IconButton(
                 icon: const Icon(Icons.share_outlined),
@@ -529,6 +539,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           setState(() {
                             _isAddingToCart = false;
                           });
+                          widget.onAddToCart?.call(product);
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

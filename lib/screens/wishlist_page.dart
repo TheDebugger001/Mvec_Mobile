@@ -7,6 +7,8 @@ class WishlistPage extends StatefulWidget {
   final Function(Product) onRemoveFromWishlist;
   final Function(Product) onMoveToCart;
   final ValueChanged<Product>? onToggleWishlist;
+  final VoidCallback? onOpenCart;
+  final ValueChanged<Product>? onAddToCart;
 
   const WishlistPage({
     super.key,
@@ -14,6 +16,8 @@ class WishlistPage extends StatefulWidget {
     required this.onRemoveFromWishlist,
     required this.onMoveToCart,
     this.onToggleWishlist,
+    this.onOpenCart,
+    this.onAddToCart,
   });
 
   @override
@@ -34,6 +38,14 @@ class _WishlistPageState extends State<WishlistPage> {
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
+        actions: [
+          if (widget.onOpenCart != null)
+            IconButton(
+              icon: const Icon(Icons.shopping_cart_outlined),
+              tooltip: 'Open cart',
+              onPressed: widget.onOpenCart,
+            ),
+        ],
       ),
       body: widget.wishlistItems.isEmpty
           ? _buildEmptyWishlist()
@@ -102,6 +114,8 @@ class _WishlistPageState extends State<WishlistPage> {
                     product: product,
                     isWishlisted: true,
                     onToggleWishlist: _toggleWishlistFromDetail,
+                    onAddToCart: widget.onAddToCart,
+                    onOpenCart: widget.onOpenCart,
                   ),
                 ),
               );
@@ -178,6 +192,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   child: TextButton.icon(
                     onPressed: () {
                       widget.onRemoveFromWishlist(product);
+                      setState(() {});
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Removed from wishlist'),
@@ -198,6 +213,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   child: TextButton.icon(
                     onPressed: () {
                       widget.onMoveToCart(product);
+                      setState(() {});
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('${product.name} moved to cart'),

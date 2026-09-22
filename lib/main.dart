@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'models/product.dart';
 import 'screens/product_detail_page.dart';
 import 'screens/wishlist_page.dart';
+import 'screens/cart_page.dart';
 
 final demoProduct = Product(
   id: 'demo-backpack',
@@ -68,6 +69,20 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  void _addToCart(Product product) {
+    setState(() {
+      if (!_cartItems.any((item) => item.id == product.id)) {
+        _cartItems.add(product);
+      }
+    });
+  }
+
+  void _removeFromCart(Product product) {
+    setState(() {
+      _cartItems.removeWhere((item) => item.id == product.id);
+    });
+  }
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -104,6 +119,28 @@ class _MyAppState extends State<MyApp> {
                 onRemoveFromWishlist: _removeFromWishlist,
                 onMoveToCart: _moveToCart,
                 onToggleWishlist: _toggleWishlist,
+                onOpenCart: () {
+                  _navigatorKey.currentState!.push(
+                    MaterialPageRoute(
+                      builder: (context) => CartPage(
+                        cartItems: _cartItems,
+                        onRemoveFromCart: _removeFromCart,
+                      ),
+                    ),
+                  );
+                },
+                onAddToCart: _addToCart,
+              ),
+            ),
+          );
+        },
+        onAddToCart: _addToCart,
+        onOpenCart: () {
+          _navigatorKey.currentState!.push(
+            MaterialPageRoute(
+              builder: (context) => CartPage(
+                cartItems: _cartItems,
+                onRemoveFromCart: _removeFromCart,
               ),
             ),
           );
