@@ -36,30 +36,42 @@ class _CartPageState extends State<CartPage> {
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final product = widget.cartItems[index];
-                return ListTile(
-                  tileColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                return Dismissible(
+                  key: ValueKey(product.id),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                    ),
                   ),
-                  leading: product.images.isEmpty
-                      ? const Icon(Icons.image_outlined)
-                      : Image.network(
-                          product.images.first,
-                          width: 64,
-                          height: 64,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              const Icon(Icons.image_outlined),
-                        ),
-                  title: Text(product.name),
-                  subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
-                  trailing: IconButton(
-                    tooltip: 'Remove from cart',
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () {
-                      widget.onRemoveFromCart(product);
-                      setState(() {});
-                    },
+                  onDismissed: (_) {
+                    widget.onRemoveFromCart(product);
+                    setState(() {});
+                  },
+                  child: ListTile(
+                    tileColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    leading: product.images.isEmpty
+                        ? const Icon(Icons.image_outlined)
+                        : Image.network(
+                            product.images.first,
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                const Icon(Icons.image_outlined),
+                          ),
+                    title: Text(product.name),
+                    subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
                   ),
                 );
               },

@@ -48,8 +48,11 @@ void main() {
     expect(find.text('My Cart'), findsOneWidget);
     expect(find.text('Classic Leather Backpack'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Remove from cart'));
-    await tester.pump();
+    await tester.drag(
+      find.text('Classic Leather Backpack'),
+      const Offset(-400, 0),
+    );
+    await tester.pumpAndSettle();
 
     expect(find.text('Your cart is empty'), findsOneWidget);
   });
