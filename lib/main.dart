@@ -125,6 +125,7 @@ class _MyAppState extends State<MyApp> {
                       builder: (context) => CartPage(
                         cartItems: _cartItems,
                         onRemoveFromCart: _removeFromCart,
+                        onAddToCart: _addToCart,
                       ),
                     ),
                   );
@@ -141,6 +142,7 @@ class _MyAppState extends State<MyApp> {
               builder: (context) => CartPage(
                 cartItems: _cartItems,
                 onRemoveFromCart: _removeFromCart,
+                onAddToCart: _addToCart,
               ),
             ),
           );
