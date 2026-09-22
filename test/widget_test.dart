@@ -62,6 +62,7 @@ void main() {
 
     await tester.tap(find.text('Add to Cart'));
     await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.byTooltip('Open cart'));
     await tester.pumpAndSettle();
 
@@ -88,5 +89,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Your cart is empty'), findsOneWidget);
+  });
+
+  testWidgets('cart opens checkout with the current order',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.text('Add to Cart'));
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.tap(find.byTooltip('Open cart'));
+    await tester.pumpAndSettle();
+
+    final checkoutButton = find.text('Proceed to Checkout');
+    await tester.ensureVisible(checkoutButton);
+    final checkoutAction = tester.widget<ElevatedButton>(
+      find.ancestor(
+        of: checkoutButton,
+        matching: find.byType(ElevatedButton),
+      ),
+    );
+    checkoutAction.onPressed!();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Checkout'), findsOneWidget);
+    expect(find.text('Order Review'), findsOneWidget);
+    expect(find.text('Classic Leather Backpack'), findsOneWidget);
+    expect(find.text('Confirm & Place Order'), findsOneWidget);
   });
 }

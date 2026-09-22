@@ -4,6 +4,7 @@ import 'models/product.dart';
 import 'screens/product_detail_page.dart';
 import 'screens/wishlist_page.dart';
 import 'screens/cart_page.dart';
+import 'screens/checkout_page.dart';
 
 final demoProduct = Product(
   id: 'demo-backpack',
@@ -92,8 +93,31 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _proceedToCheckout() {
-    ScaffoldMessenger.of(_navigatorKey.currentContext!).showSnackBar(
-      const SnackBar(content: Text('Checkout is coming soon')),
+    final subtotal = _cartItems.fold<double>(
+      0,
+      (sum, item) => sum + item.totalPrice,
+    );
+    const shippingFee = 5.00;
+    const serviceFee = 2.50;
+    final tax = subtotal * 0.08;
+
+    _navigatorKey.currentState!.push(
+      MaterialPageRoute(
+        builder: (context) => CheckoutPage(
+          cartItems: _cartItems,
+          subtotal: subtotal,
+          shippingFee: shippingFee,
+          serviceFee: serviceFee,
+          tax: tax,
+          total: subtotal + shippingFee + serviceFee + tax,
+          onOrderPlaced: () {
+            setState(() {
+              _cartItems.clear();
+            });
+            _navigatorKey.currentState!.pop();
+          },
+        ),
+      ),
     );
   }
 
