@@ -5,6 +5,7 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mvec_mobile/main.dart';
@@ -15,5 +16,23 @@ void main() {
 
     expect(find.text('Classic Leather Backpack'), findsOneWidget);
     expect(find.text('Add to Cart'), findsOneWidget);
+  });
+
+  testWidgets('wishlist stays connected to product detail',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.byIcon(Icons.favorite_border).first);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Open wishlist'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Wishlist'), findsOneWidget);
+    expect(find.text('Classic Leather Backpack'), findsOneWidget);
+
+    await tester.tap(find.text('Remove'));
+    await tester.pump();
+
+    expect(find.text('Your wishlist is empty'), findsOneWidget);
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models/product.dart';
 import 'screens/product_detail_page.dart';
+import 'screens/wishlist_page.dart';
 
 final demoProduct = Product(
   id: 'demo-backpack',
@@ -29,13 +30,49 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final List<Product> _wishlistItems = [];
+  final List<Product> _cartItems = [];
+
+  void _toggleWishlist(Product product) {
+    setState(() {
+      final alreadyWishlisted = _wishlistItems.any((item) => item.id == product.id);
+      if (alreadyWishlisted) {
+        _wishlistItems.removeWhere((item) => item.id == product.id);
+      } else {
+        _wishlistItems.add(product);
+      }
+    });
+  }
+
+  void _removeFromWishlist(Product product) {
+    setState(() {
+      _wishlistItems.removeWhere((item) => item.id == product.id);
+    });
+  }
+
+  void _moveToCart(Product product) {
+    setState(() {
+      _wishlistItems.removeWhere((item) => item.id == product.id);
+      if (!_cartItems.any((item) => item.id == product.id)) {
+        _cartItems.add(product);
+      }
+    });
+  }
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
@@ -55,7 +92,23 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: ProductDetailPage(product: demoProduct),
+      home: ProductDetailPage(
+        product: demoProduct,
+        isWishlisted: _wishlistItems.any((item) => item.id == demoProduct.id),
+        onToggleWishlist: _toggleWishlist,
+        onOpenWishlist: () {
+          _navigatorKey.currentState!.push(
+            MaterialPageRoute(
+              builder: (context) => WishlistPage(
+                wishlistItems: _wishlistItems,
+                onRemoveFromWishlist: _removeFromWishlist,
+                onMoveToCart: _moveToCart,
+                onToggleWishlist: _toggleWishlist,
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

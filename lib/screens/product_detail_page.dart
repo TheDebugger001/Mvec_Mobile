@@ -3,8 +3,17 @@ import '../models/product.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Product product;
+  final bool isWishlisted;
+  final ValueChanged<Product>? onToggleWishlist;
+  final VoidCallback? onOpenWishlist;
 
-  const ProductDetailPage({super.key, required this.product});
+  const ProductDetailPage({
+    super.key,
+    required this.product,
+    this.isWishlisted = false,
+    this.onToggleWishlist,
+    this.onOpenWishlist,
+  });
 
   @override
   State<ProductDetailPage> createState() => _ProductDetailPageState();
@@ -26,6 +35,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   void initState() {
     super.initState();
     product = widget.product;
+    _isWishlisted = widget.isWishlisted;
 
     if (product.colors.isNotEmpty) {
       _selectedColor = product.colors.first;
@@ -33,6 +43,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     if (product.sizes.isNotEmpty) {
       _selectedSize = product.sizes.first;
     }
+  }
+
+  void _toggleWishlist() {
+    setState(() {
+      _isWishlisted = !_isWishlisted;
+    });
+    widget.onToggleWishlist?.call(product);
   }
 
   @override
@@ -68,9 +85,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   color: _isWishlisted ? Colors.red : null,
                 ),
                 onPressed: () {
-                  setState(() {
-                    _isWishlisted = !_isWishlisted;
-                  });
+                  _toggleWishlist();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -83,6 +98,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   );
                 },
               ),
+              if (widget.onOpenWishlist != null)
+                IconButton(
+                  icon: const Icon(Icons.list_alt_outlined),
+                  tooltip: 'Open wishlist',
+                  onPressed: widget.onOpenWishlist,
+                ),
               IconButton(
                 icon: const Icon(Icons.share_outlined),
                 onPressed: () {
@@ -476,11 +497,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           child: Row(
             children: [
               OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    _isWishlisted = !_isWishlisted;
-                  });
-                },
+                onPressed: _toggleWishlist,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.all(14),
                   shape: RoundedRectangleBorder(
