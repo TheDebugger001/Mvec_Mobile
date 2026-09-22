@@ -360,7 +360,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                               border: Border.all(
                                 color: isSelected
                                     ? theme.primaryColor
-                                    : Colors.grey.shade300,
+                                    : const Color.fromARGB(255, 126, 213, 240),
                               ),
                             ),
                             child: Text(
