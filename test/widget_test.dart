@@ -69,7 +69,23 @@ void main() {
     expect(find.text('Classic Leather Backpack'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Remove from cart'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Are you sure you want to delete Classic Leather Backpack from your cart?',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('No'));
+    await tester.pumpAndSettle();
+    expect(find.text('Classic Leather Backpack'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Remove from cart'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Yes'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Your cart is empty'), findsOneWidget);
   });

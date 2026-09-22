@@ -190,15 +190,7 @@ class _CartPageState extends State<CartPage> {
                   // Remove Button
                   IconButton(
                     tooltip: 'Remove from cart',
-                    onPressed: () {
-                      widget.onRemoveItem(item);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Item removed from cart'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
+                    onPressed: () => _confirmRemoveItem(item),
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                   ),
                 ],
@@ -261,6 +253,40 @@ class _CartPageState extends State<CartPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _confirmRemoveItem(CartItem item) async {
+    final shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove product?'),
+        content: Text(
+          'Are you sure you want to delete ${item.product.name} from your cart?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldRemove != true || !mounted) {
+      return;
+    }
+
+    widget.onRemoveItem(item);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Item removed from cart'),
+        duration: Duration(seconds: 1),
       ),
     );
   }
