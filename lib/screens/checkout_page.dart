@@ -30,11 +30,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final List<Address> _addresses = [];
 
   Address? _selectedAddress;
-  String _selectedPaymentMethod = 'Cash on Delivery';
+  String _selectedPaymentMethod = 'Mobile Money';
 
   final List<String> _paymentMethods = [
-    'Cash on Delivery',
-    'Mobile Money (M-Pesa / Tigo Pesa / Airtel Money)',
+    'Mobile Money',
     'Credit / Debit Card',
   ];
 
@@ -44,6 +43,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _regionController = TextEditingController();
+  final _paymentInputController = TextEditingController();
 
   @override
   void initState() {
@@ -57,6 +57,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _addressController.dispose();
     _cityController.dispose();
     _regionController.dispose();
+    _paymentInputController.dispose();
     super.dispose();
   }
 
@@ -417,43 +418,72 @@ class _CheckoutPageState extends State<CheckoutPage> {
           onTap: () {
             setState(() {
               _selectedPaymentMethod = method;
+              _paymentInputController.clear();
             });
           },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey.shade300,
-                width: isSelected ? 1.5 : 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isSelected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  color: isSelected
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    method,
-                    style: const TextStyle(fontSize: 15),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey.shade300,
+                    width: isSelected ? 1.5 : 1,
                   ),
                 ),
-              ],
-            ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isSelected
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_off,
+                      color: isSelected
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        method,
+                        style: const TextStyle(fontSize: 15),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected) _buildPaymentInput(),
+            ],
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildPaymentInput() {
+    final isMobileMoney = _selectedPaymentMethod == 'Mobile Money';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextFormField(
+        controller: _paymentInputController,
+        keyboardType: isMobileMoney
+            ? TextInputType.phone
+            : TextInputType.number,
+        decoration: InputDecoration(
+          labelText: isMobileMoney ? 'Mobile money phone number' : 'Card number',
+          hintText: isMobileMoney ? '+255 700 000 000' : '1234 5678 9012 3456',
+          prefixIcon: Icon(
+            isMobileMoney ? Icons.phone_outlined : Icons.credit_card_outlined,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          border: const OutlineInputBorder(),
+        ),
+      ),
     );
   }
 
@@ -514,6 +544,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a delivery address')),
+      );
+      return;
+    }
+
+    if (_paymentInputController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _selectedPaymentMethod == 'Mobile Money'
+                ? 'Enter your mobile money phone number'
+                : 'Enter your card number',
+          ),
+        ),
       );
       return;
     }

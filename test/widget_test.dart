@@ -110,6 +110,7 @@ void main() {
     );
     checkoutAction.onPressed!();
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Checkout'), findsOneWidget);
     expect(find.text('No delivery address added yet. Add one to continue.'),
@@ -117,11 +118,27 @@ void main() {
     expect(find.text('Order Review'), findsOneWidget);
     expect(find.text('Classic Leather Backpack'), findsOneWidget);
     expect(find.text('Confirm & Place Order'), findsOneWidget);
+    expect(find.text('Cash on Delivery'), findsNothing);
+    expect(find.text('Mobile money phone number'), findsOneWidget);
+
+    final cardMethod = tester.widget<GestureDetector>(
+      find.ancestor(
+        of: find.text('Credit / Debit Card'),
+        matching: find.byType(GestureDetector),
+      ),
+    );
+    cardMethod.onTap!();
+    await tester.pump();
+    expect(find.text('Card number'), findsOneWidget);
+    expect(find.text('Mobile money phone number'), findsNothing);
 
     await tester.tap(find.text('Add New Address'));
     await tester.pumpAndSettle();
 
-    final addressFields = find.byType(TextFormField);
+    final addressFields = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextFormField),
+    );
     await tester.enterText(addressFields.at(0), 'Amina Hassan');
     await tester.enterText(addressFields.at(1), '+255 700 000 000');
     await tester.enterText(addressFields.at(2), '12 Mlimani Road');
