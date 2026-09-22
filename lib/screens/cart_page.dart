@@ -118,11 +118,13 @@ class _CartPageState extends State<CartPage> {
   }
 
   Widget _buildDeleteButton(Product product) {
-    return SizedBox(
+    return Container(
       width: _actionWidth,
+      height: 72,
+      color: Colors.red,
       child: IconButton(
         tooltip: 'Delete from cart',
-        icon: const Icon(Icons.delete_outline, color: Colors.black54),
+        icon: const Icon(Icons.delete_outline, color: Colors.white),
         onPressed: () => _deleteProduct(product),
       ),
     );
