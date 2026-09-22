@@ -36,6 +36,26 @@ void main() {
     expect(find.text('Your wishlist is empty'), findsOneWidget);
   });
 
+  testWidgets('wishlist product can be moved to cart',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.byIcon(Icons.favorite_border).first);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Open wishlist'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Move to Cart'));
+    await tester.pump();
+    expect(find.text('Your wishlist is empty'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Open cart'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Cart'), findsOneWidget);
+    expect(find.text('Classic Leather Backpack'), findsOneWidget);
+  });
+
   testWidgets('cart shows added products and supports removal',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
