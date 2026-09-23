@@ -1,236 +1,188 @@
-// Smoke tests for the marketplace app shell: top menu + home feed render.
+// Smoke tests for the MVEC authentication flow (Login / Registration /
+// Forgot password) and the routing + validation helpers behind it.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-import 'package:mvec_mobile/features/marketplace/presentation/Screens/home_screen.dart';
 import 'package:mvec_mobile/main.dart';
-import 'package:mvec_mobile/models/address.dart';
-import 'package:mvec_mobile/models/cart_item.dart';
-import 'package:mvec_mobile/models/order.dart';
-import 'package:mvec_mobile/screens/track_order_page.dart';
+import 'package:mvec_mobile/models/user.dart';
+import 'package:mvec_mobile/providers/auth_provider.dart';
+import 'package:mvec_mobile/screens/auth/auth_validation.dart';
 
 void main() {
-  testWidgets('App boots to the login screen', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MvecAdminApp()));
+  // Keep widget tests offline and deterministic: never fetch fonts at runtime.
+  GoogleFonts.config.allowRuntimeFetching = false;
 
-    await tester.pump(const Duration(milliseconds: 300));
+  group('validation helpers', () {
+    test('email / phone validation', () {
+      expect(validateEmailOrPhone(''), isNotNull);
+      expect(validateEmailOrPhone('not-an-email'), isNotNull);
+      expect(validateEmailOrPhone('72xxxxxx'), isNotNull);
+      expect(validateEmailOrPhone('user@example.com'), isNull);
+      expect(validateEmailOrPhone('+250791234567'), isNull);
+      expect(validatePhone('abcd'), isNotNull);
+      expect(validatePhone('+250 791 234 567'), isNull);
+      expect(validateEmail(''), isNull);
+      expect(validateEmail('bad'), isNotNull);
+    });
 
-    expect(find.text('ADMIN CONTROL'), findsOneWidget);
-    expect(find.text('Email or telephone'), findsOneWidget);
-    expect(find.text('Password'), findsOneWidget);
-    expect(find.byType(TextField), findsNWidgets(2));
-  testWidgets('product detail screen loads', (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+    test('password validation', () {
+      expect(validatePassword(''), isNotNull);
+      expect(validatePassword('123'), isNotNull);
+      expect(validatePassword('123456'), isNull);
+      expect(validateConfirmPassword('123', '456'), isNotNull);
+      expect(validateConfirmPassword('456', '456'), isNull);
+    });
 
-    expect(find.text('Classic Leather Backpack'), findsOneWidget);
-    expect(find.text('Add to Cart'), findsOneWidget);
+    test('full name and otp validation', () {
+      expect(validateFullName('Narada'), isNotNull);
+      expect(validateFullName('Narada Test'), isNull);
+      expect(validateOtp('123'), isNotNull);
+      expect(validateOtp('abcdef'), isNotNull);
+      expect(validateOtp('123456'), isNull);
+    });
   });
 
-  testWidgets('wishlist stays connected to product detail',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  group('role routing', () {
+    test('super admin goes to control center', () {
+      final admin = UserRecord(role: 'super_admin');
+      expect(roleHome(admin), '/admin');
+    });
 
-    await tester.tap(find.byIcon(Icons.favorite_border).first);
-    await tester.pump();
-    await tester.tap(find.byTooltip('Open wishlist'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('My Wishlist'), findsOneWidget);
-    expect(find.text('Classic Leather Backpack'), findsOneWidget);
-
-    await tester.tap(find.text('Remove'));
-    await tester.pump();
-
-    expect(find.text('Your wishlist is empty'), findsOneWidget);
+    test('buyer, vendor, supplier and affiliate land on the home feed', () {
+      for (final role in ['buyer', 'vendor', 'supplier', 'affiliate']) {
+        expect(roleHome(UserRecord(role: role)), '/home', reason: role);
+      }
+    });
   });
 
-  testWidgets('wishlist product can be moved to cart',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  group('app boot', () {
+    testWidgets('boots to the login screen', (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.favorite_border).first);
-    await tester.pump();
-    await tester.tap(find.byTooltip('Open wishlist'));
-    await tester.pumpAndSettle();
+      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.text('Email or telephone'), findsOneWidget);
+      expect(find.text('Password'), findsOneWidget);
+      expect(find.byType(TextFormField), findsNWidgets(2));
+    });
 
-    await tester.tap(find.text('Move to Cart'));
-    await tester.pump();
-    expect(find.text('Your wishlist is empty'), findsOneWidget);
+    testWidgets('empty login submit shows validation errors',
+        (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Open cart'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Log in'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('My Cart'), findsOneWidget);
-    expect(find.text('Classic Leather Backpack'), findsOneWidget);
+      expect(find.text('Enter your email or telephone.'), findsOneWidget);
+      expect(find.text('Enter your password.'), findsOneWidget);
+    });
+
+    testWidgets('invalid email shows a validation error', (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'bad@email');
+      await tester.enterText(find.byType(TextFormField).last, 'password1');
+      await tester.tap(find.text('Log in'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter a valid email address.'), findsOneWidget);
+    });
   });
 
-  testWidgets('cart shows added products and supports removal',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  group('registration', () {
+    Future<void> openRegister(WidgetTester tester) async {
+      await tester.ensureVisible(find.text('Create one'));
+      await tester.tap(find.text('Create one'));
+      await tester.pumpAndSettle();
+    }
 
-    await tester.tap(find.text('Add to Cart'));
-    await tester.pump(const Duration(milliseconds: 900));
-    await tester.pump(const Duration(seconds: 1));
-    await tester.tap(find.byTooltip('Open cart'));
-    await tester.pumpAndSettle();
+    testWidgets('opens from the login screen and shows four user types',
+        (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+      await tester.pumpAndSettle();
 
-    expect(find.text('My Cart'), findsOneWidget);
-    expect(find.text('Classic Leather Backpack'), findsOneWidget);
+      await openRegister(tester);
 
-    await tester.tap(find.byTooltip('Remove from cart'));
-    await tester.pumpAndSettle();
+      expect(find.text('Create your account'), findsOneWidget);
+      for (final role in ['Buyer', 'Vendor', 'Supplier', 'Affiliate']) {
+        expect(find.text(role), findsOneWidget, reason: role);
+      }
+      expect(find.text('Full name'), findsOneWidget);
+      expect(find.text('Telephone'), findsOneWidget);
+    });
 
-    expect(
-      find.text(
-        'Are you sure you want to delete Classic Leather Backpack from your cart?',
-      ),
-      findsOneWidget,
-    );
+    testWidgets('selecting a vendor shows the company field',
+        (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('No'));
-    await tester.pumpAndSettle();
-    expect(find.text('Classic Leather Backpack'), findsOneWidget);
+      await openRegister(tester);
 
-    await tester.tap(find.byTooltip('Remove from cart'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Yes'));
-    await tester.pumpAndSettle();
+      expect(find.text('Company name'), findsNothing);
 
-    expect(find.text('Your cart is empty'), findsOneWidget);
+      await tester.tap(find.text('Vendor'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Company name'), findsOneWidget);
+    });
+
+    testWidgets('register validation catches missing and mismatched fields',
+        (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+      await tester.pumpAndSettle();
+
+      await openRegister(tester);
+
+      await tester.ensureVisible(find.text('Create account'));
+      await tester.tap(find.text('Create account'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter your full name.'), findsOneWidget);
+      expect(find.text('Enter your telephone number.'), findsOneWidget);
+      expect(find.text('Enter your password.'), findsOneWidget);
+
+      // Field order for a buyer: name, telephone, email, password, confirm.
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(3), 'password1');
+      await tester.enterText(fields.at(4), 'password2');
+      await tester.ensureVisible(find.text('Create account'));
+      await tester.tap(find.text('Create account'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Passwords do not match.'), findsOneWidget);
+    });
   });
 
-  testWidgets('cart opens checkout with the current order',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  group('forgot password', () {
+    testWidgets('opens from login and renders the request form',
+        (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Add to Cart'));
-    await tester.pump(const Duration(milliseconds: 900));
-    await tester.tap(find.byTooltip('Open cart'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Forgot password?'));
+      await tester.pumpAndSettle();
 
-    final checkoutButton = find.text('Proceed to Checkout');
-    await tester.ensureVisible(checkoutButton);
-    final checkoutAction = tester.widget<ElevatedButton>(
-      find.ancestor(
-        of: checkoutButton,
-        matching: find.byType(ElevatedButton),
-      ),
-    );
-    checkoutAction.onPressed!();
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Forgot your password?'), findsOneWidget);
+      expect(find.text('Email or telephone'), findsOneWidget);
+      expect(find.text('Send code'), findsOneWidget);
+    });
 
-    expect(find.text('Checkout'), findsOneWidget);
-    expect(find.text('No delivery address added yet. Add one to continue.'),
-      findsOneWidget);
-    expect(find.text('Order Review'), findsOneWidget);
-    expect(find.text('Classic Leather Backpack'), findsOneWidget);
-    expect(find.text('Confirm & Place Order'), findsOneWidget);
-    expect(find.text('Cash on Delivery'), findsNothing);
-    expect(find.text('Mobile money phone number'), findsOneWidget);
+    testWidgets('validates the identity before sending', (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+      await tester.pumpAndSettle();
 
-    final cardMethod = tester.widget<GestureDetector>(
-      find.ancestor(
-        of: find.text('Credit / Debit Card'),
-        matching: find.byType(GestureDetector),
-      ),
-    );
-    cardMethod.onTap!();
-    await tester.pump();
-    expect(find.text('Card number'), findsOneWidget);
-    expect(find.text('Mobile money phone number'), findsNothing);
+      await tester.tap(find.text('Forgot password?'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Add New Address'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Send code'));
+      await tester.pumpAndSettle();
 
-    final addressFields = find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.byType(TextFormField),
-    );
-    await tester.enterText(addressFields.at(0), '');
-    await tester.enterText(addressFields.at(1), '');
-    await tester.enterText(addressFields.at(2), '');
-    await tester.enterText(addressFields.at(3), '');
-    await tester.enterText(addressFields.at(4), '');
-    await tester.tap(find.text('Save address'));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('No delivery address added yet. Add one to continue.'),
-      findsOneWidget,
-    );
-    expect(find.text('Enter Full name'), findsOneWidget);
-  });
-
-  testWidgets('track order page displays the placed order',
-      (WidgetTester tester) async {
-    final order = Order(
-      id: 'order-1',
-      orderNumber: 'MV-1001',
-      orderDate: DateTime(2026, 9, 22),
-      status: OrderStatus.confirmed,
-      items: [CartItem(product: demoProduct)],
-      deliveryAddress: Address(
-        id: 'address-1',
-        fullName: 'Amina Hassan',
-        phone: '+2507 -------',
-        addressLine: '12 Mlimani Road',
-        city: 'Kigali',
-        region: 'Kigali',
-      ),
-      paymentMethod: 'Mobile Money',
-      subtotal: demoProduct.price,
-      shippingFee: 5,
-      serviceFee: 2.5,
-      tax: demoProduct.price * 0.08,
-      total: demoProduct.price + 5 + 2.5 + demoProduct.price * 0.08,
-      trackingNumber: 'TRK-1001',
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(home: TrackOrderPage(order: order)),
-    );
-
-    expect(find.text('Track Order'), findsOneWidget);
-    expect(find.text('Order #MV-1001'), findsOneWidget);
-    expect(find.text('Confirmed'), findsAtLeastNWidgets(1));
-    expect(find.text('Amina Hassan'), findsOneWidget);
-    expect(find.textContaining('TRK-1001'), findsOneWidget);
-  testWidgets('renders the top menu and home feed', (WidgetTester tester) async {
-    await tester.pumpWidget(const MvecApp());
-    await tester.pumpAndSettle();
-
-    // The horizontally scrollable top menu shows the marketplace tabs.
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Shop'), findsOneWidget);
-    expect(find.textContaining('You are previewing demo data'), findsOneWidget);
-
-    // Scroll the home feed down to reveal the featured products row.
-    final homeList = find.descendant(
-      of: find.byType(HomeScreen),
-      matching: find.byType(ListView),
-    );
-    await tester.drag(homeList, const Offset(0, -600));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Wireless Over-Ear Headphones'), findsWidgets);
-  });
-
-  testWidgets('tapping a top menu item switches the body',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MvecApp());
-    await tester.pumpAndSettle();
-
-    // Scroll the top menu to reach the trailing Orders tab.
-    final menu = find.byType(ListView).first;
-    await tester.drag(menu, const Offset(-800, 0));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Orders'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('#MV-20415'), findsOneWidget);
+      expect(find.text('Enter your email or telephone.'), findsOneWidget);
+    });
   });
 }

@@ -43,9 +43,23 @@ class UserRecord {
         if (phone != null) 'phone': phone,
         if (role != null) 'role': role,
         if (status != null) 'status': status,
+        if (gender != null) 'gender': gender,
+        if (companyName != null) 'companyName': companyName,
       };
 
   String get display => fullname ?? email ?? phone ?? 'Unknown';
+
+  /// Normalised account type: vendor, supplier, affiliate, buyer, delivery
+  /// or super_admin. Unknown values fall back to `buyer`.
+  String get userType {
+    final r = (role ?? 'buyer').trim().toLowerCase();
+    if (r == 'admin' || r == 'super_admin' || r == 'superadmin') return 'super_admin';
+    if (r == 'delivery' || r == 'delivery_driver') return 'delivery';
+    if (r == 'vendor') return 'vendor';
+    if (r == 'supplier') return 'supplier';
+    if (r == 'affiliate') return 'affiliate';
+    return 'buyer';
+  }
 }
 
 DateTime? _dt(dynamic v) {

@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart' as p;
 
+import '../features/marketplace/presentation/Screens/main_navigation.dart';
+import '../features/marketplace/presentation/providers/home_provider.dart';
 import '../providers/auth_provider.dart';
+import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/auth/register_screen.dart';
+import '../screens/auth/reset_password_screen.dart';
+import '../screens/auth/verification_code_screen.dart';
 import '../screens/layout/admin_shell.dart';
 import '../screens/analytics/analytics_screen.dart';
 import '../screens/audit_logs/audit_logs_screen.dart';
@@ -42,181 +49,272 @@ import '../screens/vendors/vendors_screen.dart';
 import '../screens/commissions/commissions_screen.dart';
 import '../screens/acquisitions/acquisitions_screen.dart';
 
+/// Routes that a signed-in user must never stay on.
+const _publicAuthPaths = <String>[
+  '/login',
+  '/signup',
+  '/forgot-password',
+  '/verify-code',
+  '/reset-password',
+];
+
 final routerProvider = Provider<GoRouter>((ref) {
   final gate = ValueNotifier(0);
   ref.onDispose(gate.dispose);
   ref.listen(authControllerProvider, (prev, next) {
-    if (prev?.isLoggedIn != next.isLoggedIn) gate.value++;
+    if (prev?.isLoggedIn != next.isLoggedIn ||
+        prev?.restoring != next.restoring) {
+      gate.value++;
+    }
   });
 
   return GoRouter(
     initialLocation: '/login',
     refreshListenable: gate,
     redirect: (context, state) {
-      final loggedIn = ref.read(authControllerProvider).isLoggedIn;
+      final auth = ref.read(authControllerProvider);
       final loc = state.matchedLocation;
-      final isAdminRoute = loc.startsWith('/admin');
-      if (isAdminRoute && !loggedIn) return '/login';
-      if (loc == '/login' && loggedIn) return '/admin';
-      return null;
+      final isPublic = _publicAuthPaths.any(loc.startsWith);
+      if (auth.restoring) return null;
+
+      if (auth.isLoggedIn) {
+        final user = auth.session!.user;
+        // A signed-in user should never sit on a public auth page.
+        if (isPublic) return roleHome(user);
+        // Only super admins may enter the control center.
+        if (loc.startsWith('/admin') && user.userType != 'super_admin') {
+          return '/home';
+        }
+        return null;
+      }
+
+      // Signed out.
+      if (isPublic) {
+        // Code-verification / reset screens only make sense mid-flow.
+        final pendingReset = auth.hasPendingReset;
+        final hasToken = (auth.resetToken ?? '').isNotEmpty;
+        if (loc == '/reset-password' && !hasToken) return '/forgot-password';
+        if (loc == '/verify-code' && !pendingReset) return '/forgot-password';
+        return null;
+      }
+      return '/login';
     },
     routes: [
       GoRoute(
         path: '/',
         redirect: (_, __) {
-          final loggedIn = ref.read(authControllerProvider).isLoggedIn;
-          return loggedIn ? '/admin' : '/login';
+          final auth = ref.read(authControllerProvider);
+          if (auth.isLoggedIn) return roleHome(auth.session!.user);
+          return '/login';
         },
       ),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(path: '/signup', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/verify-code',
+        builder: (_, __) => const VerificationCodeScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, __) => const ResetPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (_, __) => p.ChangeNotifierProvider(
+          create: (_) => HomeProvider()..loadHomeFeed(),
+          child: const MainNavigation(),
+        ),
+      ),
       GoRoute(
         path: '/admin',
-        builder: (context, state) => const AdminShell(path: '/admin', child: OverviewScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin', child: OverviewScreen()),
       ),
       GoRoute(
         path: '/admin/messages',
-        builder: (context, state) => const AdminShell(path: '/admin/messages', child: MessagesScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/messages', child: MessagesScreen()),
       ),
       GoRoute(
         path: '/admin/analytics',
-        builder: (context, state) => const AdminShell(path: '/admin/analytics', child: AnalyticsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/analytics', child: AnalyticsScreen()),
       ),
       GoRoute(
         path: '/admin/ledger',
-        builder: (context, state) => const AdminShell(path: '/admin/ledger', child: LedgerScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/ledger', child: LedgerScreen()),
       ),
       GoRoute(
         path: '/admin/commission-rules',
-        builder: (context, state) => const AdminShell(path: '/admin/commission-rules', child: CommissionRulesScreen()),
+        builder: (context, state) => const AdminShell(
+            path: '/admin/commission-rules', child: CommissionRulesScreen()),
       ),
       GoRoute(
         path: '/admin/risk',
-        builder: (context, state) => const AdminShell(path: '/admin/risk', child: RiskScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/risk', child: RiskScreen()),
       ),
       GoRoute(
         path: '/admin/supplier-acquisition',
-        builder: (context, state) => const AdminShell(path: '/admin/supplier-acquisition', child: AcquisitionScreen(type: 'supplier')),
+        builder: (context, state) => const AdminShell(
+            path: '/admin/supplier-acquisition',
+            child: AcquisitionScreen(type: 'supplier')),
       ),
       GoRoute(
         path: '/admin/vendor-acquisition',
-        builder: (context, state) => const AdminShell(path: '/admin/vendor-acquisition', child: AcquisitionScreen(type: 'vendor')),
+        builder: (context, state) => const AdminShell(
+            path: '/admin/vendor-acquisition',
+            child: AcquisitionScreen(type: 'vendor')),
       ),
       GoRoute(
         path: '/admin/users',
-        builder: (context, state) => const AdminShell(path: '/admin/users', child: UsersScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/users', child: UsersScreen()),
       ),
       GoRoute(
         path: '/admin/vendors',
-        builder: (context, state) => const AdminShell(path: '/admin/vendors', child: VendorsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/vendors', child: VendorsScreen()),
       ),
       GoRoute(
         path: '/admin/suppliers',
-        builder: (context, state) => const AdminShell(path: '/admin/suppliers', child: SuppliersScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/suppliers', child: SuppliersScreen()),
       ),
       GoRoute(
         path: '/admin/affiliates',
-        builder: (context, state) => const AdminShell(path: '/admin/affiliates', child: AffiliatesScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/affiliates', child: AffiliatesScreen()),
       ),
       GoRoute(
         path: '/admin/products',
-        builder: (context, state) => const AdminShell(path: '/admin/products', child: ProductsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/products', child: ProductsScreen()),
       ),
       GoRoute(
         path: '/admin/categories',
-        builder: (context, state) => const AdminShell(path: '/admin/categories', child: CategoriesScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/categories', child: CategoriesScreen()),
       ),
       GoRoute(
         path: '/admin/orders',
-        builder: (context, state) => const AdminShell(path: '/admin/orders', child: OrdersScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/orders', child: OrdersScreen()),
       ),
       GoRoute(
         path: '/admin/payments',
-        builder: (context, state) => const AdminShell(path: '/admin/payments', child: PaymentsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/payments', child: PaymentsScreen()),
       ),
       GoRoute(
         path: '/admin/transactions',
-        builder: (context, state) => const AdminShell(path: '/admin/transactions', child: TransactionsScreen()),
+        builder: (context, state) => const AdminShell(
+            path: '/admin/transactions', child: TransactionsScreen()),
       ),
       GoRoute(
         path: '/admin/commissions',
-        builder: (context, state) => const AdminShell(path: '/admin/commissions', child: CommissionsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/commissions', child: CommissionsScreen()),
       ),
       GoRoute(
         path: '/admin/deliveries',
-        builder: (context, state) => const AdminShell(path: '/admin/deliveries', child: DeliveriesScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/deliveries', child: DeliveriesScreen()),
       ),
       GoRoute(
         path: '/admin/refunds',
-        builder: (context, state) => const AdminShell(path: '/admin/refunds', child: RefundsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/refunds', child: RefundsScreen()),
       ),
       GoRoute(
         path: '/admin/disputes',
-        builder: (context, state) => const AdminShell(path: '/admin/disputes', child: DisputesScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/disputes', child: DisputesScreen()),
       ),
       GoRoute(
         path: '/admin/advertising',
-        builder: (context, state) => const AdminShell(path: '/admin/advertising', child: AdvertisingScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/advertising', child: AdvertisingScreen()),
       ),
       GoRoute(
         path: '/admin/subscriptions',
-        builder: (context, state) => const AdminShell(path: '/admin/subscriptions', child: SubscriptionsScreen()),
+        builder: (context, state) => const AdminShell(
+            path: '/admin/subscriptions', child: SubscriptionsScreen()),
       ),
       GoRoute(
         path: '/admin/reports',
-        builder: (context, state) => const AdminShell(path: '/admin/reports', child: ReportsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/reports', child: ReportsScreen()),
       ),
       GoRoute(
         path: '/admin/recommendations',
-        builder: (context, state) => const AdminShell(path: '/admin/recommendations', child: RecommendationsScreen()),
+        builder: (context, state) => const AdminShell(
+            path: '/admin/recommendations', child: RecommendationsScreen()),
       ),
       GoRoute(
         path: '/admin/matching',
-        builder: (context, state) => const AdminShell(path: '/admin/matching', child: MatchingScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/matching', child: MatchingScreen()),
       ),
       GoRoute(
         path: '/admin/trust',
-        builder: (context, state) => const AdminShell(path: '/admin/trust', child: TrustScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/trust', child: TrustScreen()),
       ),
       GoRoute(
         path: '/admin/reviews',
-        builder: (context, state) => const AdminShell(path: '/admin/reviews', child: ReviewsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/reviews', child: ReviewsScreen()),
       ),
       GoRoute(
         path: '/admin/notifications',
-        builder: (context, state) => const AdminShell(path: '/admin/notifications', child: NotificationsScreen()),
+        builder: (context, state) => const AdminShell(
+            path: '/admin/notifications', child: NotificationsScreen()),
       ),
       GoRoute(
         path: '/admin/languages',
-        builder: (context, state) => const AdminShell(path: '/admin/languages', child: LanguagesScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/languages', child: LanguagesScreen()),
       ),
       GoRoute(
         path: '/admin/locations',
-        builder: (context, state) => const AdminShell(path: '/admin/locations', child: LocationsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/locations', child: LocationsScreen()),
       ),
       GoRoute(
         path: '/admin/audit-logs',
-        builder: (context, state) => const AdminShell(path: '/admin/audit-logs', child: AuditLogsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/audit-logs', child: AuditLogsScreen()),
       ),
       GoRoute(
         path: '/admin/security',
-        builder: (context, state) => const AdminShell(path: '/admin/security', child: SecurityScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/security', child: SecurityScreen()),
       ),
       GoRoute(
         path: '/admin/system',
-        builder: (context, state) => const AdminShell(path: '/admin/system', child: SystemScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/system', child: SystemScreen()),
       ),
       GoRoute(
         path: '/admin/settings',
-        builder: (context, state) => const AdminShell(path: '/admin/settings', child: SettingsScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/settings', child: SettingsScreen()),
       ),
       GoRoute(
         path: '/admin/support',
-        builder: (context, state) => const AdminShell(path: '/admin/support', child: SupportScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/support', child: SupportScreen()),
       ),
       GoRoute(
         path: '/admin/search',
-        builder: (context, state) => const AdminShell(path: '/admin/search', child: SearchScreen()),
+        builder: (context, state) =>
+            const AdminShell(path: '/admin/search', child: SearchScreen()),
       ),
     ],
   );
