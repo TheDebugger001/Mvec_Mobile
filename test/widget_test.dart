@@ -1,6 +1,7 @@
 // Smoke tests for the marketplace app shell: top menu + home feed render.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/home_screen.dart';
@@ -11,6 +12,15 @@ import 'package:mvec_mobile/models/order.dart';
 import 'package:mvec_mobile/screens/track_order_page.dart';
 
 void main() {
+  testWidgets('App boots to the login screen', (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: MvecAdminApp()));
+
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('ADMIN CONTROL'), findsOneWidget);
+    expect(find.text('Email or telephone'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(2));
   testWidgets('product detail screen loads', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
