@@ -33,12 +33,14 @@ class ProductCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Thumbnail(product: product),
               Padding(
                 padding: const EdgeInsets.all(8),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (product.brand != null && product.brand!.isNotEmpty)
@@ -63,15 +65,23 @@ class ProductCard extends StatelessWidget {
                         const Icon(Icons.star_rounded,
                             color: AppColors.secondary, size: 16),
                         const SizedBox(width: 2),
-                        Text(
-                          product.rating.toStringAsFixed(1),
-                          style: AppTextStyles.caption(context)
-                              .copyWith(color: AppColors.textPrimary),
+                        Flexible(
+                          child: Text(
+                            product.rating.toStringAsFixed(1),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption(context)
+                                .copyWith(color: AppColors.textPrimary),
+                          ),
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '(${product.ratingCount})',
-                          style: AppTextStyles.caption(context),
+                        Flexible(
+                          child: Text(
+                            '(${product.ratingCount})',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption(context),
+                          ),
                         ),
                       ],
                     ),
@@ -82,6 +92,7 @@ class ProductCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             _formatPrice(product.price),
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: priceTag
                                 ? AppTextStyles.price(context).copyWith(
@@ -94,9 +105,13 @@ class ProductCard extends StatelessWidget {
                         ),
                         if (product.originalPrice != null) ...<Widget>[
                           const SizedBox(width: 6),
-                          Text(
-                            _formatPrice(product.originalPrice!),
-                            style: AppTextStyles.oldPrice(context),
+                          Flexible(
+                            child: Text(
+                              _formatPrice(product.originalPrice!),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.oldPrice(context),
+                            ),
                           ),
                         ],
                       ],
