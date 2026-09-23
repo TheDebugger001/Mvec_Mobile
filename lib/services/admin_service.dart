@@ -31,6 +31,14 @@ class AdminService {
     return UserRecord.fromJson(singleJson(res, ['user']));
   }
 
+  // ---------- Account / profile ----------
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    await _api.patch('/auth/change-password', body: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+  }
+
   // ---------- Vendors ----------
   Future<Paged<PartyRecord>> vendors({int page = 1, int pageSize = 20, String? status, String? verificationStatus}) async {
     final res = await _api.get('/admin/vendors', query: {

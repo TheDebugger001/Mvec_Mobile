@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/account/account_screen.dart';
+import '../screens/buyers/buyers_screen.dart';
 import '../screens/layout/admin_shell.dart';
 import '../screens/analytics/analytics_screen.dart';
 import '../screens/audit_logs/audit_logs_screen.dart';
@@ -113,6 +115,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/suppliers',
         builder: (context, state) => const AdminShell(path: '/admin/suppliers', child: SuppliersScreen()),
+      ),
+      GoRoute(
+        path: '/admin/buyers',
+        builder: (context, state) => const AdminShell(path: '/admin/buyers', child: BuyersScreen()),
+      ),
+      GoRoute(
+        path: '/admin/account',
+        builder: (context, state) => const AdminShell(path: '/admin/account', child: AccountScreen()),
       ),
       GoRoute(
         path: '/admin/affiliates',

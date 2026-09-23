@@ -8,6 +8,9 @@ import '../../core/utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/mv_icon.dart';
 
+/// Mirrors the frontend `DashboardLayout`: sticky topbar (search, theme,
+/// notifications, avatar), an accordion grouped sidebar, and a mobile
+/// bottom navigation bar with the four primary items + "More" (drawer).
 class AdminShell extends ConsumerStatefulWidget {
   const AdminShell({super.key, required this.path, required this.child});
   final String path;
@@ -19,97 +22,145 @@ class AdminShell extends ConsumerStatefulWidget {
 
 class _AdminShellState extends ConsumerState<AdminShell> {
   final _drawerKey = GlobalKey<ScaffoldState>();
+  final _search = TextEditingController();
+  String? _openGroup;
+
+  @override
+  void initState() {
+    super.initState();
+    _openGroup = AdminNav.groupFor(widget.path) ?? AdminNav.groups.first.label;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final g = AdminNav.groupFor(widget.path);
+    if (g != null && _openGroup != g) _openGroup = g;
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _goSearch(String text) {
+    final q = text.trim();
+    if (q.isEmpty) return;
+    context.go('/admin/search');
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final name = user?.display ?? 'Administrator';
     return Scaffold(
       key: _drawerKey,
-      drawer: _buildDrawer(user?.display ?? 'Administrator'),
+      drawer: _buildDrawer(name, user?.email ?? ''),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
-          _buildTopbar(user?.display ?? 'Administrator'),
+          _buildTopbar(name),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20).copyWith(bottom: 40),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 96),
               child: widget.child,
             ),
           ),
+          _buildBottomNav(name),
         ],
       ),
     );
   }
 
+  // ─── TOP BAR ────────────────────────────────────────────────────────────
   Widget _buildTopbar(String name) {
-    final notifierDot = true;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ink = isDark ? MvColors.darkText : MvColors.ink;
     return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark ? MvColors.darkSurface : Colors.white,
+        color: isDark ? MvColors.darkSurface : Colors.white,
         border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
       ),
       child: Row(
         children: [
           IconButton(
             onPressed: () => _drawerKey.currentState?.openDrawer(),
-            icon: const MvIcon('menu'),
+            icon: MvIcon('menu', color: ink),
             tooltip: 'Menu',
           ),
-          const SizedBox(width: 4),
-          const Text(
-            'MVEC',
-            style: TextStyle(fontFamily: 'Manrope', fontSize: 18, fontWeight: FontWeight.w800, color: MvColors.primaryDeep),
-          ),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: MvColors.metricIconBg,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text('ADMIN', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: MvColors.primaryDeep)),
-          ),
-          const Spacer(),
-          Consumer(builder: (context, ref, _) {
-            return IconButton(
-              onPressed: () {
-                final t = ref.read(themeModeProvider);
-                ref.read(themeModeProvider.notifier).state = t == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-              },
-              icon: MvIcon(
-                Theme.of(context).brightness == Brightness.dark ? 'sun' : 'moon',
-                color: Theme.of(context).brightness == Brightness.dark ? MvColors.darkText : MvColors.ink,
+          Expanded(
+            child: Container(
+              height: 38,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: isDark ? MvColors.darkSurface2 : const Color(0xFFF7FAFB),
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(color: isDark ? MvColors.darkBorder : const Color(0xFFE0E5E8)),
               ),
-              tooltip: 'Toggle theme',
-            );
-          }),
+              child: Row(
+                children: [
+                  MvIcon('search', size: 16, color: isDark ? MvColors.darkMuted : const Color(0xFF9AA5AA)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _search,
+                      onSubmitted: _goSearch,
+                      style: TextStyle(fontSize: 13, color: ink),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintText: 'Search…',
+                        hintStyle: TextStyle(fontSize: 13, color: isDark ? MvColors.darkMuted : const Color(0xFF9AA5AA)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           IconButton(
-            onPressed: () => context.push('/admin/notifications'),
+            onPressed: () {
+              final t = ref.read(themeModeProvider);
+              ref.read(themeModeProvider.notifier).state = t == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+            },
+            icon: MvIcon(isDark ? 'sun' : 'moon', color: ink),
+            tooltip: 'Toggle theme',
+          ),
+          IconButton(
+            onPressed: () => context.go('/admin/notifications'),
             tooltip: 'Notifications',
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                MvIcon('bell', color: Theme.of(context).brightness == Brightness.dark ? MvColors.darkText : MvColors.ink),
-                if (notifierDot)
-                  Positioned(
-                    top: -2,
-                    right: -3,
-                    child: Container(width: 7, height: 7, decoration: const BoxDecoration(color: MvColors.badgeRed, shape: BoxShape.circle)),
+                MvIcon('bell', color: ink),
+                Positioned(
+                  top: -3,
+                  right: -4,
+child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  height: 16,
+                  constraints: const BoxConstraints(minWidth: 16),
+                  alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: MvColors.badgeRed, borderRadius: BorderRadius.all(Radius.circular(9))),
+                    child: const Text('9+', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white)),
                   ),
+                ),
               ],
             ),
           ),
           InkWell(
-            onTap: () => context.push('/admin/messages'),
+            onTap: () => context.go('/admin/account'),
             borderRadius: BorderRadius.circular(17),
             child: Container(
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               decoration: const BoxDecoration(gradient: MvColors.gradient, shape: BoxShape.circle),
               alignment: Alignment.center,
-              child: Text(initials(name), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+              child: Text(initials(name), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white)),
             ),
           ),
         ],
@@ -117,75 +168,89 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     );
   }
 
-  Widget _buildDrawer(String name) {
+  // ─── DRAWER (grouped accordion) ─────────────────────────────────────────
+  Widget _buildDrawer(String name, String email) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final muted = isDark ? MvColors.darkMuted : const Color(0xFF8A969C);
     return Drawer(
       child: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
+                      Text(
+                        'MVEC',
+                        style: TextStyle(
+                          fontSize: 27,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: 'Manrope',
+                          foreground: Paint()
+                            ..shader = MvColors.gradient.createShader(const Rect.fromLTWH(0, 0, 120, 30)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'ADMIN CONTROL',
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.6, color: MvColors.muted),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: 40,
+                        height: 40,
                         decoration: const BoxDecoration(gradient: MvColors.gradient, shape: BoxShape.circle),
                         alignment: Alignment.center,
-                        child: Text(initials(name), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
+                        child: Text(initials(name), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 2),
-                            const Text('Super Administrator', style: TextStyle(fontSize: 11, color: MvColors.primaryDeep, fontWeight: FontWeight.w700)),
+                            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 3),
+                            Text('Super Administrator', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: muted)),
                           ],
                         ),
                       ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(Icons.close, size: 20, color: isDark ? MvColors.darkMuted : MvColors.ink),
-                      ),
                     ],
                   ),
-                  Divider(color: Theme.of(context).dividerColor, height: 24),
+                  Divider(color: Theme.of(context).dividerColor, height: 26),
                 ],
               ),
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                 children: [
-                  for (final (section, items) in AdminNav.groups) ...[
-                    for (final item in items) _item(item),
-                    if (section != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                        child: Text(
-                          section.toUpperCase(),
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.4, color: Theme.of(context).hintColor),
-                        ),
-                      ),
-                  ],
+                  for (final group in AdminNav.groups) _group(group, isDark),
                 ],
               ),
             ),
-            Divider(color: Theme.of(context).dividerColor, height: 1),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _bottomItem('View marketplace', '/', 'home'),
-                  _bottomItem('Sign out', '/login', 'logout', danger: true, onTap: () async {
+                  Divider(color: Theme.of(context).dividerColor, height: 1),
+                  const SizedBox(height: 8),
+                  _bottomLink('View marketplace', 'home', () {
+                    Navigator.pop(context);
+                    context.go('/');
+                  }),
+                  _bottomLink('Sign out', 'logout', () async {
                     await ref.read(authControllerProvider.notifier).logout();
                     if (mounted) context.go('/login');
-                  }),
+                  }, danger: true),
                 ],
               ),
             ),
@@ -195,53 +260,69 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     );
   }
 
-  Widget _item(NavItem item) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final active = widget.path == item.path || (widget.path.startsWith(item.path) && item.path != '/admin');
-    return _navLink(item.label, item.icon, active, isDark, onTap: () {
-      Navigator.pop(context);
-      context.go(item.path);
-    });
-  }
-
-  Widget _bottomItem(String label, String path, String icon, {bool danger = false, VoidCallback? onTap}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return _navLink(
-      label,
-      icon,
-      false,
-      isDark,
-      danger: danger,
-      onTap: () {
-        Navigator.pop(context);
-        onTap ?? context.go(path);
-      },
+  Widget _group(NavGroup group, bool isDark) {
+    final open = _openGroup == group.label;
+    final hasActive = group.items.any((i) => _isActive(i.path));
+    final fg = hasActive
+        ? MvColors.primaryDeep
+        : (isDark ? const Color(0xFFB9CBD3) : const Color(0xFF4C5A62));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() => _openGroup = open ? null : group.label),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      group.label.toUpperCase(),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .4, color: fg),
+                    ),
+                  ),
+                  MvIcon('arrow', size: 14, color: fg) //
+                      .rotate(open ? 90 : 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (open)
+          for (final item in group.items)
+            _item(item, isDark, indent: true),
+      ],
     );
   }
 
-  Widget _navLink(String label, String icon, bool active, bool isDark, {bool danger = false, VoidCallback? onTap}) {
-    final fg = danger
-        ? MvColors.dangerIcon
-        : (active
-            ? MvColors.primaryDeep
-            : (isDark ? MvColors.darkMuted : const Color(0xFF6B7780)));
+  Widget _item(NavItem item, bool isDark, {bool indent = false}) {
+    final active = _isActive(item.path);
+    final fg = active
+        ? MvColors.primaryDeep
+        : (isDark ? MvColors.darkMuted : const Color(0xFF6B7780));
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+      padding: EdgeInsets.fromLTRB(indent ? 12 : 0, 0, 0, 1),
       child: Material(
         color: active ? (isDark ? MvColors.darkSurface2 : MvColors.metricIconBg) : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
-          onTap: onTap,
           borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            Navigator.pop(context);
+            context.go(item.path);
+          },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                MvIcon(icon, size: 17, color: fg),
+                MvIcon(item.icon, size: 16, color: fg),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    label,
+                    item.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 13, fontWeight: active ? FontWeight.w800 : FontWeight.w600, color: fg),
@@ -254,4 +335,105 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       ),
     );
   }
+
+  Widget _bottomLink(String label, String icon, VoidCallback onTap, {bool danger = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fg = danger ? MvColors.dangerIcon : (isDark ? MvColors.darkMuted : const Color(0xFF6B7780));
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                MvIcon(icon, size: 16, color: fg),
+                const SizedBox(width: 12),
+                Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: fg)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── MOBILE BOTTOM NAV ──────────────────────────────────────────────────
+  Widget _buildBottomNav(String name) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? MvColors.darkSurface : Colors.white;
+    return Container(
+      decoration: BoxDecoration(
+        color: surface,
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            for (final item in AdminNav.bottomNav)
+              Expanded(
+                child: _bottomItem(item, isDark),
+              ),
+            Expanded(
+              child: _bottomMore(isDark),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bottomItem(NavItem item, bool isDark) {
+    final active = _isActive(item.path);
+    final fg = active
+        ? MvColors.primaryDeep
+        : (isDark ? MvColors.darkMuted : const Color(0xFF6B7780));
+    return InkWell(
+      onTap: () => context.go(item.path),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            MvIcon(item.icon, size: 18, color: fg),
+            const SizedBox(height: 3),
+            Text(
+              item.label,
+              style: TextStyle(fontSize: 9.5, fontWeight: active ? FontWeight.w800 : FontWeight.w600, color: fg),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bottomMore(bool isDark) {
+    final fg = isDark ? MvColors.darkMuted : const Color(0xFF6B7780);
+    return InkWell(
+      onTap: () => _drawerKey.currentState?.openDrawer(),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            MvIcon('menu', size: 18, color: fg),
+            const SizedBox(height: 3),
+            Text('More', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: fg)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _isActive(String path) => widget.path == path || (widget.path.startsWith(path) && path != '/admin');
+}
+
+extension _RotateX on Widget {
+  Widget rotate(double deg) => Transform.rotate(angle: deg * 3.141592653589793 / 180, child: this);
 }

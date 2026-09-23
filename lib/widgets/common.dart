@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/theme.dart';
 import '../core/utils.dart';
@@ -71,7 +72,7 @@ class MetricCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(color: MvColors.metricIconBg, borderRadius: BorderRadius.circular(9)),
-                child: const Center(child: MvIcon('chart', size: 20, color: MvColors.primaryDeep)),
+                child: Center(child: MvIcon(icon, size: 20, color: MvColors.primaryDeep)),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -103,7 +104,8 @@ class MetricCard extends StatelessWidget {
 
 /// Small helper so metric values use Manrope 800 20px like the frontend.
 class GoogleFontsManrope {
-  static const metricValue = TextStyle(fontSize: 20, fontWeight: FontWeight.w800, fontFamily: 'ManropeFallback', letterSpacing: -.2);
+  static TextStyle get metricValue =>
+      GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.2);
 }
 
 class PageHead extends StatelessWidget {
@@ -230,9 +232,10 @@ class InfoBox extends StatelessWidget {
 }
 
 class DataCard extends StatelessWidget {
-  const DataCard({super.key, required this.child, this.title, this.trailing, this.padding = const EdgeInsets.all(18)});
+  const DataCard({super.key, required this.child, this.title, this.subtitle, this.trailing, this.padding = const EdgeInsets.all(18)});
   final Widget child;
   final String? title;
+  final String? subtitle;
   final Widget? trailing;
   final EdgeInsets padding;
 
@@ -246,9 +249,19 @@ class DataCard extends StatelessWidget {
           children: [
             if (title != null) ...[
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(title!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(subtitle!, style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor)),
+                        ],
+                      ],
+                    ),
                   ),
                   if (trailing != null) trailing!,
                 ],

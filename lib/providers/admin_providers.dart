@@ -17,6 +17,18 @@ final usersProvider = FutureProvider.autoDispose<List<UserRecord>>((ref) async {
   return p.items;
 });
 
+/// Buyer management: all records whose role maps to a buyer.
+final buyersProvider = FutureProvider.autoDispose<List<UserRecord>>((ref) async {
+  final p = await ref.watch(adminServiceProvider).users(role: 'buyer', limit: 100);
+  final items = p.items;
+  if (items.isNotEmpty) return items;
+  final all = await ref.watch(adminServiceProvider).users(limit: 100);
+  return all.items.where((u) {
+    final r = (u.role ?? '').toLowerCase();
+    return r.contains('buyer') || (!r.contains('vendor') && !r.contains('supplier') && !r.contains('affiliate') && !r.contains('admin'));
+  }).toList();
+});
+
 class PartyQuery {
   const PartyQuery({this.page = 1, this.status, this.verification, this.search});
   final int page;

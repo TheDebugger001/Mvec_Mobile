@@ -118,3 +118,9 @@ String titleCase(String s) {
   if (s.isEmpty) return s;
   return s.split(RegExp(r'[_\s]+')).map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ');
 }
+
+String formatDate(DateTime d) {
+  final m = '${d.month}'.padLeft(2, '0');
+  final day = '${d.day}'.padLeft(2, '0');
+  return '$day/$m/${d.year}';
+}

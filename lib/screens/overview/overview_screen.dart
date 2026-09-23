@@ -10,6 +10,9 @@ import '../../widgets/charts.dart';
 import '../../widgets/common.dart';
 import '../../widgets/mv_icon.dart';
 
+/// Rebuild of the overview to match the new frontend `AdminDashboard`:
+/// KPI metric grid, a "MVEC revenue today" card (Commission earned +
+/// Products listed), platform activity, recent orders and category health.
 class OverviewScreen extends ConsumerWidget {
   const OverviewScreen({super.key});
 
@@ -18,6 +21,7 @@ class OverviewScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(reportSummaryProvider('7d'));
     final ordersAsync = ref.watch(ordersProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
+    final productsAsync = ref.watch(productsProvider);
 
     final summary = summaryAsync.when(
       data: (s) => s,
@@ -33,6 +37,28 @@ class OverviewScreen extends ConsumerWidget {
           title: 'Good morning, Administrator 👋',
           subtitle: 'Monitor the entire MVEC marketplace from one control center.',
           actions: [
+            IconButton(
+              onPressed: () => context.push('/admin/notifications'),
+              tooltip: 'Notifications',
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const MvIcon('bell', color: MvColors.ink),
+                  Positioned(
+                    top: -3,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      height: 16,
+                      constraints: const BoxConstraints(minWidth: 16),
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(color: MvColors.badgeRed, borderRadius: BorderRadius.all(Radius.circular(9))),
+                      child: const Text('5', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             GradientButton(
               label: 'Create record',
               icon: 'plus',
@@ -50,7 +76,7 @@ class OverviewScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         _pair(
-          const _RevenueCard(),
+          _RevenueTodayCard(summary: summary, productsAsync: productsAsync),
           const DataCard(
             title: 'Platform activity',
             child: Column(
@@ -307,50 +333,57 @@ class OverviewScreen extends ConsumerWidget {
   }
 }
 
-class _RevenueCard extends ConsumerStatefulWidget {
-  const _RevenueCard();
+/// Mirrors the new frontend "MVEC revenue today" card: commission earned +
+/// products listed headline metrics. No fake bar chart.
+class _RevenueTodayCard extends StatelessWidget {
+  const _RevenueTodayCard({this.summary, this.productsAsync});
 
-  @override
-  ConsumerState<_RevenueCard> createState() => _RevenueCardState();
-}
-
-class _RevenueCardState extends ConsumerState<_RevenueCard> {
-  String _range = '7d';
-
-  static const List<(String, String)> _ranges = [
-    ('7 days', '7d'),
-    ('30 days', '30d'),
-    ('3 months', '3m'),
-    ('1 year', '1y'),
-  ];
+  final ReportSummary? summary;
+  final AsyncValue<List<ProductRecord>>? productsAsync;
 
   @override
   Widget build(BuildContext context) {
-    final revenue = ref.watch(reportRevenueProvider(_range));
+    final count = productsAsync?.when(
+          data: (p) => '${p.length}',
+          error: (_, __) => '—',
+          loading: () => '…',
+        ) ??
+        '—';
+    final commission = summary == null ? '—' : money(summary!.commission);
     return DataCard(
-      title: 'Marketplace revenue',
-      trailing: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _range,
-          isDense: true,
-          items: [
-            for (final r in _ranges)
-              DropdownMenuItem<String>(
-                value: r.$2,
-                child: Text(
-                  r.$1,
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
-                ),
-              ),
-          ],
-          onChanged: (v) => setState(() => _range = v ?? '7d'),
+      title: 'MVEC revenue today',
+      child: Row(
+        children: [
+          Expanded(
+            child: _innerMetric(context, label: 'Commission earned', value: commission, icon: 'wallet'),
+          ),
+          Expanded(
+            child: _innerMetric(context, label: 'Products listed', value: count, icon: 'box'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _innerMetric(BuildContext context, {required String label, required String value, required String icon}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: const BoxDecoration(
+            gradient: MvColors.gradient,
+            borderRadius: BorderRadius.all(Radius.circular(9)),
+          ),
+          alignment: Alignment.center,
+          child: MvIcon(icon, size: 16, color: Colors.white),
         ),
-      ),
-      child: revenue.when(
-        loading: () => const LoadingState(),
-        error: (_, __) => const EmptyState(message: 'Revenue data unavailable'),
-        data: (series) => FakeBarChart(values: series.series, labels: series.labels),
-      ),
+        const SizedBox(height: 8),
+        Text(value, style: GoogleFontsManrope.metricValue),
+        const SizedBox(height: 2),
+        Text(label, style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor)),
+      ],
     );
   }
 }
