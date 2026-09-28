@@ -4,20 +4,16 @@ import 'package:provider/provider.dart';
 import '../../../../core/utils/app_theme.dart';
 import '../../data/models/category_model.dart';
 import '../providers/commerce_provider.dart';
-import 'categories_screen.dart';
 import 'deals_screen.dart';
 import 'for_you_screen.dart';
 import 'home_screen.dart';
 import 'orders_screen.dart';
 import 'product_navigation.dart';
-import 'search_screen.dart';
 import 'shop_screen.dart';
 import 'vendors_screen.dart';
 
-/// The eight destinations exposed by the top menu bar.
+/// The six destinations exposed by the top menu bar.
 enum TopMenuItem {
-  search('Search', Icons.search_outlined),
-  categories('All Categories', Icons.grid_view_outlined),
   home('Home', Icons.home_outlined),
   shop('Shop', Icons.storefront_outlined),
   forYou('For You', Icons.recommend_outlined),
@@ -34,8 +30,8 @@ enum TopMenuItem {
 /// Root navigation container.
 ///
 /// Renders a horizontal scrollable top menu bar with the marketplace tabs
-/// (Search, All Categories, Home, Shop, For You, Deals, Vendors, Orders)
-/// and swaps the body underneath. Home is the default active tab.
+/// (Home, Shop, For You, Deals, Vendors, Orders) and swaps the body
+/// underneath. Home is the default active tab.
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -75,10 +71,8 @@ class _MainNavigationState extends State<MainNavigation> {
               child: IndexedStack(
                 index: _selected.index,
                 children: [
-                  const SearchScreen(),
-                  CategoriesScreen(onCategoryTap: _openCategory),
                   HomeScreen(
-                    onSearchTap: () => _select(TopMenuItem.search),
+                    onSearchTap: () => _select(TopMenuItem.shop),
                     onBrowseAll: _openAllProducts,
                     onCategoryTap: _openCategory,
                   ),
