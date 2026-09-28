@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../features/marketplace/presentation/providers/commerce_provider.dart';
 import '../models/product.dart';
 import 'product_detail_page.dart';
 
@@ -27,6 +30,7 @@ class WishlistPage extends StatefulWidget {
 class _WishlistPageState extends State<WishlistPage> {
   @override
   Widget build(BuildContext context) {
+    final commerce = context.watch<CommerceProvider>();
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -41,7 +45,11 @@ class _WishlistPageState extends State<WishlistPage> {
         actions: [
           if (widget.onOpenCart != null)
             IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined),
+              icon: Badge(
+                isLabelVisible: commerce.cartItemCount > 0,
+                label: Text('${commerce.cartItemCount}'),
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
               tooltip: 'Open cart',
               onPressed: widget.onOpenCart,
             ),

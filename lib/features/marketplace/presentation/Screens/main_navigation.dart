@@ -113,10 +113,6 @@ class _TopMenuBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final commerce = context.watch<CommerceProvider>();
-    final cartItemCount = commerce.cartItems.fold<int>(
-      0,
-      (count, item) => count + item.quantity,
-    );
 
     return SizedBox(
       height: 58,
@@ -154,7 +150,7 @@ class _TopMenuBar extends StatelessWidget {
           _TopBarAction(
             icon: Icons.shopping_cart_outlined,
             tooltip: 'Cart',
-            count: cartItemCount,
+            count: commerce.cartItemCount,
             countKey: 'home-cart-count',
             onPressed: () => openCart(context, commerce),
           ),

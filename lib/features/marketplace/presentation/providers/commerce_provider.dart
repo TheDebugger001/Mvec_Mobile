@@ -10,6 +10,14 @@ class CommerceProvider extends ChangeNotifier {
   List<Product> get wishlistItems => _wishlistItems;
   List<CartItem> get cartItems => _cartItems;
 
+  /// Number of saved products, used for the wishlist count badge.
+  int get wishlistCount => _wishlistItems.length;
+
+  /// Total units in the cart (sum of quantities), used for the cart count
+  /// badge so every surface shows the same number.
+  int get cartItemCount =>
+      _cartItems.fold<int>(0, (count, item) => count + item.quantity);
+
   bool isWishlisted(Product product) =>
       _wishlistItems.any((item) => item.id == product.id);
 

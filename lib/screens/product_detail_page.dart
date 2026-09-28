@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../features/marketplace/presentation/providers/commerce_provider.dart';
 import '../models/product.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -66,6 +68,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final commerce = context.watch<CommerceProvider>();
     final isOutOfStock = product.stock <= 0;
     final isLowStock = product.stock > 0 && product.stock <= 5;
 
@@ -86,13 +89,24 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             actions: [
               if (widget.onOpenWishlist != null)
                 IconButton(
-                  icon: const Icon(Icons.favorite_border, color: Colors.black),
+                  icon: Badge(
+                    isLabelVisible: commerce.wishlistCount > 0,
+                    label: Text('${commerce.wishlistCount}'),
+                    child: const Icon(
+                      Icons.favorite_border,
+                      color: Colors.black,
+                    ),
+                  ),
                   tooltip: 'Open wishlist',
                   onPressed: widget.onOpenWishlist,
                 ),
               if (widget.onOpenCart != null)
                 IconButton(
-                  icon: const Icon(Icons.shopping_cart_outlined),
+                  icon: Badge(
+                    isLabelVisible: commerce.cartItemCount > 0,
+                    label: Text('${commerce.cartItemCount}'),
+                    child: const Icon(Icons.shopping_cart_outlined),
+                  ),
                   tooltip: 'Open cart',
                   onPressed: widget.onOpenCart,
                 ),

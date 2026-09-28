@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../features/marketplace/presentation/providers/commerce_provider.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
 import 'product_detail_page.dart';
@@ -52,6 +54,7 @@ class _CartPageState extends State<CartPage> {
 
   @override
   Widget build(BuildContext context) {
+    final commerce = context.watch<CommerceProvider>();
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -63,6 +66,28 @@ class _CartPageState extends State<CartPage> {
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
+        actions: [
+          if (widget.onOpenWishlist != null)
+            IconButton(
+              icon: Badge(
+                isLabelVisible: commerce.wishlistCount > 0,
+                label: Text('${commerce.wishlistCount}'),
+                child: const Icon(Icons.favorite_border, color: Colors.black),
+              ),
+              tooltip: 'Open wishlist',
+              onPressed: widget.onOpenWishlist,
+            ),
+          if (widget.onOpenCart != null)
+            IconButton(
+              icon: Badge(
+                isLabelVisible: commerce.cartItemCount > 0,
+                label: Text('${commerce.cartItemCount}'),
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
+              tooltip: 'Open cart',
+              onPressed: widget.onOpenCart,
+            ),
+        ],
       ),
       body: widget.cartItems.isEmpty
           ? _buildEmptyCart()
