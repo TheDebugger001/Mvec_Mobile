@@ -43,6 +43,10 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/subscriptions/subscriptions_screen.dart';
 import '../screens/support/support_screen.dart';
 import '../screens/suppliers/suppliers_screen.dart';
+import '../screens/suppliers/supplier_dashboard_screen.dart';
+import '../screens/suppliers/supplier_products_screen.dart';
+import '../screens/suppliers/supplier_profile_screen.dart';
+import '../screens/suppliers/supplier_shell.dart';
 import '../screens/system/system_screen.dart';
 import '../screens/transactions/transactions_screen.dart';
 import '../screens/trust/trust_screen.dart';
@@ -87,6 +91,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc.startsWith('/admin') && user.userType != 'super_admin') {
           return '/home';
         }
+        // The supplier portal is exclusive to suppliers.
+        if (loc.startsWith('/supplier') && user.userType != 'supplier') {
+          return roleHome(user);
+        }
         return null;
       }
 
@@ -129,6 +137,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => p.ChangeNotifierProvider(
           create: (_) => HomeProvider()..loadHomeFeed(),
           child: const MainNavigation(),
+        ),
+      ),
+      // Supplier portal. Deliberately outside /admin so the super-admin-only
+      // guard below never bounces a supplier away from their own dashboard.
+      GoRoute(
+        path: '/supplier',
+        builder: (context, state) => const SupplierShell(
+          path: '/supplier',
+          child: SupplierDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/supplier/products',
+        builder: (context, state) => const SupplierShell(
+          path: '/supplier/products',
+          child: SupplierProductsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/supplier/profile',
+        builder: (context, state) => const SupplierShell(
+          path: '/supplier/profile',
+          child: SupplierProfileScreen(),
         ),
       ),
       GoRoute(

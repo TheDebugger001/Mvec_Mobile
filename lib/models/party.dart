@@ -56,7 +56,10 @@ class PartyRecord {
       email: j['email'] ?? owner?['email'] ?? user?['email'],
       phone: j['phone'] ?? owner?['phone'] ?? user?['phone'],
       category: j['category'] ?? (cats != null && cats.isNotEmpty ? cats.join(', ') : null) ?? j['primaryCategory'],
-      location: j['location'] ?? j['address'] ?? j['province'] ?? j['district'],
+      location: _str(j['location']) ??
+          _str(j['address']) ??
+          _str(j['province']) ??
+          _str(j['district']),
       status: j['status'],
       verificationStatus: j['verificationStatus'],
       rating: (j['rating'] ?? j['averageRating'])?.toDouble(),
@@ -70,6 +73,14 @@ class PartyRecord {
   }
 
   static int? _int(dynamic v) => v is int ? v : (v is num ? v.toInt() : (v is String ? int.tryParse(v) : null));
+
+  /// Reads a scalar string field. Object/array payloads (e.g. a structured
+  /// `address`) are skipped rather than leaking into a `String?`.
+  static String? _str(dynamic v) {
+    if (v == null || v is Map || v is List) return null;
+    final s = v.toString();
+    return s.isEmpty ? null : s;
+  }
 
   String get display => name ?? email ?? 'Unknown';
   String get effectiveStatus {
