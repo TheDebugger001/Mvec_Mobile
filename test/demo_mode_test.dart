@@ -8,14 +8,19 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:mvec_mobile/core/api_config.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/main_navigation.dart';
+import 'package:mvec_mobile/features/supplier/data/supplier_workspace.dart';
+import 'package:mvec_mobile/features/supplier/presentation/supplier_dashboard_screen.dart';
 import 'package:mvec_mobile/main.dart';
 import 'package:mvec_mobile/providers/auth_provider.dart';
 import 'package:mvec_mobile/screens/layout/admin_shell.dart';
 
 void main() {
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   // Without the define these cases would exercise the *real* login path and
   // hang on a network call, so skip the whole file.
   group('demo auth gate (--dart-define=DEMO_MODE=true)', () {
@@ -33,8 +38,9 @@ void main() {
       expect(session!.token, 'demo-token');
     }, skip: !kDemoMode);
 
-    testWidgets('an admin identity routes to the control center',
-        (tester) async {
+    testWidgets('an admin identity routes to the control center', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -43,10 +49,7 @@ void main() {
           .login('admin@gmail.com', 'anything');
 
       await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MvecApp(),
-        ),
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
       );
       // The control center loads live providers, so its spinners never settle
       // in a test: pump a bounded number of frames instead of pumpAndSettle.
@@ -56,8 +59,9 @@ void main() {
       expect(find.byType(AdminShell), findsOneWidget);
     }, skip: !kDemoMode);
 
-    testWidgets('a buyer identity routes to the marketplace home feed',
-        (tester) async {
+    testWidgets('a buyer identity routes to the marketplace home feed', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -66,15 +70,119 @@ void main() {
           .login('buyer@example.com', 'anything');
 
       await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MvecApp(),
-        ),
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
       );
       await tester.pumpAndSettle();
 
       expect(find.byType(MainNavigationScreen), findsOneWidget);
     }, skip: !kDemoMode);
+
+    testWidgets('supplier can sign in and advance an order', (tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final signedIn = await container
+          .read(authControllerProvider.notifier)
+          .login('supplier@mvec.rw', 'demo123');
+      expect(signedIn, isTrue);
+      expect(
+        container.read(authControllerProvider).session!.user.userType,
+        'supplier',
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MainNavigationScreen), findsOneWidget);
+      expect(find.byType(SupplierDashboardScreen), findsNothing);
+
+      await tester.tap(find.byTooltip('Account'));
+      await tester.pumpAndSettle();
+      expect(find.text('Supplier account'), findsOneWidget);
+      await tester.tap(find.text('Supplier account'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SupplierDashboardScreen), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Open supplier navigation'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Wholesale Products'));
+      await tester.pumpAndSettle();
+      expect(find.text('Arabica Coffee Beans'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Open supplier navigation'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Vendor Orders'));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm order'), findsOneWidget);
+      await tester.tap(find.text('Confirm order'));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirmed'), findsWidgets);
+    }, skip: !kDemoMode);
+
+    test(
+      'demo supplier data supports catalog, stock, notification and profile edits',
+      () async {
+        final service = DemoSupplierWorkspaceService();
+        final initialProducts = await service.products();
+        expect(initialProducts, hasLength(4));
+        expect(initialProducts.first.imageUrl, isNotEmpty);
+
+        await service.saveProduct(
+          const SupplierProduct(
+            id: '',
+            name: 'Demo Green Tea',
+            category: 'Beverages',
+            description: 'Loose-leaf green tea.',
+            imageUrl: 'https://example.com/green-tea.jpg',
+            price: 5400,
+            stock: 18,
+            status: 'ACTIVE',
+          ),
+        );
+        final created = (await service.products()).first;
+        expect(created.name, 'Demo Green Tea');
+        expect(created.imageUrl, 'https://example.com/green-tea.jpg');
+        expect(created.price, 5400);
+        expect(created.stock, 18);
+        expect(created.minimumOrderQuantity, 1);
+        expect(created.bulkDiscount, 0);
+
+        await service.saveProduct(
+          created.copyWith(minimumOrderQuantity: 6, bulkDiscount: 7),
+        );
+        final wholesaleProduct = (await service.products()).first;
+        expect(wholesaleProduct.minimumOrderQuantity, 6);
+        expect(wholesaleProduct.bulkDiscount, 7);
+
+        await service.updateStock(initialProducts.first.id, 83);
+        final updatedStock = (await service.products()).firstWhere(
+          (product) => product.id == initialProducts.first.id,
+        );
+        expect(updatedStock.stock, 83);
+
+        await service.updateOrderStatus('MV-4821', 'Confirmed');
+        expect((await service.orders()).first.status, 'Confirmed');
+
+        await service.markNotificationRead('sn-1');
+        expect((await service.notifications()).first.read, isTrue);
+
+        final original = await service.profile();
+        final updated = SupplierProfile(
+          businessName: 'Demo Updated Co.',
+          email: original.email,
+          phone: original.phone,
+          address: original.address,
+          orderNotifications: false,
+          stockNotifications: original.stockNotifications,
+        );
+        await service.saveProfile(updated);
+        expect((await service.profile()).businessName, 'Demo Updated Co.');
+        expect((await service.profile()).orderNotifications, isFalse);
+      },
+      skip: !kDemoMode,
+    );
 
     test('empty demo credentials are rejected', () async {
       final container = ProviderContainer();

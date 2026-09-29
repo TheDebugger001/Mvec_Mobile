@@ -31,13 +31,22 @@ flutter run --dart-define=DEMO_MODE=true
 ```
 
 This opens the auth gate locally — **any** non-empty email and password is
-accepted, and no network call is made. Use an identity containing `admin` to
-land on the control center (`/admin`); any other identity lands on the
-marketplace home feed (`/home`).
+accepted, and no network call is made. Use `admin@gmail.com` for the control
+center, `supplier@mvec.rw` to sign in as a supplier, or another identity for
+the marketplace home feed. Suppliers keep the marketplace as their initial
+screen and open **Supplier account** from the existing account menu.
 
-The marketplace is served entirely from local mock data, so it is fully
-presentable offline. The admin console renders, but its data comes from the
-backend — offline it falls back to empty/`—` placeholders rather than crashing.
+The marketplace and supplier workspace use local mock data, so both are
+presentable without a backend. The supplier workspace includes product details
+and image URLs, pricing, stock adjustments, order fulfillment, notifications,
+and account preferences. Demo edits last for the current app session.
+
+When demo mode is off, the supplier service uses these backend contracts:
+`GET /supplier/products`, `GET /supplier/orders`,
+`GET /supplier/notifications`, `GET /supplier/profile`, plus create/update
+operations under those resources. Align or implement those authenticated
+endpoints in the backend before switching the supplier role to live data. The
+admin console still requires the backend and otherwise shows empty states.
 
 The flag is **off by default**, so release builds always talk to the real
 backend. Verify it with:

@@ -48,16 +48,15 @@ class AuthState {
     bool clearSession = false,
     bool clearError = false,
     bool clearReset = false,
-  }) =>
-      AuthState(
-        session: clearSession ? null : (session ?? this.session),
-        loading: loading ?? this.loading,
-        restoring: restoring ?? this.restoring,
-        error: clearError ? null : (error ?? this.error),
-        resetEmail: clearReset ? null : (resetEmail ?? this.resetEmail),
-        devCode: clearReset ? null : (devCode ?? this.devCode),
-        resetToken: clearReset ? null : (resetToken ?? this.resetToken),
-      );
+  }) => AuthState(
+    session: clearSession ? null : (session ?? this.session),
+    loading: loading ?? this.loading,
+    restoring: restoring ?? this.restoring,
+    error: clearError ? null : (error ?? this.error),
+    resetEmail: clearReset ? null : (resetEmail ?? this.resetEmail),
+    devCode: clearReset ? null : (devCode ?? this.devCode),
+    resetToken: clearReset ? null : (resetToken ?? this.resetToken),
+  );
 }
 
 class AuthController extends Notifier<AuthState> {
@@ -117,26 +116,42 @@ class AuthController extends Notifier<AuthState> {
   /// Logs in with an email or a phone number plus a password.
   Future<bool> login(String emailOrPhone, String password) async {
     if (kDemoMode) {
-      // Demo mode: any non-empty credentials open the app. A super-admin
-      // identity lands on `/admin`; anything else lands on the marketplace.
+      // Demo mode: any non-empty credentials open a role-specific local account.
       final identity = emailOrPhone.trim();
       if (identity.isEmpty || password.isEmpty) {
-        state = state.copyWith(loading: false, error: 'Enter an email and a password.');
+        state = state.copyWith(
+          loading: false,
+          error: 'Enter an email and a password.',
+        );
         return false;
       }
-      final wantsAdmin = identity.toLowerCase().contains('admin');
+      final normalizedIdentity = identity.toLowerCase();
+      final role =
+          normalizedIdentity.contains('admin')
+              ? 'super_admin'
+              : normalizedIdentity.contains('supplier')
+              ? 'supplier'
+              : normalizedIdentity.contains('vendor')
+              ? 'vendor'
+              : normalizedIdentity.contains('affiliate')
+              ? 'affiliate'
+              : 'buyer';
       state = AuthState(
         session: AuthSession(
           token: 'demo-token',
-          user: wantsAdmin
-              ? _demoUser
-              : UserRecord(
-                  id: 'demo-buyer',
-                  fullname: 'Demo Buyer',
-                  email: identity,
-                  role: 'buyer',
-                  status: 'active',
-                ),
+          user:
+              role == 'super_admin'
+                  ? _demoUser
+                  : UserRecord(
+                    id: 'demo-$role',
+                    fullname:
+                        'Demo ${role[0].toUpperCase()}${role.substring(1)}',
+                    email: identity,
+                    role: role,
+                    companyName:
+                        role == 'supplier' ? 'Rwanda Fresh Produce Co.' : null,
+                    status: 'active',
+                  ),
         ),
       );
       return true;
@@ -184,7 +199,10 @@ class AuthController extends Notifier<AuthState> {
             phone: telephone.trim(),
             role: role,
             gender: gender,
-            companyName: companyName?.trim().isNotEmpty == true ? companyName!.trim() : null,
+            companyName:
+                companyName?.trim().isNotEmpty == true
+                    ? companyName!.trim()
+                    : null,
             status: 'active',
           ),
         ),
@@ -193,16 +211,19 @@ class AuthController extends Notifier<AuthState> {
     }
     state = state.copyWith(loading: true, clearError: true);
     try {
-      final res = await _api.post('/auth/register', body: {
-        'Fullname': fullName,
-        if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
-        'phone': telephone.trim(),
-        if (gender != null && gender.isNotEmpty) 'gender': gender,
-        'role': role,
-        if (companyName != null && companyName.trim().isNotEmpty)
-          'companyName': companyName.trim(),
-        'password': password,
-      });
+      final res = await _api.post(
+        '/auth/register',
+        body: {
+          'Fullname': fullName,
+          if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+          'phone': telephone.trim(),
+          if (gender != null && gender.isNotEmpty) 'gender': gender,
+          'role': role,
+          if (companyName != null && companyName.trim().isNotEmpty)
+            'companyName': companyName.trim(),
+          'password': password,
+        },
+      );
       final token = res['token'] as String?;
       final user = UserRecord.fromJson(singleJson(res, ['user']));
       if (token == null) {
@@ -235,9 +256,10 @@ class AuthController extends Notifier<AuthState> {
     try {
       final identity = emailOrPhone.trim();
       final isEmail = identity.contains('@');
-      final res = await _api.post('/auth/forgot-password', body: {
-        if (isEmail) 'email': identity else 'phone': identity,
-      });
+      final res = await _api.post(
+        '/auth/forgot-password',
+        body: {if (isEmail) 'email': identity else 'phone': identity},
+      );
       state = state.copyWith(
         loading: false,
         resetEmail: identity,
@@ -261,10 +283,13 @@ class AuthController extends Notifier<AuthState> {
     try {
       final identity = email.trim();
       final isEmail = identity.contains('@');
-      final res = await _api.post('/auth/verify-reset-otp', body: {
-        if (isEmail) 'email': identity else 'phone': identity,
-        'code': code,
-      });
+      final res = await _api.post(
+        '/auth/verify-reset-otp',
+        body: {
+          if (isEmail) 'email': identity else 'phone': identity,
+          'code': code,
+        },
+      );
       final token = res is Map ? res['resetToken']?.toString() : null;
       if (token == null || token.isEmpty) {
         throw ApiException('Code verified but no reset token was returned.');
@@ -286,10 +311,10 @@ class AuthController extends Notifier<AuthState> {
     }
     state = state.copyWith(loading: true, clearError: true);
     try {
-      await _api.post('/auth/reset-password', body: {
-        'resetToken': token,
-        'newPassword': newPassword,
-      });
+      await _api.post(
+        '/auth/reset-password',
+        body: {'resetToken': token, 'newPassword': newPassword},
+      );
       state = state.copyWith(loading: false, clearReset: true);
       return true;
     } catch (e) {

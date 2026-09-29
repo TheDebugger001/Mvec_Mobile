@@ -20,17 +20,23 @@ import 'package:mvec_mobile/providers/auth_provider.dart';
 import 'package:mvec_mobile/screens/auth/auth_validation.dart';
 
 Product _demoProduct() => Product(
-      id: 'p1',
-      name: 'Test Product',
-      description: 'A product used by the provider tests.',
-      price: 10,
-      oldPrice: 12,
-      stock: 5,
-      images: const <String>[],
-      colors: const <String>[],
-      sizes: const <String>[],
-      vendor: Vendor(id: 'v1', name: 'Test Vendor', logo: '', rating: 4.5, totalProducts: 1),
-    );
+  id: 'p1',
+  name: 'Test Product',
+  description: 'A product used by the provider tests.',
+  price: 10,
+  oldPrice: 12,
+  stock: 5,
+  images: const <String>[],
+  colors: const <String>[],
+  sizes: const <String>[],
+  vendor: Vendor(
+    id: 'v1',
+    name: 'Test Vendor',
+    logo: '',
+    rating: 4.5,
+    totalProducts: 1,
+  ),
+);
 
 /// Auth controller stub so a test can boot the app as a signed-in role
 /// without touching secure storage or the network.
@@ -41,18 +47,17 @@ class _StubAuthController extends AuthController {
 
   @override
   AuthState build() => AuthState(
-        session: user == null
-            ? null
-            : AuthSession(token: 'test-token', user: user!),
-      );
+    session:
+        user == null ? null : AuthSession(token: 'test-token', user: user!),
+  );
 }
 
 UserRecord _user(String role) => UserRecord(
-      id: 'u1',
-      fullname: 'Test User',
-      email: 'test@example.com',
-      role: role,
-    );
+  id: 'u1',
+  fullname: 'Test User',
+  email: 'test@example.com',
+  role: role,
+);
 
 /// Boots the signed-out app (login screen).
 Future<void> _pumpSignedOut(WidgetTester tester) async {
@@ -66,13 +71,16 @@ Future<void> _pumpSignedIn(WidgetTester tester, String role) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        authControllerProvider.overrideWith(() => _StubAuthController(_user(role))),
+        authControllerProvider.overrideWith(
+          () => _StubAuthController(_user(role)),
+        ),
       ],
       child: const MvecApp(),
     ),
   );
   await tester.pumpAndSettle();
 }
+
 /// The marketplace is served by mock data in tests, so the home feed and its
 /// product grids always have content.
 Future<void> _pumpMarketplace(WidgetTester tester) async {
@@ -140,10 +148,14 @@ void main() {
       expect(roleHome(_user('super_admin')), '/admin');
     });
 
-    test('buyer, vendor, supplier and affiliate land on the home feed', () {
-      for (final role in ['buyer', 'vendor', 'supplier', 'affiliate']) {
+    test('buyer, vendor and affiliate land on the home feed', () {
+      for (final role in ['buyer', 'vendor', 'affiliate']) {
         expect(roleHome(_user(role)), '/home', reason: role);
       }
+    });
+
+    test('supplier keeps the marketplace landing screen', () {
+      expect(roleHome(_user('supplier')), '/home');
     });
   });
 
@@ -157,8 +169,7 @@ void main() {
       expect(find.byType(TextFormField), findsNWidgets(2));
     });
 
-    testWidgets('empty login submit shows validation errors',
-        (tester) async {
+    testWidgets('empty login submit shows validation errors', (tester) async {
       await _pumpSignedOut(tester);
 
       await tester.tap(find.text('Log in'));
@@ -187,8 +198,9 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('opens from the login screen and shows four user types',
-        (tester) async {
+    testWidgets('opens from the login screen and shows four user types', (
+      tester,
+    ) async {
       await _pumpSignedOut(tester);
       await openRegister(tester);
 
@@ -200,8 +212,7 @@ void main() {
       expect(find.text('Telephone'), findsOneWidget);
     });
 
-    testWidgets('selecting a vendor shows the company field',
-        (tester) async {
+    testWidgets('selecting a vendor shows the company field', (tester) async {
       await _pumpSignedOut(tester);
       await openRegister(tester);
 
@@ -213,8 +224,9 @@ void main() {
       expect(find.text('Company name'), findsOneWidget);
     });
 
-    testWidgets('register validation catches missing and mismatched fields',
-        (tester) async {
+    testWidgets('register validation catches missing and mismatched fields', (
+      tester,
+    ) async {
       await _pumpSignedOut(tester);
       await openRegister(tester);
 
@@ -239,8 +251,9 @@ void main() {
   });
 
   group('forgot password', () {
-    testWidgets('opens from login and renders the request form',
-        (tester) async {
+    testWidgets('opens from login and renders the request form', (
+      tester,
+    ) async {
       await _pumpSignedOut(tester);
 
       await tester.tap(find.text('Forgot password?'));
@@ -264,8 +277,7 @@ void main() {
   });
 
   group('signed-in routing', () {
-    testWidgets('a buyer lands on the marketplace home feed',
-        (tester) async {
+    testWidgets('a buyer lands on the marketplace home feed', (tester) async {
       await _pumpSignedIn(tester, 'buyer');
 
       expect(find.byType(MainNavigationScreen), findsOneWidget);
@@ -273,8 +285,9 @@ void main() {
       expect(find.text('Welcome back'), findsNothing);
     });
 
-    testWidgets('a super admin lands on the control-center dashboard',
-        (tester) async {
+    testWidgets('a super admin lands on the control-center dashboard', (
+      tester,
+    ) async {
       // The dashboard loads live providers, so its spinners never settle in a
       // test: pump a bounded number of frames instead of pumpAndSettle.
       await tester.pumpWidget(
@@ -297,8 +310,9 @@ void main() {
   });
 
   group('marketplace shell', () {
-    testWidgets('renders the floating bottom nav, categories and home feed',
-        (tester) async {
+    testWidgets('renders the floating bottom nav, categories and home feed', (
+      tester,
+    ) async {
       await _pumpMarketplace(tester);
 
       // Bottom nav carries the four primary destinations, icon and label.
@@ -335,7 +349,9 @@ void main() {
       expect(find.textContaining('demo data'), findsOneWidget);
     });
 
-    testWidgets('only the active tab takes the sky-blue accent', (tester) async {
+    testWidgets('only the active tab takes the sky-blue accent', (
+      tester,
+    ) async {
       await _pumpMarketplace(tester);
 
       final palette = MvPalette.light();
@@ -362,8 +378,9 @@ void main() {
       expect(after.dx, greaterThan(before.dx));
     });
 
-    testWidgets('the dark-mode toggle flips every surface and text colour',
-        (tester) async {
+    testWidgets('the dark-mode toggle flips every surface and text colour', (
+      tester,
+    ) async {
       await _pumpMarketplace(tester);
 
       expect(_scaffoldBackground(tester), MvColors.page);
@@ -393,13 +410,17 @@ void main() {
         'mvec.theme_mode': 'dark',
       });
       final prefs = await SharedPreferences.getInstance();
-      addTearDown(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
+      addTearDown(
+        () => SharedPreferences.setMockInitialValues(<String, Object>{}),
+      );
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
-            authControllerProvider.overrideWith(() => _StubAuthController(_user('buyer'))),
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(_user('buyer')),
+            ),
           ],
           child: const MvecApp(),
         ),
@@ -412,13 +433,16 @@ void main() {
       expect(_labelColor(tester, 'Deals'), dark.textMuted);
       expect(_iconColor(tester, Icons.home_rounded), AppColors.primary);
       expect(
-        Theme.of(tester.element(find.byType(HomeScreen))).textTheme.bodyMedium!.color,
+        Theme.of(
+          tester.element(find.byType(HomeScreen)),
+        ).textTheme.bodyMedium!.color,
         dark.text,
       );
     });
 
-    testWidgets('the shell lays out on a small phone without overflowing',
-        (tester) async {
+    testWidgets('the shell lays out on a small phone without overflowing', (
+      tester,
+    ) async {
       // 360dp is the narrowest screen the storefront has to survive now that
       // the top bar also carries notifications and the dark-mode toggle.
       tester.view.physicalSize = const Size(360 * 3, 640 * 3);
@@ -435,8 +459,7 @@ void main() {
       );
     });
 
-    testWidgets('tapping a bottom nav icon switches the body',
-        (tester) async {
+    testWidgets('tapping a bottom nav icon switches the body', (tester) async {
       await _pumpMarketplace(tester);
 
       await tester.tap(find.byIcon(Icons.pie_chart_rounded));
@@ -446,8 +469,9 @@ void main() {
       expect(find.text('Recently Viewed'), findsOneWidget);
     });
 
-    testWidgets('tapping a category pill filters the shop catalog',
-        (tester) async {
+    testWidgets('tapping a category pill filters the shop catalog', (
+      tester,
+    ) async {
       await _pumpMarketplace(tester);
 
       // Category pills jump straight to the Shop tab.
@@ -459,8 +483,9 @@ void main() {
       expect(find.text('Linen Summer Dress'), findsNothing);
     });
 
-    testWidgets('opens search, categories, vendors and orders pages',
-        (tester) async {
+    testWidgets('opens search, categories, vendors and orders pages', (
+      tester,
+    ) async {
       await _pumpMarketplace(tester);
 
       await tester.tap(find.text('Search products, brands & more'));
@@ -493,12 +518,13 @@ void main() {
   group('marketplace cart and wishlist', () {
     /// Scrolls the home feed far enough to bring the product rows onstage.
     Future<void> scrollToProducts(WidgetTester tester) async {
-      final homeList = find
-          .descendant(
-            of: find.byType(HomeScreen),
-            matching: find.byType(ListView),
-          )
-          .first;
+      final homeList =
+          find
+              .descendant(
+                of: find.byType(HomeScreen),
+                matching: find.byType(ListView),
+              )
+              .first;
       await tester.drag(homeList, const Offset(0, -600));
       await tester.pumpAndSettle();
     }
@@ -506,8 +532,9 @@ void main() {
     Badge badgeFor(WidgetTester tester, String countKey) =>
         tester.widget<Badge>(find.byKey(ValueKey<String>(countKey)));
 
-    testWidgets('product cards add directly to cart and wishlist',
-        (tester) async {
+    testWidgets('product cards add directly to cart and wishlist', (
+      tester,
+    ) async {
       await _pumpMarketplace(tester);
       await scrollToProducts(tester);
 
@@ -523,8 +550,9 @@ void main() {
       expect((badgeFor(tester, 'home-wishlist-count').label as Text).data, '1');
     });
 
-    testWidgets('adding a wishlisted product to cart clears the wishlist',
-        (tester) async {
+    testWidgets('adding a wishlisted product to cart clears the wishlist', (
+      tester,
+    ) async {
       await _pumpMarketplace(tester);
       await scrollToProducts(tester);
 
@@ -547,8 +575,9 @@ void main() {
       );
     });
 
-    testWidgets('product detail opens, adds to cart and reaches the cart',
-        (tester) async {
+    testWidgets('product detail opens, adds to cart and reaches the cart', (
+      tester,
+    ) async {
       await _pumpMarketplace(tester);
       await scrollToProducts(tester);
 
@@ -566,14 +595,10 @@ void main() {
       await tester.tap(find.byTooltip('Open cart'));
       await tester.pumpAndSettle();
       expect(find.text('My Cart'), findsOneWidget);
-      expect(
-        find.textContaining('Wireless Over-Ear Headphones'),
-        findsWidgets,
-      );
+      expect(find.textContaining('Wireless Over-Ear Headphones'), findsWidgets);
     });
 
-    testWidgets('wishlist page moves an item into the cart',
-        (tester) async {
+    testWidgets('wishlist page moves an item into the cart', (tester) async {
       await _pumpMarketplace(tester);
       await scrollToProducts(tester);
 
@@ -593,10 +618,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('My Cart'), findsOneWidget);
       // The cart line and the confirmation snackbar both name the product.
-      expect(
-        find.textContaining('Wireless Over-Ear Headphones'),
-        findsWidgets,
-      );
+      expect(find.textContaining('Wireless Over-Ear Headphones'), findsWidgets);
     });
   });
 
