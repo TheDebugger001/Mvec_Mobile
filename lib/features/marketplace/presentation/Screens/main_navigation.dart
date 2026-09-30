@@ -7,6 +7,7 @@ import '../../../../core/utils/app_theme.dart';
 import '../../../../models/user.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../data/models/category_model.dart';
+import '../../data/models/product_model.dart';
 import '../providers/commerce_provider.dart';
 import '../providers/home_provider.dart';
 import 'categories_screen.dart';
@@ -63,6 +64,7 @@ class _NavTab {
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
   Category? _selectedCategory;
 
@@ -102,7 +104,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     );
   }
 
-  void _openSearch() => _pushPage(const SearchScreen(), title: 'Search');
+  void _openSearch([String query = '']) =>
+      _pushPage(SearchScreen(initialQuery: query), title: 'Search');
 
   void _openVendors() => _pushPage(const VendorsScreen(), title: 'Vendors');
 
@@ -126,69 +129,97 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   void _openCart(BuildContext context) =>
       openCart(context, context.read<CommerceProvider>());
 
-  /// Overflow sheet behind the category bar's "More" grid button. Everything
-  /// that will not fit in the bottom bar or the chip strip lands here.
-  Future<void> _openMore() {
+  void _openMore() => _scaffoldKey.currentState?.openDrawer();
+
+  Widget _buildMoreDrawer() {
     final isDark = context.isDarkMode;
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: context.mv.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+    final mv = context.mv;
+    return Drawer(
+      backgroundColor: mv.surface,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 22, 16, 18),
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.grid_view_outlined, color: mv.accentDeep),
+                  const SizedBox(width: 12),
+                  Text('More', style: AppTextStyles.title(context)),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                children: <Widget>[
+                  _MoreDrawerAction(
+                    icon: Icons.grid_view_outlined,
+                    label: 'All categories',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _openCategories();
+                    },
+                  ),
+                  _MoreDrawerAction(
+                    icon: Icons.store_mall_directory_outlined,
+                    label: 'Vendors',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _openVendors();
+                    },
+                  ),
+                  _MoreDrawerAction(
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Orders & history',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _openOrders();
+                    },
+                  ),
+                  _MoreDrawerAction(
+                    icon: Icons.favorite_border,
+                    label: 'My wishlist',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _openWishlist(context);
+                    },
+                  ),
+                  _MoreDrawerAction(
+                    icon: Icons.notifications_none_rounded,
+                    label: 'Notifications',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _openNotifications();
+                    },
+                  ),
+                  _MoreDrawerAction(
+                    icon: isDark ? Icons.light_mode : Icons.dark_mode,
+                    label: isDark ? 'Light mode' : 'Dark mode',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _toggleTheme();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            _MoreDrawerAction(
+              icon: Icons.logout,
+              label: 'Sign out',
+              destructive: true,
+              onTap: () async {
+                Navigator.of(context).pop();
+                await ref.read(authControllerProvider.notifier).logout();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
-      builder:
-          (sheetContext) => _SheetScaffold(
-            children: [
-              _SheetAction(
-                icon: Icons.grid_view_outlined,
-                label: 'All categories',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _openCategories();
-                },
-              ),
-              _SheetAction(
-                icon: Icons.store_mall_directory_outlined,
-                label: 'Vendors',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _openVendors();
-                },
-              ),
-              _SheetAction(
-                icon: Icons.receipt_long_outlined,
-                label: 'Orders & history',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _openOrders();
-                },
-              ),
-              _SheetAction(
-                icon: Icons.favorite_border,
-                label: 'My wishlist',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _openWishlist(context);
-                },
-              ),
-              _SheetAction(
-                icon: Icons.notifications_none_rounded,
-                label: 'Notifications',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _openNotifications();
-                },
-              ),
-              _SheetAction(
-                icon: isDark ? Icons.light_mode : Icons.dark_mode,
-                label: isDark ? 'Light mode' : 'Dark mode',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _toggleTheme();
-                },
-              ),
-            ],
-          ),
     );
   }
 
@@ -262,6 +293,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     final provider = context.watch<HomeProvider>();
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildMoreDrawer(),
       backgroundColor: context.mv.page,
 
       body: SafeArea(
@@ -312,15 +345,17 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
             child: Row(
               children: [
                 IconButton(
-                  tooltip: 'Back',
+                  tooltip: 'Menu',
                   visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                  onPressed:
-                      Navigator.of(context).canPop()
-                          ? () => Navigator.maybePop(context)
-                          : null,
+                  icon: const Icon(Icons.menu, size: 22),
+                  onPressed: _openMore,
                 ),
-                Expanded(child: _SearchTrigger(onTap: _openSearch)),
+                Expanded(
+                  child: _SearchTrigger(
+                    products: context.watch<HomeProvider>().products,
+                    onSubmit: _openSearch,
+                  ),
+                ),
                 _TopBarAction(
                   icon: Icons.favorite_border,
                   tooltip: 'Wishlist',
@@ -347,14 +382,16 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 4),
-          _CategoriesBar(
-            key: const ValueKey<String>('category-bar'),
-            categories: categories,
-            selected: _selectedCategory,
-            onSelected: _selectCategory,
-            onOpenMore: _openMore,
-          ),
+          if (_currentIndex != 1) ...<Widget>[
+            const SizedBox(height: 4),
+            _CategoriesBar(
+              key: const ValueKey<String>('category-bar'),
+              categories: categories,
+              selected: _selectedCategory,
+              onSelected: _selectCategory,
+              onOpenMore: _openMore,
+            ),
+          ],
           const Divider(height: 1),
         ],
       ),
@@ -476,7 +513,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   curve: Curves.easeOut,
                   style: TextStyle(
                     fontSize: 10.5,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
                     color: color,
                   ),
                   child: Text(
@@ -551,43 +588,183 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 // Search trigger shown in the top bar.
 // ---------------------------------------------------------------------------
 
-class _SearchTrigger extends StatelessWidget {
-  const _SearchTrigger({required this.onTap});
+class _SearchTrigger extends StatefulWidget {
+  const _SearchTrigger({required this.products, required this.onSubmit});
 
-  final VoidCallback onTap;
+  final List<Product> products;
+  final ValueChanged<String> onSubmit;
+
+  @override
+  State<_SearchTrigger> createState() => _SearchTriggerState();
+}
+
+class _SearchTriggerState extends State<_SearchTrigger> {
+  final List<String> _recentSearches = <String>[
+    'Wireless headphones',
+    'Summer fashion',
+  ];
+  static const List<String> _trendingSearches = <String>[
+    'Summer style',
+    'Home essentials',
+  ];
+
+  Iterable<String> _options(TextEditingValue value) {
+    final query = value.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      return <String>[..._recentSearches, ..._trendingSearches];
+    }
+    return widget.products
+        .where(
+          (product) => <String>[
+            product.name,
+            product.brand ?? '',
+            product.categoryName ?? '',
+            product.vendorName ?? '',
+          ].join(' ').toLowerCase().contains(query),
+        )
+        .map((product) => product.name)
+        .toSet()
+        .take(5);
+  }
+
+  void _submit(String value) {
+    final term = value.trim();
+    if (term.isEmpty) return;
+    _recentSearches.remove(term);
+    _recentSearches.insert(0, term);
+    if (_recentSearches.length > 4) _recentSearches.removeLast();
+    widget.onSubmit(term);
+  }
 
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        height: 42,
-        margin: const EdgeInsets.only(right: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: mv.surfaceMuted,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: mv.border),
-        ),
-        child: Row(
-          children: <Widget>[
-            Icon(Icons.search, color: mv.textMuted, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Search products, brands & more',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: mv.textMuted, fontSize: 13),
+    return RawAutocomplete<String>(
+      optionsBuilder: _options,
+      onSelected: _submit,
+      optionsViewBuilder: (context, onSelected, options) {
+        final optionList = options.toList();
+        final recent = optionList.where(_recentSearches.contains).toList();
+        final trending = optionList.where(_trendingSearches.contains).toList();
+        final products =
+            optionList
+                .where(
+                  (option) =>
+                      !_recentSearches.contains(option) &&
+                      !_trendingSearches.contains(option),
+                )
+                .toList();
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            color: mv.surface,
+            elevation: 10,
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320, maxWidth: 300),
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: <Widget>[
+                  if (recent.isNotEmpty) ...<Widget>[
+                    _suggestionHeading('Recent searches', mv.textMuted),
+                    for (final option in recent)
+                      _suggestionOption(option, onSelected),
+                  ],
+                  if (trending.isNotEmpty) ...<Widget>[
+                    _suggestionHeading('Trending', mv.textMuted),
+                    for (final option in trending)
+                      _suggestionOption(option, onSelected),
+                  ],
+                  if (products.isNotEmpty) ...<Widget>[
+                    _suggestionHeading('Products', mv.textMuted),
+                    for (final option in products)
+                      _suggestionOption(option, onSelected),
+                  ],
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
+      fieldViewBuilder:
+          (context, controller, focusNode, onFieldSubmitted) => Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: SizedBox(
+              height: 42,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => _submit(controller.text),
+                style: TextStyle(color: mv.text, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Search products, brands & more...',
+                  hintStyle: TextStyle(color: mv.textMuted, fontSize: 13),
+                  prefixIcon: Icon(Icons.search, color: mv.textMuted, size: 19),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 42,
+                  ),
+                  filled: true,
+                  fillColor: mv.surfaceMuted,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide(color: mv.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide(color: mv.accentDeep, width: 1.2),
+                  ),
+                ),
+              ),
+            ),
+          ),
     );
   }
+
+  Widget _suggestionHeading(String title, Color color) => Padding(
+    padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+    child: Text(
+      title,
+      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w500),
+    ),
+  );
+
+  Widget _suggestionOption(
+    String option,
+    AutocompleteOnSelected<String> onSelected,
+  ) => InkWell(
+    onTap: () => onSelected(option),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            _recentSearches.contains(option)
+                ? Icons.history
+                : _trendingSearches.contains(option)
+                ? Icons.trending_up
+                : Icons.search,
+            size: 17,
+            color: context.mv.textMuted,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              option,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: context.mv.text, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Wishlist/notification/cart icon button with a count badge, pinned to the
@@ -801,7 +978,7 @@ class _MoreButton extends StatelessWidget {
                 'More',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                   color: mv.text,
                 ),
               ),
@@ -811,6 +988,30 @@ class _MoreButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MoreDrawerAction extends StatelessWidget {
+  const _MoreDrawerAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? AppColors.error : context.mv.text;
+    return ListTile(
+      leading: Icon(icon, color: color, size: 20),
+      title: Text(label, style: TextStyle(fontSize: 14, color: color)),
+      onTap: onTap,
     );
   }
 }
@@ -860,7 +1061,7 @@ class _CategoryPill extends StatelessWidget {
               curve: Curves.easeOut,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                fontWeight: active ? FontWeight.w500 : FontWeight.w400,
                 color: active ? Colors.white : mv.textMuted,
               ),
               child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -876,8 +1077,7 @@ class _CategoryPill extends StatelessWidget {
 // Account sheet widgets.
 // ---------------------------------------------------------------------------
 
-/// Chrome shared by the account sheet and the category bar's "More" sheet: the
-/// grab handle followed by the action rows.
+/// Chrome shared by the account sheet: the grab handle followed by the action rows.
 ///
 /// The rows live in a shrink-wrapped [ListView] rather than a plain column
 /// because a modal bottom sheet is only allowed 9/16 of the screen height by

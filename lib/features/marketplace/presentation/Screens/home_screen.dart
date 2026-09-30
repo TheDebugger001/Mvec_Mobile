@@ -8,15 +8,15 @@ import '../../data/models/category_model.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/vendor_model.dart';
 import '../providers/home_provider.dart';
-import '../Widgets/banner_carousel.dart';
 import '../Widgets/category_grid.dart';
 import '../Widgets/product_card.dart';
 import '../Widgets/vendor_card.dart';
 import 'product_navigation.dart';
+import 'vendor_store_screen.dart';
 
 /// Marketplace home feed.
 ///
-/// Renders the banner carousel, category grid, featured products,
+/// Renders the marketplace hero, category grid, featured products,
 /// recommended products, and featured vendors from [HomeProvider].
 /// Search lives in the shell's top bar, so it is not repeated here.
 class HomeScreen extends StatelessWidget {
@@ -66,10 +66,6 @@ class HomeScreen extends StatelessWidget {
                   onShopNow: onBrowseAll,
                   onViewDeals: onViewDeals,
                 ),
-                if (provider.banners.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 16),
-                  BannerCarousel(banners: provider.banners),
-                ],
                 const SizedBox(height: 20),
                 if (visibleCategories.isNotEmpty) ...<Widget>[
                   _SectionHeader(
@@ -151,14 +147,22 @@ class _MarketplaceHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final product = products.isEmpty ? null : products.first;
+    final mv = context.mv;
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFFE9F9FD), Color(0xFFC6EDF8)],
+          colors: <Color>[
+            context.isDarkMode
+                ? const Color(0xFF1E293B)
+                : const Color(0xFFE9F9FD),
+            context.isDarkMode
+                ? const Color(0xFF263B4A)
+                : const Color(0xFFC6EDF8),
+          ],
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
@@ -176,8 +180,8 @@ class _MarketplaceHero extends StatelessWidget {
                     Text(
                       'MVEC MARKETPLACE',
                       style: AppTextStyles.caption(context).copyWith(
-                        color: AppColors.primaryDeep,
-                        fontWeight: FontWeight.w800,
+                        color: mv.accentDeep,
+                        fontWeight: FontWeight.w500,
                         letterSpacing: 1,
                       ),
                     ),
@@ -187,15 +191,18 @@ class _MarketplaceHero extends StatelessWidget {
                       style: AppTextStyles.headline(context).copyWith(
                         fontSize: 25,
                         height: 1.04,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
+                        color: mv.text,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Products from trusted sellers across Rwanda.',
-                      style: AppTextStyles.bodySecondary(
-                        context,
-                      ).copyWith(fontSize: 12, height: 1.3),
+                      style: AppTextStyles.bodySecondary(context).copyWith(
+                        fontSize: 12,
+                        height: 1.3,
+                        color: mv.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -216,7 +223,7 @@ class _MarketplaceHero extends StatelessWidget {
                                   color: Colors.white.withValues(alpha: 0.7),
                                   child: Icon(
                                     Icons.shopping_bag_outlined,
-                                    color: AppColors.primaryDeep,
+                                    color: mv.accentDeep,
                                   ),
                                 ),
                             errorWidget:
@@ -224,7 +231,7 @@ class _MarketplaceHero extends StatelessWidget {
                                   color: Colors.white.withValues(alpha: 0.7),
                                   child: Icon(
                                     Icons.shopping_bag_outlined,
-                                    color: AppColors.primaryDeep,
+                                    color: mv.accentDeep,
                                   ),
                                 ),
                           )
@@ -232,7 +239,7 @@ class _MarketplaceHero extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.7),
                             child: Icon(
                               Icons.shopping_bag_outlined,
-                              color: AppColors.primaryDeep,
+                              color: mv.accentDeep,
                               size: 36,
                             ),
                           ),
@@ -442,8 +449,10 @@ class _VendorRow extends StatelessWidget {
           return VendorCard(
             vendor: vendor,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Opening ${vendor.name} store')),
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => VendorStoreScreen(storeName: vendor.name),
+                ),
               );
             },
           );

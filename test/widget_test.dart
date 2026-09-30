@@ -402,7 +402,7 @@ void main() {
 
       // Top bar keeps search, wishlist, notifications, the dark-mode toggle and
       // account reachable — the cart moved down to the bottom bar.
-      expect(find.text('Search products, brands & more'), findsOneWidget);
+      expect(find.byType(TextField).first, findsOneWidget);
       expect(find.byTooltip('Wishlist'), findsOneWidget);
       expect(find.byTooltip('Notifications'), findsOneWidget);
       expect(find.byTooltip('Switch to dark mode'), findsOneWidget);
@@ -511,6 +511,11 @@ void main() {
       await tester.tap(
         inCategoryBar(find.widgetWithText(InkWell, 'Electronics')),
       );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey<String>('category-bar')), findsNothing);
+
+      await tester.tap(inBottomNav(find.byIcon(Icons.home_outlined)));
       await tester.pumpAndSettle();
 
       expect(chipFill('Electronics'), AppColors.skyBlueSolid);
@@ -628,29 +633,45 @@ void main() {
       expect(find.text('Linen Summer Dress'), findsNothing);
     });
 
-    testWidgets('opens search plus every destination behind the More sheet', (
+    testWidgets('opens search plus every destination behind the More drawer', (
       tester,
     ) async {
       await _pumpMarketplace(tester);
 
-      await tester.tap(find.text('Search products, brands & more'));
+      expect(find.byTooltip('Menu'), findsOneWidget);
+      expect(find.byIcon(Icons.menu), findsOneWidget);
+      await tester.tap(find.byTooltip('Menu'));
       await tester.pumpAndSettle();
-      expect(find.text('Search'), findsWidgets);
+      expect(find.byType(Drawer), findsOneWidget);
+      expect(tester.getTopLeft(find.byType(Drawer)).dx, 0);
+      await tester.tapAt(const Offset(350, 400));
+      await tester.pumpAndSettle();
 
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
+      expect(find.text('Recent searches'), findsOneWidget);
+      await tester.tap(find.text('Wireless headphones'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('result(s) for "Wireless headphones"'),
+        findsOneWidget,
+      );
       await tester.pageBack();
       await tester.pumpAndSettle();
 
       // All Categories, Vendors and Orders lost their top-bar quick links to
-      // the "More" overflow sheet; none of them is reachable from the bars.
+      // the "More" sidebar; none of them is reachable from the bars.
       expect(find.text('All categories'), findsNothing);
       expect(find.byTooltip('Vendors'), findsNothing);
 
       await tester.tap(find.text('More'));
       await tester.pumpAndSettle();
+      expect(find.byType(Drawer), findsOneWidget);
       expect(find.text('All categories'), findsOneWidget);
       expect(find.text('Vendors'), findsOneWidget);
       expect(find.text('Orders & history'), findsOneWidget);
       expect(find.text('My wishlist'), findsOneWidget);
+      expect(find.text('Sign out'), findsOneWidget);
 
       await tester.tap(find.text('All categories'));
       await tester.pumpAndSettle();
@@ -675,7 +696,7 @@ void main() {
       expect(find.text('My Orders'), findsWidgets);
     });
 
-    testWidgets('the More sheet is dismissible without navigating', (
+    testWidgets('the More drawer is dismissible without navigating', (
       tester,
     ) async {
       await _pumpMarketplace(tester);
@@ -684,7 +705,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Orders & history'), findsOneWidget);
 
-      await tester.tapAt(const Offset(200, 100));
+      await tester.tapAt(const Offset(350, 100));
       await tester.pumpAndSettle();
 
       expect(find.text('Orders & history'), findsNothing);
@@ -702,7 +723,7 @@ void main() {
                 matching: find.byType(ListView),
               )
               .first;
-      await tester.drag(homeList, const Offset(0, -850));
+      await tester.drag(homeList, const Offset(0, -650));
       await tester.pumpAndSettle();
     }
 
