@@ -171,10 +171,16 @@ void main() {
       expect(roleHome(_user('supplier')), '/supplier');
     });
 
-    test('buyer, vendor and affiliate land on the home feed', () {
-      for (final role in ['buyer', 'vendor', 'affiliate']) {
-        expect(roleHome(_user(role)), '/home', reason: role);
-      }
+    test('vendor goes to the vendor portal', () {
+      expect(roleHome(_user('vendor')), '/vendor');
+    });
+
+    test('affiliate goes to the affiliate center', () {
+      expect(roleHome(_user('affiliate')), '/affiliate');
+    });
+
+    test('buyer lands on the home feed', () {
+      expect(roleHome(_user('buyer')), '/home');
     });
   });
 
@@ -326,6 +332,29 @@ void main() {
       expect(find.byType(MainNavigationScreen), findsNothing);
       expect(find.text('Welcome back'), findsNothing);
     });
+
+    testWidgets('a vendor lands on the vendor portal', (tester) async {
+      // Like the admin dashboard, the portal loads live providers, so pump a
+      // bounded number of frames instead of pumpAndSettle.
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(_user('vendor')),
+            ),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // "VENDOR PORTAL" is the shell's top-bar eyebrow and the overview
+      // header, so it renders more than once.
+      expect(find.text('VENDOR PORTAL'), findsWidgets);
+      expect(find.byType(MainNavigationScreen), findsNothing);
+      expect(find.text('Welcome back'), findsNothing);
+    });
   });
 
   group('marketplace shell', () {
@@ -349,6 +378,9 @@ void main() {
           reason: label,
         );
       }
+
+      expect(find.text('MVEC MARKETPLACE'), findsOneWidget);
+      expect(find.text('Shop. Sell.\nGrow together.'), findsOneWidget);
 
       // Top bar keeps search, wishlist, notifications, cart, the dark-mode
       // toggle and account reachable.
@@ -544,7 +576,7 @@ void main() {
                 matching: find.byType(ListView),
               )
               .first;
-      await tester.drag(homeList, const Offset(0, -600));
+      await tester.drag(homeList, const Offset(0, -850));
       await tester.pumpAndSettle();
     }
 

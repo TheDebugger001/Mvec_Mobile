@@ -95,6 +95,23 @@ class ApiClient {
 
 final apiProvider = Provider<ApiClient>((ref) => ApiClient.instance);
 
+/// The HTTP status behind a failed request, or `null` when the request never
+/// reached the server (timeout, DNS, socket) or the error is not an API error.
+///
+/// `ApiClient`'s error interceptor wraps every failure in a `DioException`
+/// whose `error` is the [ApiException] carrying the status, so callers that
+/// need to branch on a specific code (e.g. "this vendor has no store yet")
+/// read it through here instead of unwrapping Dio types by hand.
+int? statusCodeOf(Object error) {
+  if (error is ApiException) return error.statusCode;
+  if (error is DioException) {
+    final inner = error.error;
+    if (inner is ApiException) return inner.statusCode;
+    return error.response?.statusCode;
+  }
+  return null;
+}
+
 /// A page of list results, normalised across the backend's three envelopes:
 /// `{data, meta}`, `{success, data}` and bare `{orders}` / arrays.
 class Paged<T> {

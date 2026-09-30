@@ -18,9 +18,7 @@ class AdminNav {
   AdminNav._();
 
   static const groups = <NavGroup>[
-    NavGroup('Overview', [
-      NavItem('Overview', '/admin', 'grid'),
-    ]),
+    NavGroup('Overview', [NavItem('Overview', '/admin', 'grid')]),
     NavGroup('Insights', [
       NavItem('Analytics', '/admin/analytics', 'chart'),
       NavItem('Reports', '/admin/reports', 'chart'),
@@ -89,7 +87,10 @@ class AdminNav {
   /// Find the group containing a path (used to auto-open the drawer group).
   static String? groupFor(String path) {
     for (final g in groups) {
-      if (g.items.any((i) => i.path == path || (path.startsWith(i.path) && i.path != '/admin'))) {
+      if (g.items.any(
+        (i) =>
+            i.path == path || (path.startsWith(i.path) && i.path != '/admin'),
+      )) {
         return g.label;
       }
     }
@@ -102,6 +103,8 @@ class AdminNav {
 /// the super-admin-only guard in `router.dart` never applies.
 class SupplierNav {
   SupplierNav._();
+
+  static const root = '/supplier';
 
   static const groups = <NavGroup>[
     NavGroup('Overview', [
@@ -127,7 +130,59 @@ class SupplierNav {
   /// Find the group containing a path (used to auto-open the drawer group).
   static String? groupFor(String path) {
     for (final g in groups) {
-      if (g.items.any((i) => i.path == path || (path.startsWith(i.path) && i.path != '/supplier'))) {
+      if (g.items.any(
+        (i) => i.path == path || (path.startsWith(i.path) && i.path != root),
+      )) {
+        return g.label;
+      }
+    }
+    return null;
+  }
+}
+
+/// Vendor portal navigation.
+///
+/// Same shape as [AdminNav] (accordion groups + mobile bottom bar) so the
+/// vendor shell can be a drop-in mirror of the admin shell, with every path
+/// rooted at `/vendor`.
+class VendorNav {
+  VendorNav._();
+
+  static const root = '/vendor';
+
+  static const groups = <NavGroup>[
+    NavGroup('Overview', [NavItem('Overview', '/vendor', 'grid')]),
+    NavGroup('Orders & earnings', [
+      NavItem('Orders', '/vendor/orders', 'cart'),
+      NavItem('Sales & earnings', '/vendor/sales', 'wallet'),
+    ]),
+    NavGroup('Store', [
+      NavItem('Products', '/vendor/products', 'box'),
+      NavItem('Store Profile', '/vendor/profile', 'user'),
+      NavItem('Account settings', '/vendor/settings', 'settings'),
+    ]),
+    NavGroup('Communication', [
+      NavItem('Notifications', '/vendor/notifications', 'bell'),
+    ]),
+  ];
+
+  static List<NavItem> get all => [for (final g in groups) ...g.items];
+
+  /// Primary items for the mobile bottom bar, plus a "More" entry that opens
+  /// the grouped drawer (added by the shell).
+  static const bottomNav = <NavItem>[
+    NavItem('Overview', '/vendor', 'grid'),
+    NavItem('Orders', '/vendor/orders', 'cart'),
+    NavItem('Sales', '/vendor/sales', 'wallet'),
+    NavItem('Settings', '/vendor/settings', 'settings'),
+  ];
+
+  /// The drawer group containing a path, used to auto-open the right accordion.
+  static String? groupFor(String path) {
+    for (final g in groups) {
+      if (g.items.any(
+        (i) => i.path == path || (path.startsWith(i.path) && i.path != root),
+      )) {
         return g.label;
       }
     }

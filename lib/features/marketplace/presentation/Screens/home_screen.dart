@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -22,11 +23,13 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
     this.onBrowseAll,
+    this.onViewDeals,
     this.onCategoryTap,
   });
 
   /// Switches the top navigation to the Shop tab (All Categories).
   final VoidCallback? onBrowseAll;
+  final VoidCallback? onViewDeals;
   final ValueChanged<Category>? onCategoryTap;
 
   @override
@@ -38,9 +41,16 @@ class HomeScreen extends StatelessWidget {
     }
 
     final categories = provider.categories;
-    final visibleCategories = categories.length > 8
-        ? categories.sublist(0, 8)
-        : categories;
+    final visibleCategories =
+        categories.length > 8 ? categories.sublist(0, 8) : categories;
+    final featuredIds =
+        provider.featuredProducts.map((product) => product.id).toSet();
+    final popularProducts = <Product>[
+      ...provider.featuredProducts,
+      ...provider.products.where(
+        (product) => !featuredIds.contains(product.id),
+      ),
+    ];
 
     return Column(
       children: [
@@ -51,12 +61,19 @@ class HomeScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
                 if (provider.isDemo) const _DemoNotice(),
-                const SizedBox(height: 12),
-                BannerCarousel(banners: provider.banners),
+                _MarketplaceHero(
+                  products: popularProducts,
+                  onShopNow: onBrowseAll,
+                  onViewDeals: onViewDeals,
+                ),
+                if (provider.banners.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 16),
+                  BannerCarousel(banners: provider.banners),
+                ],
                 const SizedBox(height: 20),
                 if (visibleCategories.isNotEmpty) ...<Widget>[
                   _SectionHeader(
-                    title: 'All Categories',
+                    title: 'Find what you need',
                     actionLabel: 'See all',
                     onAction: onBrowseAll,
                   ),
@@ -67,16 +84,41 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                 ],
-                if (provider.featuredProducts.isNotEmpty) ...<Widget>[
-                  _SectionHeader(title: 'Featured Products'),
+                if (popularProducts.isNotEmpty) ...<Widget>[
+                  _SectionHeader(title: 'Popular Products'),
                   const SizedBox(height: 12),
-                  _ProductRow(products: provider.featuredProducts),
+                  _ProductRow(products: popularProducts),
                   const SizedBox(height: 20),
                 ],
+                for (final category in visibleCategories)
+                  if (provider.products.any(
+                    (product) =>
+                        product.categoryId == category.id ||
+                        product.categoryName == category.name,
+                  )) ...<Widget>[
+                    _SectionHeader(title: category.name),
+                    const SizedBox(height: 12),
+                    _ProductRow(
+                      products:
+                          provider.products
+                              .where(
+                                (product) =>
+                                    product.categoryId == category.id ||
+                                    product.categoryName == category.name,
+                              )
+                              .take(4)
+                              .toList(),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 if (provider.recommendedProducts.isNotEmpty) ...<Widget>[
                   _SectionHeader(title: 'Recommended For You'),
                   const SizedBox(height: 12),
                   _ProductRow(products: provider.recommendedProducts),
+                  const SizedBox(height: 20),
+                ],
+                if (onViewDeals != null) ...<Widget>[
+                  _DealsBanner(onTap: onViewDeals!),
                   const SizedBox(height: 20),
                 ],
                 if (provider.vendors.isNotEmpty) ...<Widget>[
@@ -93,6 +135,194 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _onCategoryTap(Category category) => onCategoryTap?.call(category);
+}
+
+class _MarketplaceHero extends StatelessWidget {
+  const _MarketplaceHero({
+    required this.products,
+    required this.onShopNow,
+    required this.onViewDeals,
+  });
+
+  final List<Product> products;
+  final VoidCallback? onShopNow;
+  final VoidCallback? onViewDeals;
+
+  @override
+  Widget build(BuildContext context) {
+    final product = products.isEmpty ? null : products.first;
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFFE9F9FD), Color(0xFFC6EDF8)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MVEC MARKETPLACE',
+                      style: AppTextStyles.caption(context).copyWith(
+                        color: AppColors.primaryDeep,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Shop. Sell.\nGrow together.',
+                      style: AppTextStyles.headline(context).copyWith(
+                        fontSize: 25,
+                        height: 1.04,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Products from trusted sellers across Rwanda.',
+                      style: AppTextStyles.bodySecondary(
+                        context,
+                      ).copyWith(fontSize: 12, height: 1.3),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 88,
+                height: 112,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child:
+                      product != null && product.imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                            imageUrl: product.imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder:
+                                (context, _) => ColoredBox(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  child: Icon(
+                                    Icons.shopping_bag_outlined,
+                                    color: AppColors.primaryDeep,
+                                  ),
+                                ),
+                            errorWidget:
+                                (context, _, _) => ColoredBox(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  child: Icon(
+                                    Icons.shopping_bag_outlined,
+                                    color: AppColors.primaryDeep,
+                                  ),
+                                ),
+                          )
+                          : ColoredBox(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            child: Icon(
+                              Icons.shopping_bag_outlined,
+                              color: AppColors.primaryDeep,
+                              size: 36,
+                            ),
+                          ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 2,
+            children: [
+              FilledButton(onPressed: onShopNow, child: const Text('Shop now')),
+              TextButton(onPressed: onViewDeals, child: const Text('Deals')),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Verified sellers  ·  Secure checkout  ·  Local delivery',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption(context).copyWith(fontSize: 10),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DealsBanner extends StatelessWidget {
+  const _DealsBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFFE9F9FD), Color(0xFFC6EDF8)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MVEC DEAL DAYS',
+                  style: AppTextStyles.caption(context).copyWith(
+                    color: AppColors.primaryDeep,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'More products.\nLess searching.',
+                  style: AppTextStyles.sectionTitle(
+                    context,
+                  ).copyWith(fontSize: 20, height: 1.1),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Explore deals from verified sellers.',
+                  style: AppTextStyles.bodySecondary(context),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.tonal(
+                  onPressed: onTap,
+                  child: const Text('Shop deals'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            Icons.local_offer_outlined,
+            size: 58,
+            color: AppColors.primaryDeep.withValues(alpha: 0.8),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Small notice shown when the feed is served from the mock service.
@@ -116,11 +346,7 @@ class _DemoNotice extends StatelessWidget {
             child: Text(
               'You are previewing demo data. Live products will appear when '
               'the marketplace API is connected.',
-              style: TextStyle(
-                color: warning,
-                fontSize: 12,
-                height: 1.3,
-              ),
+              style: TextStyle(color: warning, fontSize: 12, height: 1.3),
             ),
           ),
         ],

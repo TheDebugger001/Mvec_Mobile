@@ -14,6 +14,7 @@ import 'package:mvec_mobile/features/marketplace/presentation/Screens/main_navig
 import 'package:mvec_mobile/main.dart';
 import 'package:mvec_mobile/providers/auth_provider.dart';
 import 'package:mvec_mobile/screens/layout/admin_shell.dart';
+import 'package:mvec_mobile/screens/vendor/vendor_shell.dart';
 
 void main() {
   // Without the define these cases would exercise the *real* login path and
@@ -33,8 +34,9 @@ void main() {
       expect(session!.token, 'demo-token');
     }, skip: !kDemoMode);
 
-    testWidgets('an admin identity routes to the control center',
-        (tester) async {
+    testWidgets('an admin identity routes to the control center', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -43,10 +45,7 @@ void main() {
           .login('admin@gmail.com', 'anything');
 
       await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MvecApp(),
-        ),
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
       );
       // The control center loads live providers, so its spinners never settle
       // in a test: pump a bounded number of frames instead of pumpAndSettle.
@@ -56,8 +55,9 @@ void main() {
       expect(find.byType(AdminShell), findsOneWidget);
     }, skip: !kDemoMode);
 
-    testWidgets('a buyer identity routes to the marketplace home feed',
-        (tester) async {
+    testWidgets('a buyer identity routes to the marketplace home feed', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -66,14 +66,31 @@ void main() {
           .login('buyer@example.com', 'anything');
 
       await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MvecApp(),
-        ),
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
       );
       await tester.pumpAndSettle();
 
       expect(find.byType(MainNavigationScreen), findsOneWidget);
+    }, skip: !kDemoMode);
+
+    testWidgets('a vendor identity opens the local vendor dashboard', (
+      tester,
+    ) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(authControllerProvider.notifier)
+          .login('vendor@umucyo.rw', 'anything');
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.byType(VendorShell), findsOneWidget);
+      expect(find.text('VENDOR PORTAL'), findsOneWidget);
     }, skip: !kDemoMode);
 
     test('empty demo credentials are rejected', () async {

@@ -47,6 +47,7 @@ class MetricCard extends StatelessWidget {
     required this.label,
     required this.value,
     this.delta,
+    this.deltaColor,
     this.icon = 'chart',
     this.onTap,
   });
@@ -54,6 +55,11 @@ class MetricCard extends StatelessWidget {
   final String label;
   final String value;
   final String? delta;
+
+  /// Colour of the [delta] line. Defaults to the success green, which is wrong
+  /// for a negative movement — pass [MvColors.errorText] for those.
+  final Color? deltaColor;
+
   final String icon;
   final VoidCallback? onTap;
 
@@ -89,7 +95,14 @@ class MetricCard extends StatelessWidget {
                     ),
                     if (delta != null) ...[
                       const SizedBox(height: 2),
-                      Text(delta!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: MvColors.successText)),
+                      Text(
+                        delta!,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: deltaColor ?? MvColors.successText,
+                        ),
+                      ),
                     ],
                   ],
                 ),

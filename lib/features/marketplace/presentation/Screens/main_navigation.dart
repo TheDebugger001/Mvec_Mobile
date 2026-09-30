@@ -69,7 +69,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     });
   }
 
-
   void _openAllProducts() {
     setState(() {
       _selectedCategory = null;
@@ -217,6 +216,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                 children: <Widget>[
                   HomeScreen(
                     onBrowseAll: _openAllProducts,
+                    onViewDeals: () => _select(3),
                     onCategoryTap: _selectCategory,
                   ),
                   ShopScreen(
@@ -286,7 +286,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   countKey: 'home-cart-count',
                   onPressed: () => _openCart(context),
                 ),
-                _ThemeToggleButton(isDark: context.isDarkMode, onTap: _toggleTheme),
+                _ThemeToggleButton(
+                  isDark: context.isDarkMode,
+                  onTap: _toggleTheme,
+                ),
                 IconButton(
                   tooltip: 'Account',
                   visualDensity: VisualDensity.compact,
@@ -315,10 +318,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     );
   }
 
-  void _openNotifications() => _pushPage(
-    const _NotificationsPage(),
-    title: 'Notifications',
-  );
+  void _openNotifications() =>
+      _pushPage(const _NotificationsPage(), title: 'Notifications');
 
   // ---------------------------------------------------------------------------
   // Floating bottom navigation bar: a rounded pill card that hovers above the
@@ -366,7 +367,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     duration: const Duration(milliseconds: 260),
                     curve: Curves.easeOutCubic,
                     left:
-                        tabWidth * _currentIndex + (tabWidth - indicatorWidth) / 2,
+                        tabWidth * _currentIndex +
+                        (tabWidth - indicatorWidth) / 2,
                     bottom: 6,
                     width: indicatorWidth,
                     height: 4,
@@ -572,10 +574,7 @@ class _NotificationsPage extends StatelessWidget {
               color: context.mv.accentDeep,
             ),
             const SizedBox(height: 12),
-            Text(
-              'No new notifications',
-              style: AppTextStyles.title(context),
-            ),
+            Text('No new notifications', style: AppTextStyles.title(context)),
             const SizedBox(height: 4),
             Text(
               'Order updates and vendor offers will show up here.',
@@ -624,18 +623,13 @@ class _CategoriesBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
           child: Row(
             children: [
-              Icon(
-                Icons.category_outlined,
-                size: 16,
-                color: mv.accentDeep,
-              ),
+              Icon(Icons.category_outlined, size: 16, color: mv.accentDeep),
               const SizedBox(width: 6),
               Text(
                 'Categories',
-                style: AppTextStyles.caption(context).copyWith(
-                  color: mv.text,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTextStyles.caption(
+                  context,
+                ).copyWith(color: mv.text, fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               _QuickLink(
