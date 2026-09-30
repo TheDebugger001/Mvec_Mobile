@@ -59,7 +59,9 @@ class ApiClient {
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.connectionError) {
-      return 'Cannot reach the server. Check your connection.';
+      return 'Cannot reach the server at $kApiBaseUrl. '
+          'Check the backend is running and the URL matches your device '
+          '(emulator: 10.0.2.2, device: your LAN IP).';
     }
     if (e.response != null) return 'Request failed (${e.response!.statusCode})';
     return e.message ?? 'Network error';
