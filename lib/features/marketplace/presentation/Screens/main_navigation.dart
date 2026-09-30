@@ -389,7 +389,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               categories: categories,
               selected: _selectedCategory,
               onSelected: _selectCategory,
-              onOpenMore: _openMore,
             ),
           ],
           const Divider(height: 1),
@@ -879,7 +878,7 @@ class _NotificationsPage extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Category bar: a always-visible chip strip plus the "More" overflow trigger.
+// Category bar: a compact label and horizontal chip strip.
 // ---------------------------------------------------------------------------
 
 class _CategoriesBar extends StatelessWidget {
@@ -888,13 +887,11 @@ class _CategoriesBar extends StatelessWidget {
     required this.categories,
     required this.selected,
     required this.onSelected,
-    required this.onOpenMore,
   });
 
   final List<Category> categories;
   final Category? selected;
   final ValueChanged<Category?> onSelected;
-  final VoidCallback onOpenMore;
 
   @override
   Widget build(BuildContext context) {
@@ -914,8 +911,6 @@ class _CategoriesBar extends StatelessWidget {
                   context,
                 ).copyWith(color: mv.text, fontWeight: FontWeight.w700),
               ),
-              const Spacer(),
-              _MoreButton(onPressed: onOpenMore),
             ],
           ),
         ),
@@ -941,53 +936,6 @@ class _CategoriesBar extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Overflow trigger at the trailing edge of the category bar. Opens the sheet
-/// holding every storefront destination that no longer has a home in the top
-/// bar or the bottom bar.
-class _MoreButton extends StatelessWidget {
-  const _MoreButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final mv = context.mv;
-    return Semantics(
-      button: true,
-      label: 'More options',
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(9),
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          height: 30,
-          decoration: BoxDecoration(
-            color: AppColors.chipNeutral,
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: mv.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'More',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: mv.text,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(Icons.grid_view_outlined, size: 15, color: mv.textMuted),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

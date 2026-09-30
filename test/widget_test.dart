@@ -409,11 +409,11 @@ void main() {
       expect(find.byTooltip('Account'), findsOneWidget);
       expect(find.byTooltip('Cart'), findsNothing);
 
-      // The category strip stays expanded, and the destinations that no longer
-      // have a home in the bars sit behind the "More" trigger.
+      // The category strip stays expanded while sidebar destinations remain
+      // available through the single hamburger control.
       expect(find.text('Categories'), findsOneWidget);
       expect(find.text('All'), findsOneWidget);
-      expect(find.text('More'), findsOneWidget);
+      expect(find.text('More'), findsNothing);
       expect(find.byIcon(Icons.category_outlined), findsOneWidget);
 
       expect(find.textContaining('demo data'), findsOneWidget);
@@ -659,12 +659,12 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      // All Categories, Vendors and Orders lost their top-bar quick links to
-      // the "More" sidebar; none of them is reachable from the bars.
+      // All Categories, Vendors and Orders are reached from the hamburger
+      // sidebar, without duplicate category-strip controls.
       expect(find.text('All categories'), findsNothing);
       expect(find.byTooltip('Vendors'), findsNothing);
 
-      await tester.tap(find.text('More'));
+      await tester.tap(find.byTooltip('Menu'));
       await tester.pumpAndSettle();
       expect(find.byType(Drawer), findsOneWidget);
       expect(find.text('All categories'), findsOneWidget);
@@ -680,7 +680,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('More'));
+      await tester.tap(find.byTooltip('Menu'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Vendors'));
       await tester.pumpAndSettle();
@@ -689,7 +689,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('More'));
+      await tester.tap(find.byTooltip('Menu'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Orders & history'));
       await tester.pumpAndSettle();
@@ -701,7 +701,7 @@ void main() {
     ) async {
       await _pumpMarketplace(tester);
 
-      await tester.tap(find.text('More'));
+      await tester.tap(find.byTooltip('Menu'));
       await tester.pumpAndSettle();
       expect(find.text('Orders & history'), findsOneWidget);
 
