@@ -154,8 +154,8 @@ void main() {
       }
     });
 
-    test('supplier keeps the marketplace landing screen', () {
-      expect(roleHome(_user('supplier')), '/home');
+    test('supplier lands on the supplier portal', () {
+      expect(roleHome(_user('supplier')), '/supplier');
     });
   });
 

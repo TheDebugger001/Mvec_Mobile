@@ -177,7 +177,7 @@ void main() {
           orderNotifications: false,
           stockNotifications: original.stockNotifications,
         );
-        await service.saveProfile(updated);
+        await service.saveProfile(updated, isNewProfile: false);
         expect((await service.profile()).businessName, 'Demo Updated Co.');
         expect((await service.profile()).orderNotifications, isFalse);
       },

@@ -96,3 +96,45 @@ class AdminNav {
     return null;
   }
 }
+
+/// Supplier portal navigation. Reuses the same accordion drawer + mobile
+/// bottom bar as the admin shell, but every path stays under `/supplier` so
+/// the super-admin-only guard in `router.dart` never applies.
+class SupplierNav {
+  SupplierNav._();
+
+  // Only routes that actually exist in `router.dart` belong here: the
+  // dashboard SPA plus the two shell sub-pages. The SPA's own pages
+  // (Inventory, Vendor Orders, Notifications, Settings) are reached from its
+  // internal drawer, not from a URL.
+  static const groups = <NavGroup>[
+    NavGroup('Overview', [
+      NavItem('Dashboard', '/supplier', 'grid'),
+    ]),
+    NavGroup('My Store', [
+      NavItem('Products', '/supplier/products', 'box'),
+    ]),
+    NavGroup('Account', [
+      NavItem('Business Profile', '/supplier/profile', 'shop'),
+    ]),
+  ];
+
+  static List<NavItem> get all => [for (final g in groups) ...g.items];
+
+  /// Primary items shown directly in the mobile bottom bar.
+  static const bottomNav = <NavItem>[
+    NavItem('Dashboard', '/supplier', 'grid'),
+    NavItem('Products', '/supplier/products', 'box'),
+    NavItem('Profile', '/supplier/profile', 'shop'),
+  ];
+
+  /// Find the group containing a path (used to auto-open the drawer group).
+  static String? groupFor(String path) {
+    for (final g in groups) {
+      if (g.items.any((i) => i.path == path || (path.startsWith(i.path) && i.path != '/supplier'))) {
+        return g.label;
+      }
+    }
+    return null;
+  }
+}

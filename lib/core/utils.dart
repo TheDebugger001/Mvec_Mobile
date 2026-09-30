@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'api_client.dart';
+import 'api_config.dart';
 import 'theme.dart';
 
 final _fmtMoney = NumberFormat('#,##0', 'en');
@@ -53,6 +55,10 @@ const _mvSuccessGreen = Color(0xFF168D58);
 
 /// Tries to extract a readable message from an error object.
 String friendlyError(Object e) {
+  // An ApiException already carries a human-readable message (including the
+  // attempted base URL for connection failures) — surface it verbatim.
+  if (e is ApiException) return e.message;
+
   final s = e.toString();
   final idx = s.indexOf('message":');
   if (idx != -1) {
@@ -61,8 +67,12 @@ String friendlyError(Object e) {
     if (end != -1) m = m.substring(0, end);
     if (m.isNotEmpty) return m;
   }
-  if (s.contains('SocketException') || s.contains('Connection refused') || s.contains('Connection timed out')) {
-    return 'Cannot reach the server. Check your connection.';
+  if (s.contains('SocketException') ||
+      s.contains('Connection refused') ||
+      s.contains('Connection timed out') ||
+      s.contains('connection error')) {
+    return 'Cannot reach $kApiBaseUrl. Start the backend and point the app at '
+        'the right host (emulator: 10.0.2.2, real device: your LAN IP).';
   }
   return s.replaceAll('Exception: ', '').replaceAll('DioException [bad response]: ', 'Server error: ');
 }

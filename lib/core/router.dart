@@ -41,6 +41,9 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/subscriptions/subscriptions_screen.dart';
 import '../screens/support/support_screen.dart';
 import '../screens/suppliers/suppliers_screen.dart';
+import '../screens/suppliers/supplier_products_screen.dart';
+import '../screens/suppliers/supplier_profile_screen.dart';
+import '../screens/suppliers/supplier_shell.dart';
 import '../screens/system/system_screen.dart';
 import '../screens/transactions/transactions_screen.dart';
 import '../screens/trust/trust_screen.dart';
@@ -86,6 +89,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc.startsWith('/admin') && user.userType != 'super_admin') {
           return '/home';
         }
+        // The supplier portal is exclusive to suppliers.
         if (loc.startsWith('/supplier') && user.userType != 'supplier') {
           return roleHome(user);
         }
@@ -127,9 +131,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ResetPasswordScreen(),
       ),
       GoRoute(path: '/home', builder: (_, __) => const MainNavigationScreen()),
+      // Supplier portal. Deliberately outside /admin so the super-admin-only
+      // guard below never bounces a supplier away from their own dashboard.
+      // The dashboard is a self-contained SPA (own sidebar + drawer + internal
+      // page state), so it must NOT be wrapped in SupplierShell — the
+      // sub-pages below are the ones that borrow the shared shell chrome.
       GoRoute(
         path: '/supplier',
         builder: (_, __) => const SupplierDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/supplier/products',
+        builder: (context, state) => const SupplierShell(
+          path: '/supplier/products',
+          child: SupplierProductsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/supplier/profile',
+        builder: (context, state) => const SupplierShell(
+          path: '/supplier/profile',
+          child: SupplierProfileScreen(),
+        ),
       ),
       GoRoute(
         path: '/admin',
