@@ -12,11 +12,19 @@ class SupplierService {
   final ApiClient _api;
 
   // ---------- Profile ----------
-  /// `GET /suppliers/me/profile` → `{ supplier }`.
-  /// 404s until onboarding has been completed.
-  Future<SupplierDetail> profile() async {
-    final res = await _api.get('/suppliers/me/profile');
-    return SupplierDetail.fromJson(singleJson(res, ['supplier', 'profile', 'data']));
+  /// The supplier's own profile, or `null` when they have not onboarded yet.
+  ///
+  /// `GET /suppliers/me/profile` 404s until onboarding is complete. That is a
+  /// normal first-run state rather than a failure, so it is mapped to `null`
+  /// and the UI offers onboarding instead of surfacing an error.
+  Future<SupplierDetail?> profile() async {
+    try {
+      final res = await _api.get('/suppliers/me/profile');
+      return SupplierDetail.fromJson(singleJson(res, ['supplier', 'profile', 'data']));
+    } catch (e) {
+      if (statusCodeOf(e) == 404) return null;
+      rethrow;
+    }
   }
 
   /// `POST /suppliers/onboard` → creates the profile on first save.

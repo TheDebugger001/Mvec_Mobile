@@ -24,9 +24,9 @@ class SupplierProfileScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PageHead(
-          eyebrow: 'SUPPLIER PORTAL',
+          eyebrow: 'SUPPLIER PLATFORM',
           title: 'Business profile',
-          subtitle: 'Keep the details buyers and the MVEC team rely on up to date.',
+          subtitle: 'Manage supplier profile and marketplace preferences.',
         ),
         switch (profileAsync) {
           AsyncLoading() => const LoadingState(),

@@ -5,54 +5,80 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../models/supplier.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/supplier_providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/mv_icon.dart';
 import 'supplier_shell.dart';
 
-/// Landing page for a signed-in supplier: KPI summary, verification state and
-/// shortcuts into the profile and inventory screens.
-class SupplierDashboardScreen extends ConsumerWidget {
+/// Landing page for a signed-in supplier.
+///
+/// Mirrors the web `SupplierDashboard` overview: a `dash-page-head`, a
+/// four-tile metric grid and the "protected settlement" explainer box.
+///
+/// The web fills those tiles with hardcoded demo figures (126 products,
+/// 84 orders, RWF 8.4M sales). Only two of those — products and catalogue
+/// value — have a real backing endpoint (`GET /suppliers/me/products`), so the
+/// remaining two tiles show stock figures instead of inventing numbers. The
+/// web's "Vendor orders", "Sales" and "Protected funds" tiles have no server
+/// data behind them yet.
+class SupplierDashboardScreen extends ConsumerStatefulWidget {
   const SupplierDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider);
+  ConsumerState<SupplierDashboardScreen> createState() => _SupplierDashboardScreenState();
+}
+
+class _SupplierDashboardScreenState extends ConsumerState<SupplierDashboardScreen> {
+  /// Guards the onboarding redirect so a rebuild cannot bounce the supplier
+  /// away from the profile page while they are filling the form in.
+  bool _redirected = false;
+
+  /// A supplier account with no business profile has nothing to see on the
+  /// dashboard, so it is forwarded to the profile page to onboard. The check
+  /// needs a resolved provider — hence both the synchronous read and the
+  /// listener, which covers the case where the profile resolves after mount.
+  void _forwardIfUnOnboarded(AsyncValue<SupplierDetail?> profile) {
+    if (_redirected) return;
+    if (profile is! AsyncData || profile.value != null) return;
+    _redirected = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.go('/supplier/profile');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(supplierProfileProvider, (_, next) => _forwardIfUnOnboarded(next));
+
     final profileAsync = ref.watch(supplierProfileProvider);
     final metricsAsync = ref.watch(supplierMetricsProvider);
-
-    final firstName = (user?.display ?? '').split(' ').first;
-    final name = firstName.isEmpty ? 'there' : firstName;
+    _forwardIfUnOnboarded(profileAsync);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PageHead(
-          eyebrow: 'SUPPLIER DASHBOARD',
-          title: 'Good day, $name 👋',
-          subtitle: 'Track your catalogue, stock levels and verification status.',
-          actions: [
-            GradientButton(
-              label: 'Add product',
-              icon: 'plus',
-              onPressed: () => context.go('/supplier/products'),
-            ),
-          ],
+        const PageHead(
+          eyebrow: 'SUPPLIER PLATFORM',
+          title: 'Supplier dashboard',
+          subtitle: 'Supply verified MVEC vendors with wholesale products.',
         ),
         _VerificationCard(
           profileAsync: profileAsync,
           onRetry: () => ref.invalidate(supplierProfileProvider),
         ),
-        const SizedBox(height: 16),
-        _metricRow(metricsAsync, ref),
-        const SizedBox(height: 16),
-        _lowerRow(metricsAsync, profileAsync, ref),
+        const SizedBox(height: 18),
+        _metricGrid(metricsAsync, ref),
+        const SizedBox(height: 18),
+        const _ProtectedSettlementBox(),
+        const SizedBox(height: 18),
+        _profileCard(context, profileAsync, ref),
       ],
     );
   }
 
-  Widget _metricRow(AsyncValue<SupplierMetrics> metricsAsync, WidgetRef ref) {
+  /// Four tiles in the web's `metric-grid`: icon chip, label, large value and
+  /// a small caption. Two per row on a phone, four across on a wide screen.
+  Widget _metricGrid(AsyncValue<SupplierMetrics> metricsAsync, WidgetRef ref) {
     return switch (metricsAsync) {
       AsyncLoading() => const LoadingState(),
       AsyncError(:final error) => ErrorState(
@@ -62,11 +88,35 @@ class SupplierDashboardScreen extends ConsumerWidget {
       AsyncData(:final value) => LayoutBuilder(
           builder: (context, constraints) {
             final cards = <Widget>[
-              MetricCard(label: 'Products', value: numFmt(value.totalProducts), icon: 'box'),
-              MetricCard(label: 'Active', value: numFmt(value.activeProducts), icon: 'check'),
-              MetricCard(label: 'Low stock', value: numFmt(value.lowStockProducts), icon: 'bell'),
-              MetricCard(label: 'Out of stock', value: numFmt(value.outOfStockProducts), icon: 'trash'),
+              MetricCard(
+                label: 'Wholesale products',
+                value: numFmt(value.totalProducts),
+                delta: '${numFmt(value.activeProducts)} active',
+                icon: 'box',
+                onTap: () => context.go('/supplier/products'),
+              ),
+              MetricCard(
+                label: 'Units in stock',
+                value: numFmt(value.totalUnitsInStock),
+                delta: 'Across ${numFmt(value.totalProducts)} products',
+                icon: 'cart',
+              ),
+              MetricCard(
+                label: 'Catalog value',
+                value: money(value.totalCatalogValue),
+                delta: 'Wholesale price × stock',
+                icon: 'chart',
+              ),
+              MetricCard(
+                label: 'Low stock',
+                value: numFmt(value.lowStockProducts),
+                delta: '${numFmt(value.outOfStockProducts)} out of stock',
+                deltaColor: value.lowStockProducts > 0 ? MvColors.warningText : MvColors.successText,
+                icon: 'bell',
+                onTap: () => context.go('/supplier/products'),
+              ),
             ];
+
             if (constraints.maxWidth >= 860) {
               return Row(
                 children: [
@@ -82,6 +132,7 @@ class SupplierDashboardScreen extends ConsumerWidget {
                 for (var i = 0; i < cards.length; i += 2) ...[
                   if (i > 0) const SizedBox(height: 14),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(child: cards[i]),
                       const SizedBox(width: 14),
@@ -95,56 +146,6 @@ class SupplierDashboardScreen extends ConsumerWidget {
         ),
       _ => const LoadingState(),
     };
-  }
-
-  Widget _lowerRow(
-    AsyncValue<SupplierMetrics> metricsAsync,
-    AsyncValue<SupplierDetail?> profileAsync,
-    WidgetRef ref,
-  ) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final performance = _performanceCard(metricsAsync, ref);
-          final profile = _profileCard(context, profileAsync, ref);
-        if (constraints.maxWidth >= 860) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: performance),
-              const SizedBox(width: 16),
-              Expanded(child: profile),
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [performance, const SizedBox(height: 16), profile],
-        );
-      },
-    );
-  }
-
-  Widget _performanceCard(AsyncValue<SupplierMetrics> metricsAsync, WidgetRef ref) {
-    return DataCard(
-      title: 'Stock overview',
-      subtitle: 'Derived from your catalogue',
-      child: switch (metricsAsync) {
-        AsyncData(:final value) => Column(
-            children: [
-              _StatRow('Units in stock', numFmt(value.totalUnitsInStock)),
-              _StatRow('Catalog value', money(value.totalCatalogValue)),
-              _StatRow('Low stock', numFmt(value.lowStockProducts)),
-              _StatRow('Out of stock', numFmt(value.outOfStockProducts)),
-            ],
-          ),
-        AsyncLoading() => const LoadingState(),
-        AsyncError(:final error) => ErrorState(
-            message: friendlyError(error),
-            onRetry: () => ref.invalidate(supplierMetricsProvider),
-          ),
-        _ => const LoadingState(),
-      },
-    );
   }
 
   Widget _profileCard(BuildContext context, AsyncValue<SupplierDetail?> profileAsync, WidgetRef ref) {
@@ -194,22 +195,106 @@ List<MapEntry<String, String>> profileEntries(SupplierDetail s) => [
       if (s.publicId != null) MapEntry('Supplier ID', s.publicId!),
     ];
 
-class _StatRow extends StatelessWidget {
-  const _StatRow(this.label, this.value);
-
-  final String label;
-  final String value;
+/// The web's `verified-box` in its neutral variant, explaining how MVEC holds
+/// vendor payments until a supply order is fulfilled. Uses a wallet chip
+/// rather than the web's 🔒 because the icon set has no lock glyph.
+class _ProtectedSettlementBox extends StatelessWidget {
+  const _ProtectedSettlementBox();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? MvColors.darkSurface2 : MvColors.surface2;
+    final border = isDark ? MvColors.darkBorder : MvColors.border;
+    final ink = isDark ? MvColors.darkText : MvColors.ink;
+    final muted = isDark ? MvColors.darkMuted : MvColors.muted;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border.all(color: border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(label, style: TextStyle(fontSize: 12.5, color: Theme.of(context).hintColor)),
+          Row(
+            children: [
+              MvIcon('wallet', size: 18, color: MvColors.primaryDeep),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'MVEC protected settlement',
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: ink),
+                ),
+              ),
+            ],
           ),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text(
+            'When a vendor pays a supplier through the MVEC workflow, the amount is '
+            'recorded as HELD. Fulfill the supply, confirm receipt/delivery, and MVEC '
+            'releases the protected amount according to the marketplace rules.',
+            style: TextStyle(fontSize: 12.5, height: 1.5, color: muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// First-run card for a supplier account with no business profile yet. Offers
+/// the one action that resolves it.
+class _OnboardingCard extends StatelessWidget {
+  const _OnboardingCard({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: MvColors.infoBoxBg,
+        border: Border.all(color: MvColors.infoBoxBorder),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MvIcon('shield', size: 22, color: MvColors.primaryDeep),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Finish setting up your business',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Your supplier account is ready but has no business profile yet. '
+                      'Add your business name and contact details so the MVEC team can '
+                      'review you and your catalogue can go live.',
+                      style: const TextStyle(fontSize: 12.5, color: MvColors.infoBoxText, height: 1.45),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          GradientButton(
+            label: 'Set up business profile',
+            icon: 'edit',
+            expanded: true,
+            onPressed: onPressed,
+          ),
         ],
       ),
     );
@@ -227,11 +312,10 @@ class _VerificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (profileAsync) {
-      // A null profile is the not-yet-onboarded state, not a failure.
-      AsyncData(value: null) => const InfoBox(
-          'Set up your business profile to start selling on MVEC.',
-          icon: 'shield',
-        ),
+      // A null profile is the not-yet-onboarded state, not a failure. It needs
+      // its own card with a button, because the plain InfoBox leaves the
+      // supplier with no way forward from here.
+      AsyncData(value: null) => _OnboardingCard(onPressed: () => context.go('/supplier/profile')),
       AsyncData(:final value?) => _card(context, value),
       AsyncLoading() => const InfoBox('Loading your verification status…', icon: 'shield'),
       AsyncError(:final error) => ErrorState(message: friendlyError(error), onRetry: onRetry),

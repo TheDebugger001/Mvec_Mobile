@@ -24,9 +24,9 @@ class SupplierProductsScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PageHead(
-          eyebrow: 'SUPPLIER PORTAL',
-          title: 'Products',
-          subtitle: 'Add, edit and remove the wholesale products you supply.',
+          eyebrow: 'SUPPLIER PLATFORM',
+          title: 'Wholesale products',
+          subtitle: 'Manage products that vendors can buy in bulk.',
           actions: [
             GradientButton(label: 'Add product', icon: 'plus', onPressed: () => _openForm(context)),
           ],
@@ -51,11 +51,12 @@ class SupplierProductsScreen extends ConsumerWidget {
         .map(
           (p) => {
             '_product': p,
-            'product': p.display,
+            'product': _productCell(p),
             'category': p.category ?? '—',
             'unit': p.unit ?? '—',
             'price': p.wholesalePrice == null ? '—' : money(p.wholesalePrice),
             'stock': '${p.stockQuantity ?? 0}',
+            'discount': (p.bulkDiscount ?? 0) > 0 ? '${numFmt(p.bulkDiscount)}%' : '—',
             'availability': StockPill(product: p),
             'status': StatusChip(p.status),
           },
@@ -68,6 +69,7 @@ class SupplierProductsScreen extends ConsumerWidget {
         MvColumn('category', 'Category'),
         MvColumn('price', 'Wholesale price', align: TextAlign.right),
         MvColumn('stock', 'Stock', align: TextAlign.right),
+        MvColumn('discount', 'Bulk discount', align: TextAlign.right),
         MvColumn('availability', 'Availability'),
         MvColumn('status', 'Status'),
       ],
@@ -215,6 +217,38 @@ Widget _thumb(SupplierProduct p) {
     child: (image == null || image.isEmpty)
         ? const Icon(Icons.inventory_2_outlined, size: 20, color: MvColors.primaryDeep)
         : null,
+  );
+}
+
+/// Product cell mirroring the web `.admin-product-main`: thumbnail plus the
+/// name over a muted "category · MOQ n" caption.
+Widget _productCell(SupplierProduct p) {
+  return Row(
+    children: [
+      _thumb(p),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              p.display,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${p.category ?? 'General'} · MOQ ${p.moq ?? 1}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 10.5, color: MvColors.muted),
+            ),
+          ],
+        ),
+      ),
+    ],
   );
 }
 

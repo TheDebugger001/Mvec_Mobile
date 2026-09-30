@@ -2,12 +2,14 @@
 // registration / forgot password) and the role-based routing behind it, plus
 // the marketplace shell (floating bottom nav, home feed, cart, wishlist).
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mvec_mobile/core/api_client.dart';
 import 'package:mvec_mobile/core/theme.dart';
 import 'package:mvec_mobile/core/utils/app_theme.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/home_screen.dart';
@@ -788,7 +790,8 @@ void main() {
       await _pumpDashboard(tester, 'supplier');
 
       expect(find.byType(SupplierShell), findsOneWidget);
-      expect(find.text('SUPPLIER DASHBOARD'), findsOneWidget);
+      expect(find.text('SUPPLIER PLATFORM'), findsOneWidget);
+      expect(find.text('Supplier dashboard'), findsOneWidget);
       expect(find.text('SUPPLIER'), findsOneWidget);
     });
 
@@ -797,6 +800,50 @@ void main() {
 
       expect(find.byType(SupplierShell), findsNothing);
       expect(find.byType(MainNavigationScreen), findsOneWidget);
+    });
+  });
+
+  // Regression cover for the "Supplier profile not found. Please complete
+  // onboarding." error that surfaced on every supplier action. `ApiClient`'s
+  // error interceptor rejects with a *DioException* carrying the real
+  // ApiException in `error`, so `on ApiException` never matched and the
+  // not-yet-onboarded 404 escaped as a hard error instead of an empty profile.
+  group('api error status extraction', () {
+    DioException intercepted(int status, String message) => DioException(
+      requestOptions: RequestOptions(path: '/suppliers/me/profile'),
+      response: Response<dynamic>(
+        requestOptions: RequestOptions(path: '/suppliers/me/profile'),
+        statusCode: status,
+        data: <String, dynamic>{'message': message},
+      ),
+      type: DioExceptionType.badResponse,
+      error: ApiException(message, statusCode: status),
+    );
+
+    test('reads the status from a bare ApiException', () {
+      expect(statusCodeOf(ApiException('nope', statusCode: 404)), 404);
+    });
+
+    test('reads the status from the interceptor-wrapped DioException', () {
+      // This is the exact shape the interceptor rejects with.
+      expect(statusCodeOf(intercepted(404, 'not onboarded')), 404);
+    });
+
+    test('a 404 is distinguishable from a real failure', () {
+      expect(statusCodeOf(intercepted(500, 'boom')), 500);
+      expect(statusCodeOf(intercepted(404, 'not onboarded')), 404);
+    });
+
+    test('a network failure has no status', () {
+      expect(
+        statusCodeOf(
+          DioException(
+            requestOptions: RequestOptions(path: '/suppliers/me/profile'),
+            type: DioExceptionType.connectionError,
+          ),
+        ),
+        isNull,
+      );
     });
   });
 }

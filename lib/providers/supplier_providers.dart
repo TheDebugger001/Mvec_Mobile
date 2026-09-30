@@ -10,16 +10,10 @@ final supplierServiceProvider = Provider<SupplierService>(
 
 /// The signed-in supplier's own profile.
 ///
-/// `GET /suppliers/me/profile` 404s while the account has not been onboarded
-/// yet, which is a normal first-run state rather than a failure — so the 404
-/// is translated into `null` and the UI offers onboarding instead of an error.
+/// `SupplierService.profile` already maps the not-yet-onboarded 404 to `null`,
+/// so this only has to surface genuine failures (network, 500, auth).
 final supplierProfileProvider = FutureProvider<SupplierDetail?>((ref) async {
-  try {
-    return await ref.watch(supplierServiceProvider).profile();
-  } on ApiException catch (e) {
-    if (e.statusCode == 404) return null;
-    rethrow;
-  }
+  return ref.watch(supplierServiceProvider).profile();
 });
 
 /// The supplier's wholesale catalogue, unpaginated as the backend returns it.
