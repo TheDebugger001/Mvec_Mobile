@@ -6,6 +6,8 @@
 // compile time. Run it with:
 //   flutter test --dart-define=DEMO_MODE=true test/demo_mode_test.dart
 
+import 'dart:ui';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,10 +15,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mvec_mobile/core/api_config.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/main_navigation.dart';
 import 'package:mvec_mobile/features/supplier/data/supplier_workspace.dart';
-import 'package:mvec_mobile/features/supplier/presentation/supplier_dashboard_screen.dart';
 import 'package:mvec_mobile/main.dart';
 import 'package:mvec_mobile/providers/auth_provider.dart';
 import 'package:mvec_mobile/screens/layout/admin_shell.dart';
+import 'package:mvec_mobile/screens/suppliers/supplier_overview_screen.dart';
+import 'package:mvec_mobile/screens/suppliers/supplier_shell.dart';
 
 void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
@@ -95,30 +98,95 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(MainNavigationScreen), findsOneWidget);
-      expect(find.byType(SupplierDashboardScreen), findsNothing);
+      // roleHome() sends a supplier straight to /supplier, so the portal (not
+      // the marketplace feed) is the landing screen.
+      expect(find.byType(SupplierOverviewScreen), findsOneWidget);
+      expect(find.byType(MainNavigationScreen), findsNothing);
 
-      await tester.tap(find.byTooltip('Account'));
-      await tester.pumpAndSettle();
-      expect(find.text('Supplier account'), findsOneWidget);
-      await tester.tap(find.text('Supplier account'));
-      await tester.pumpAndSettle();
-      expect(find.byType(SupplierDashboardScreen), findsOneWidget);
-
-      await tester.tap(find.byTooltip('Open supplier navigation'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Wholesale Products'));
+      // The 800x600 test viewport is below the 900pt breakpoint, so the
+      // supplier shell renders the bottom bar instead of the sidebar.
+      await tester.tap(find.text('Products'));
       await tester.pumpAndSettle();
       expect(find.text('Arabica Coffee Beans'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Open supplier navigation'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Vendor Orders'));
+      await tester.tap(find.text('Orders'));
       await tester.pumpAndSettle();
       expect(find.text('Confirm order'), findsOneWidget);
       await tester.tap(find.text('Confirm order'));
       await tester.pumpAndSettle();
       expect(find.text('Confirmed'), findsWidgets);
+    }, skip: !kDemoMode);
+
+    testWidgets('the supplier shell swaps sidebar for bottom nav at 900pt', (
+      tester,
+    ) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(authControllerProvider.notifier)
+          .login('supplier@mvec.rw', 'demo123');
+
+      // Wide: the web's permanent .dashboard-sidebar, and no bottom bar.
+      // 1200dp crosses the shell's 900dp breakpoint used by the web's
+      // MobileBottomNav.css media query.
+      tester.view.physicalSize = const Size(1200 * 2, 800 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SupplierSidebar), findsOneWidget);
+      expect(find.byType(SupplierBottomBar), findsNothing);
+
+      // Nav groups are collapsible, so open the catalogue group first.
+      expect(find.text('Wholesale Products'), findsNothing);
+      await tester.tap(find.text('CATALOG & ORDERS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Wholesale Products'));
+      await tester.pumpAndSettle();
+      expect(find.text('Arabica Coffee Beans'), findsOneWidget);
+
+      // Narrow: the bottom bar takes over and the sidebar is gone.
+      tester.view.physicalSize = const Size(420 * 2, 900 * 2);
+      await tester.pumpAndSettle();
+      expect(find.byType(SupplierBottomBar), findsOneWidget);
+      expect(find.byType(SupplierSidebar), findsNothing);
+      expect(find.byTooltip('Open supplier navigation'), findsOneWidget);
+    }, skip: !kDemoMode);
+
+    testWidgets('the "More" sheet exposes the rest of the supplier nav', (
+      tester,
+    ) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(authControllerProvider.notifier)
+          .login('supplier@mvec.rw', 'demo123');
+
+      tester.view.physicalSize = const Size(420 * 2, 900 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
+      );
+      await tester.pumpAndSettle();
+
+      // The four primary destinations are pinned; the rest live behind More.
+      expect(find.text('Payments'), findsOneWidget);
+      expect(find.text('Transactions'), findsNothing);
+
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Transactions'), findsOneWidget);
+      expect(find.text('Analytics'), findsOneWidget);
+      expect(find.text('MVEC Support'), findsOneWidget);
     }, skip: !kDemoMode);
 
     test(

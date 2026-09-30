@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils.dart';
 import '../../features/supplier/data/supplier_workspace.dart';
 import '../../widgets/common.dart';
-import 'supplier_shell.dart';
 
 /// Supplier self-service profile.
 ///
@@ -186,10 +185,7 @@ class _VerificationPanel extends StatelessWidget {
     return DataCard(
       title: 'Verification status',
       subtitle: 'Determines whether buyers can order from you',
-      trailing: StatusPill(
-        status: profile.verificationStatus,
-        label: titleCase(profile.effectiveStatus),
-      ),
+      trailing: StatusChip(profile.effectiveStatus),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
