@@ -8,7 +8,9 @@ import 'product_navigation.dart';
 
 /// Search tab: free-text search across the full product catalog.
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.initialQuery = ''});
+
+  final String initialQuery;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -17,6 +19,13 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.text = widget.initialQuery;
+    _query = widget.initialQuery;
+  }
 
   @override
   void dispose() {
@@ -28,12 +37,13 @@ class _SearchScreenState extends State<SearchScreen> {
     final query = _query.trim().toLowerCase();
     if (query.isEmpty) return products;
     return products.where((product) {
-      final haystack = [
-        product.name,
-        product.brand ?? '',
-        product.categoryName ?? '',
-        product.vendorName ?? '',
-      ].join(' ').toLowerCase();
+      final haystack =
+          [
+            product.name,
+            product.brand ?? '',
+            product.categoryName ?? '',
+            product.vendorName ?? '',
+          ].join(' ').toLowerCase();
       return haystack.contains(query);
     }).toList();
   }
@@ -69,29 +79,33 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ),
         Expanded(
-          child: results.isEmpty
-              ? const _EmptySearch()
-              : GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: results.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.62,
+          child:
+              results.isEmpty
+                  ? const _EmptySearch()
+                  : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: results.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.62,
+                        ),
+                    itemBuilder: (context, index) {
+                      final product = results[index];
+                      return ProductCard(
+                        width: double.infinity,
+                        product: product,
+                        onTap: () {
+                          context.read<HomeProvider>().addRecentlyViewed(
+                            product,
+                          );
+                          openProductDetails(context, product);
+                        },
+                      );
+                    },
                   ),
-                  itemBuilder: (context, index) {
-                    final product = results[index];
-                    return ProductCard(
-                      width: double.infinity,
-                      product: product,
-                      onTap: () {
-                        context.read<HomeProvider>().addRecentlyViewed(product);
-                        openProductDetails(context, product);
-                      },
-                    );
-                  },
-                ),
         ),
       ],
     );
