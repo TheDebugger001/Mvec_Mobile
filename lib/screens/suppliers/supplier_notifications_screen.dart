@@ -52,7 +52,10 @@ class SupplierNotificationsScreen extends ConsumerWidget {
             message: friendlyError(error),
             onRetry: () => ref.invalidate(supplierWorkspaceProvider),
           ),
-          AsyncData(:final value) => _Notices(notices: value.notifications),
+          AsyncData(:final value) => _Notices(
+            notices: value.notifications,
+            unavailable: value.notificationsUnavailable,
+          ),
           _ => const LoadingState(),
         },
       ],
@@ -61,16 +64,21 @@ class SupplierNotificationsScreen extends ConsumerWidget {
 }
 
 class _Notices extends ConsumerWidget {
-  const _Notices({required this.notices});
+  const _Notices({required this.notices, required this.unavailable});
 
   final List<SupplierNotice> notices;
+  final bool unavailable;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (notices.isEmpty) {
-      return const DataCard(
+      return DataCard(
         title: 'Notifications',
-        child: EmptyState(message: 'You have no notifications right now'),
+        child: EmptyState(
+          message: unavailable
+              ? 'Notifications could not be loaded. Please retry in a moment.'
+              : 'You have no notifications right now',
+        ),
       );
     }
 

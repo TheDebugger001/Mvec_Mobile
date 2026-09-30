@@ -35,7 +35,8 @@ class SupplierOrdersScreen extends ConsumerWidget {
             message: friendlyError(error),
             onRetry: () => ref.invalidate(supplierWorkspaceProvider),
           ),
-          AsyncData(:final value) => _Orders(orders: value.orders),
+          AsyncData(:final value) =>
+            _Orders(orders: value.orders, unavailable: value.ordersUnavailable),
           _ => const LoadingState(),
         },
       ],
@@ -44,19 +45,26 @@ class SupplierOrdersScreen extends ConsumerWidget {
 }
 
 class _Orders extends ConsumerWidget {
-  const _Orders({required this.orders});
+  const _Orders({required this.orders, required this.unavailable});
 
   final List<SupplierOrder> orders;
+  final bool unavailable;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (orders.isEmpty) {
-      return const DataCard(
+      return DataCard(
         title: 'Vendor orders',
         child: EmptyState(
-          message:
-              'No vendor orders yet. Orders placed by vendors appear here once '
-              'they are placed.',
+          message: unavailable
+              // `GET /orders` is restricted to admins on the backend, so this
+              // is a permission gap rather than genuinely zero orders. Saying
+              // "no orders yet" here would be a lie the user cannot act on.
+              ? 'Vendor orders are not available to supplier accounts yet. The '
+                    'orders endpoint currently only responds to administrators, '
+                    'so no order data can be shown here.'
+              : 'No vendor orders yet. Orders placed by vendors appear here once '
+                    'they are placed.',
         ),
       );
     }

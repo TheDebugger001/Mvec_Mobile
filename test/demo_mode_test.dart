@@ -117,6 +117,64 @@ void main() {
       expect(find.text('Confirmed'), findsWidgets);
     }, skip: !kDemoMode);
 
+    testWidgets('the supplier product form collects only the web fields', (
+      tester,
+    ) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container
+          .read(authControllerProvider.notifier)
+          .login('supplier@mvec.rw', 'demo123');
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Products'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Add wholesale product'));
+      await tester.pumpAndSettle();
+
+      // The seven fields the web supplier form collects, in the same order.
+      const webFields = [
+        'Product name *',
+        'Category *',
+        'Wholesale price (RWF) *',
+        'Minimum order quantity *',
+        'Stock *',
+        'Bulk discount (%) *',
+        'Description',
+      ];
+      for (final label in webFields) {
+        expect(
+          find.text(label),
+          findsOneWidget,
+          reason: 'the web form has a "$label" field',
+        );
+      }
+
+      // Fields the web form does not have must not be asked for.
+      for (final removed in [
+        'Unit',
+        'Retail price',
+        'Main image URL',
+        'Gallery image links',
+        'Status',
+      ]) {
+        expect(
+          find.text(removed),
+          findsNothing,
+          reason: '"$removed" is not part of the web supplier form',
+        );
+      }
+
+      // Description is the only optional field on the web form.
+      expect(find.text('Optional'), findsOneWidget);
+    }, skip: !kDemoMode);
+
     testWidgets('the supplier shell swaps sidebar for bottom nav at 900pt', (
       tester,
     ) async {

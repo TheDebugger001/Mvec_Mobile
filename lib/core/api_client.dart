@@ -29,14 +29,22 @@ class ApiClient {
           if (token != null) options.headers['Authorization'] = 'Bearer $token';
           handler.next(options);
         },
+        // Dio's `handler.reject` only accepts a `DioException`, so this
+        // normaliser cannot throw the ApiException directly. It attaches one to
+        // `.error`, and [_guard] unwraps it at every public verb so callers
+        // only ever see ApiException.
         onError: (e, handler) {
-          final api = DioException(
-            requestOptions: e.requestOptions,
-            response: e.response,
-            type: e.type,
-            error: ApiException(_messageFrom(e), statusCode: e.response?.statusCode),
+          handler.reject(
+            DioException(
+              requestOptions: e.requestOptions,
+              response: e.response,
+              type: e.type,
+              error: ApiException(
+                _messageFrom(e),
+                statusCode: e.response?.statusCode,
+              ),
+            ),
           );
-          handler.reject(api);
         },
       ),
     );
@@ -67,30 +75,44 @@ class ApiClient {
     return e.message ?? 'Network error';
   }
 
-  Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
-    final r = await _dio.get(path, queryParameters: query);
-    return r.data;
+  /// Every public verb funnels through here so callers only ever see
+  /// [ApiException].
+  ///
+  /// Dio's `handler.reject` is typed to a `DioException`, so the interceptor
+  /// above can only *carry* an [ApiException] in `.error` rather than throw it.
+  /// Left at that, a bare ApiException was never thrown and every
+  /// `on ApiException` guard in the app was dead code — which is how an
+  /// expected 403 from the admin-only `GET /orders` escaped and failed the
+  /// whole shared supplier provider, blanking every supplier page at once.
+  /// Nothing reads `.dio`, so unwrapping here is safe, and it also lets
+  /// `friendlyError` show the backend message instead of a raw Dio type dump.
+  Future<T> _guard<T>(Future<T> Function() run) async {
+    try {
+      return await run();
+    } on DioException catch (e) {
+      final normalised = e.error;
+      if (normalised is ApiException) throw normalised;
+      throw ApiException(
+        _messageFrom(e),
+        statusCode: e.response?.statusCode,
+      );
+    }
   }
 
-  Future<dynamic> post(String path, {Object? body, Map<String, dynamic>? query}) async {
-    final r = await _dio.post(path, data: body, queryParameters: query);
-    return r.data;
-  }
+  Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
+      _guard(() async => (await _dio.get(path, queryParameters: query)).data);
 
-  Future<dynamic> patch(String path, {Object? body, Map<String, dynamic>? query}) async {
-    final r = await _dio.patch(path, data: body, queryParameters: query);
-    return r.data;
-  }
+  Future<dynamic> post(String path, {Object? body, Map<String, dynamic>? query}) =>
+      _guard(() async => (await _dio.post(path, data: body, queryParameters: query)).data);
 
-  Future<dynamic> put(String path, {Object? body, Map<String, dynamic>? query}) async {
-    final r = await _dio.put(path, data: body, queryParameters: query);
-    return r.data;
-  }
+  Future<dynamic> patch(String path, {Object? body, Map<String, dynamic>? query}) =>
+      _guard(() async => (await _dio.patch(path, data: body, queryParameters: query)).data);
 
-  Future<dynamic> delete(String path, {Object? body}) async {
-    final r = await _dio.delete(path, data: body);
-    return r.data;
-  }
+  Future<dynamic> put(String path, {Object? body, Map<String, dynamic>? query}) =>
+      _guard(() async => (await _dio.put(path, data: body, queryParameters: query)).data);
+
+  Future<dynamic> delete(String path, {Object? body}) =>
+      _guard(() async => (await _dio.delete(path, data: body)).data);
 }
 
 final apiProvider = Provider<ApiClient>((ref) => ApiClient.instance);

@@ -24,10 +24,14 @@ class SupplierProductsScreen extends ConsumerWidget {
       children: [
         PageHead(
           eyebrow: 'SUPPLIER PORTAL',
-          title: 'Products',
-          subtitle: 'Add, edit and remove the wholesale products you supply.',
+          title: 'Wholesale products',
+          subtitle: 'Manage products that vendors can buy in bulk.',
           actions: [
-            GradientButton(label: 'Add product', icon: 'plus', onPressed: () => _openForm(context)),
+            GradientButton(
+              label: 'Add wholesale product',
+              icon: 'plus',
+              onPressed: () => _openForm(context),
+            ),
           ],
         ),
         const InfoBox('Products stay hidden from buyers until your business is verified.'),
@@ -134,7 +138,11 @@ class SupplierProductsScreen extends ConsumerWidget {
         KeyValueGrid(
           entries: [
             MapEntry('Wholesale price', money(p.price)),
-            MapEntry('Retail price', p.retailPrice == null ? '—' : money(p.retailPrice)),
+            // The supplier form no longer collects a retail price and the
+            // backend defaults it to 0, so only show it when a real value was
+            // actually stored.
+            if (p.retailPrice != null && p.retailPrice! > 0)
+              MapEntry('Retail price', money(p.retailPrice!)),
             MapEntry('Effective unit price', money(p.effectivePrice)),
             if (p.bulkDiscount > 0)
               MapEntry('Bulk discount', '${numFmt(p.bulkDiscount)}%'),
@@ -256,64 +264,60 @@ class _ProductFormSheet extends ConsumerStatefulWidget {
 }
 
 class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
-  late final TextEditingController _name = TextEditingController(text: widget.product?.name ?? '');
-  late final TextEditingController _shortDescription =
-      TextEditingController(text: widget.product?.shortDescription ?? '');
-  late final TextEditingController _category = TextEditingController(text: widget.product?.category ?? '');
-  late final TextEditingController _unit = TextEditingController(text: widget.product?.unit ?? 'piece');
+  // Exactly the fields the web supplier form collects, in the same order:
+  // name, category, wholesalePrice, moq, stock, bulkDiscount, description.
+  late final TextEditingController _name =
+      TextEditingController(text: widget.product?.name ?? '');
+  late final TextEditingController _category =
+      TextEditingController(text: widget.product?.category ?? '');
   late final TextEditingController _wholesalePrice =
-      TextEditingController(text: widget.product?.price.toString() ?? '');
-  late final TextEditingController _retailPrice =
-      TextEditingController(text: widget.product?.retailPrice?.toString() ?? '');
+      TextEditingController(text: widget.product == null ? '' : '${widget.product!.price}');
   late final TextEditingController _moq =
       TextEditingController(text: '${widget.product?.minimumOrderQuantity ?? 1}');
-  late final TextEditingController _stock = TextEditingController(text: '${widget.product?.stock ?? 0}');
+  late final TextEditingController _stock =
+      TextEditingController(text: '${widget.product?.stock ?? 0}');
   late final TextEditingController _bulkDiscount =
       TextEditingController(text: '${widget.product?.bulkDiscount ?? 0}');
-  late final TextEditingController _mainImage = TextEditingController(text: widget.product?.imageUrl ?? '');
-  late final TextEditingController _gallery =
-      TextEditingController(text: widget.product?.gallery.join('\n') ?? '');
+  late final TextEditingController _description =
+      TextEditingController(text: widget.product?.description ?? '');
 
-  late String _status = _statuses.contains(widget.product?.status.toUpperCase())
-      ? widget.product!.status.toUpperCase()
-      : 'ACTIVE';
   bool _busy = false;
-
-  /// The backend forces `OUT_OF_STOCK` whenever `stockQuantity <= 0`, so it is
-  /// not a choice a supplier can make here — only ACTIVE and ARCHIVED are.
-  static const _statuses = ['ACTIVE', 'ARCHIVED'];
 
   @override
   void dispose() {
     for (final c in [
       _name,
-      _shortDescription,
       _category,
-      _unit,
       _wholesalePrice,
-      _retailPrice,
       _moq,
       _stock,
       _bulkDiscount,
-      _mainImage,
-      _gallery,
+      _description,
     ]) {
       c.dispose();
     }
     super.dispose();
   }
 
+  /// Mirrors the web form's `required` set — the six value fields are
+  /// mandatory and `description` is the only optional one. The numeric bounds
+  /// match the backend schema (`wholesalePrice >= 0`, `moq >= 1`,
+  /// `stockQuantity >= 0`, `bulkDiscount` 0–100) so a bad value is caught here
+  /// instead of coming back as an opaque API error.
   String? _validate() {
     if (_name.text.trim().isEmpty) return 'Enter a product name';
+    if (_category.text.trim().isEmpty) return 'Enter a category';
     final price = num.tryParse(_wholesalePrice.text.trim());
     if (_wholesalePrice.text.trim().isEmpty) return 'Enter a wholesale price';
     if (price == null || price < 0) return 'Enter a valid wholesale price';
-    final stock = int.tryParse(_stock.text.trim());
-    if (stock == null || stock < 0) return 'Enter a valid stock quantity';
     final moq = int.tryParse(_moq.text.trim());
     if (moq == null || moq < 1) return 'Minimum order must be 1 or more';
+    final stock = int.tryParse(_stock.text.trim());
+    if (stock == null || stock < 0) return 'Enter a valid stock quantity';
     final discount = num.tryParse(_bulkDiscount.text.trim());
-    if (discount == null || discount < 0 || discount > 100) return 'Bulk discount must be between 0 and 100';
+    if (discount == null || discount < 0 || discount > 100) {
+      return 'Bulk discount must be between 0 and 100';
+    }
     return null;
   }
 
@@ -326,28 +330,26 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
     setState(() => _busy = true);
 
     final isEdit = widget.product != null;
+    final existing = widget.product;
     final stock = int.parse(_stock.text.trim());
     final product = SupplierProduct(
       // An empty id is what tells the workspace service to POST rather
       // than PUT, so a create keeps the sheet's product unset.
-      id: widget.product?.id ?? '',
+      id: existing?.id ?? '',
       name: _name.text.trim(),
-      description: _shortDescription.text.trim(),
-      shortDescription: _shortDescription.text.trim(),
       category: _category.text.trim(),
-      unit: _unit.text.trim(),
+      description: _description.text.trim(),
       price: num.parse(_wholesalePrice.text.trim()).toDouble(),
-      retailPrice: num.tryParse(_retailPrice.text.trim())?.toDouble(),
       stock: stock,
       minimumOrderQuantity: int.parse(_moq.text.trim()),
       bulkDiscount: num.parse(_bulkDiscount.text.trim()).toDouble(),
-      status: stock == 0 ? 'OUT_OF_STOCK' : _status,
-      imageUrl: _mainImage.text.trim(),
-      gallery: _gallery.text
-          .split('\n')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList(),
+      // Not collected by this form, so carry the stored values through. The
+      // payload omits them, and the backend preserves them on update.
+      unit: existing?.unit ?? 'piece',
+      retailPrice: existing?.retailPrice,
+      imageUrl: existing?.imageUrl ?? '',
+      gallery: existing?.gallery ?? const <String>[],
+      status: existing?.status ?? 'ACTIVE',
     );
 
     try {
@@ -383,93 +385,64 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
             ),
             const SizedBox(height: 16),
             Text(
-              isEdit ? 'Edit product' : 'Add product',
+              isEdit ? 'Edit wholesale product' : 'Add wholesale product',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Enter the wholesale product details vendors will see when sourcing stock.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 16),
-            TextField(controller: _name, decoration: const InputDecoration(labelText: 'Product name *')),
+            TextField(
+              controller: _name,
+              decoration: const InputDecoration(labelText: 'Product name *'),
+            ),
             const SizedBox(height: 12),
             TextField(
-              controller: _shortDescription,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Description'),
+              controller: _category,
+              decoration: const InputDecoration(labelText: 'Category *'),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: TextField(controller: _category, decoration: const InputDecoration(labelText: 'Category'))),
-                const SizedBox(width: 12),
-                Expanded(child: TextField(controller: _unit, decoration: const InputDecoration(labelText: 'Unit'))),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _wholesalePrice,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Wholesale price *'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _retailPrice,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Retail price'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _stock,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Stock *'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _moq,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Min order *'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _bulkDiscount,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Bulk %'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(controller: _mainImage, decoration: const InputDecoration(labelText: 'Main image URL')),
             const SizedBox(height: 12),
             TextField(
-              controller: _gallery,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Gallery image links', hintText: 'One per line'),
+              controller: _wholesalePrice,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Wholesale price (RWF) *',
+              ),
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _status,
-              decoration: const InputDecoration(labelText: 'Status'),
-              items: [
-                for (final s in _statuses) DropdownMenuItem(value: s, child: Text(titleCase(s))),
-              ],
-              onChanged: (v) => setState(() => _status = v ?? 'ACTIVE'),
+            TextField(
+              controller: _moq,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Minimum order quantity *',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _stock,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Stock *'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _bulkDiscount,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Bulk discount (%) *'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _description,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                helperText: 'Optional',
+              ),
             ),
             const SizedBox(height: 20),
             GradientButton(
-              label: isEdit ? 'Save changes' : 'Add product',
+              label: isEdit ? 'Save changes' : 'Add wholesale product',
               icon: 'check',
               expanded: true,
               onPressed: _busy ? null : _save,

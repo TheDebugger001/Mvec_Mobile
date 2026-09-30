@@ -99,21 +99,26 @@ class SupplierProduct {
   }
 
   /// The payload the backend's `sanitizeWholesalePayload` understands.
+  ///
+  /// Deliberately limited to the seven fields the web supplier form collects:
+  /// name, category, wholesale price, MOQ, stock, bulk discount, description.
+  ///
+  /// `unit`, `retailPrice`, `media` and `status` are omitted on purpose. The
+  /// supplier form no longer collects them, and every one has a safe backend
+  /// default on create (`unit: "piece"`, `retailPrice: 0`, empty `media`,
+  /// `status: "ACTIVE"` demoted to `OUT_OF_STOCK` when stock is 0). On update
+  /// `sanitizeWholesalePayload` falls back to the stored product, so omitting
+  /// them preserves existing data instead of blanking it.
   Map<String, dynamic> toJson() => {
     'name': name,
+    // The backend's WholesaleProduct has no `description` field; the long text
+    // is stored as `shortDescription`.
     'shortDescription': description,
     'category': category,
-    'unit': unit,
     'wholesalePrice': price,
-    'retailPrice': retailPrice ?? price,
     'moq': minimumOrderQuantity,
     'stockQuantity': stock,
     'bulkDiscount': bulkDiscount,
-    'status': status,
-    'media': {
-      'mainImage': imageUrl,
-      'gallery': gallery,
-    },
   };
 
   SupplierProduct copyWith({
@@ -460,12 +465,23 @@ class SupplierWorkspaceData {
     required this.orders,
     required this.notifications,
     required this.profile,
+    this.ordersUnavailable = false,
+    this.notificationsUnavailable = false,
   });
 
   final List<SupplierProduct> products;
   final List<SupplierOrder> orders;
   final List<SupplierNotice> notifications;
   final SupplierProfile profile;
+
+  /// `GET /orders` is admin-only on the backend, so a supplier gets 403 rather
+  /// than an empty list. The Orders page needs to tell those apart to avoid
+  /// claiming "no orders yet" when the truth is "not readable by your role".
+  final bool ordersUnavailable;
+
+  /// `GET /notifications/mine` should always work; flag it only so the page can
+  /// report a genuine fault instead of a false "you're all caught up".
+  final bool notificationsUnavailable;
 
   SupplierMetrics get metrics => SupplierMetrics.fromCatalog(
     products,
@@ -739,15 +755,18 @@ class ApiSupplierWorkspaceService implements SupplierWorkspaceService {
                 .toList(),
       );
 
-  /// `GET /notifications?limit=200`.
+  /// `GET /notifications/mine?limit=200` → `{ data, meta }`.
+  ///
+  /// Must be `/mine`: the collection root `GET /api/notifications` is the admin
+  /// oversight route (`authorize("super_admin")`) and 403s for a supplier.
   @override
   Future<List<SupplierNotice>> notifications() async =>
       _tolerant(
         () async =>
-            listJson(await _api.get('/notifications', query: {'limit': '200'}), [
-              'notifications',
-              'data',
-            ]).map(SupplierNotice.fromJson).toList(),
+            listJson(
+              await _api.get('/notifications/mine', query: {'limit': '200'}),
+              ['data', 'notifications'],
+            ).map(SupplierNotice.fromJson).toList(),
       );
 
   /// `GET /suppliers/me/profile` → `{ supplier }`.
@@ -814,9 +833,11 @@ class ApiSupplierWorkspaceService implements SupplierWorkspaceService {
   Future<void> updateOrderStatus(String id, String status) =>
       _api.patch('/orders/$id/status', body: {'status': status});
 
+  /// `PATCH /notifications/:id/read` — the backend exposes this as a PATCH;
+  /// there is no POST twin, so the verb has to match or it 404s.
   @override
   Future<void> markNotificationRead(String id) =>
-      _api.post('/notifications/$id/read');
+      _api.patch('/notifications/$id/read');
 
   /// `POST /suppliers/onboard` creates the profile; `PATCH
   /// /suppliers/me/profile` updates it. A 404 from [profile] is what signals
@@ -872,17 +893,34 @@ class SupplierWorkspaceController extends AsyncNotifier<SupplierWorkspaceData> {
   }
 
   Future<SupplierWorkspaceData> _load() async {
-    final values = await Future.wait<dynamic>([
+    // Each section loads independently and in its own error scope. A single
+    // unreadable endpoint used to fail this Future.wait, which flipped the one
+    // shared provider into AsyncError and blanked *every* supplier page — even
+    // pages whose own endpoints were fine. Now a failure degrades only its own
+    // section, and the page says so honestly.
+    var ordersUnavailable = false;
+    var notificationsUnavailable = false;
+
+    final results = await Future.wait<dynamic>([
       _service.products(),
-      _service.orders(),
-      _service.notifications(),
+      _service.orders().catchError((Object _) {
+        ordersUnavailable = true;
+        return <SupplierOrder>[];
+      }),
+      _service.notifications().catchError((Object _) {
+        notificationsUnavailable = true;
+        return <SupplierNotice>[];
+      }),
       _service.profile(),
     ]);
+
     return SupplierWorkspaceData(
-      products: values[0] as List<SupplierProduct>,
-      orders: values[1] as List<SupplierOrder>,
-      notifications: values[2] as List<SupplierNotice>,
-      profile: values[3] as SupplierProfile,
+      products: results[0] as List<SupplierProduct>,
+      orders: results[1] as List<SupplierOrder>,
+      notifications: results[2] as List<SupplierNotice>,
+      profile: results[3] as SupplierProfile,
+      ordersUnavailable: ordersUnavailable,
+      notificationsUnavailable: notificationsUnavailable,
     );
   }
 
