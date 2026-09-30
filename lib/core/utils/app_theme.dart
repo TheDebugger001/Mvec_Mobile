@@ -24,6 +24,18 @@ class AppColors {
     MvColors.primaryDark,
   ];
 
+  /// The sky blue reserved for filled surfaces that must carry white text or a
+  /// white glyph — active category chips, the floating cart action, the sliding
+  /// indicator. `MvColors.skyBlue` (#55C9F2) is too light to hold white content
+  /// at AA contrast, so those spots read this deeper step of the same hue
+  /// instead. Never use it for hairline text on a light background.
+  static const Color skyBlueSolid = Color(0xFF0EA5E9);
+
+  /// Recessed fill for unselected chips and inactive pills (`--slate-100`).
+  /// Deliberately neutral: only the *selected* chip is allowed to carry the
+  /// sky-blue accent, so this must stay grey.
+  static const Color chipNeutral = Color(0xFFF1F5F9);
+
   static const Color secondary = Color(0xFFF0A629); // star rating amber
   static const Color accent = Color(0xFF168D67); // price-drop green
   static const Color soft = MvColors.soft; // --soft
@@ -46,46 +58,42 @@ class AppTextStyles {
   static TextStyle headline(BuildContext context) {
     final mv = context.mv;
     return Theme.of(context).textTheme.headlineSmall!.copyWith(
-          color: mv.text,
-          fontWeight: FontWeight.w700,
-        );
+      color: mv.text,
+      fontWeight: FontWeight.w700,
+    );
   }
 
   static TextStyle sectionTitle(BuildContext context) {
     final mv = context.mv;
     return Theme.of(context).textTheme.titleMedium!.copyWith(
-          color: mv.text,
-          fontWeight: FontWeight.w700,
-        );
+      color: mv.text,
+      fontWeight: FontWeight.w700,
+    );
   }
 
   static TextStyle title(BuildContext context) {
     final mv = context.mv;
     return Theme.of(context).textTheme.titleMedium!.copyWith(
-          color: mv.text,
-          fontWeight: FontWeight.w600,
-        );
+      color: mv.text,
+      fontWeight: FontWeight.w600,
+    );
   }
 
   static TextStyle body(BuildContext context) {
     final mv = context.mv;
-    return Theme.of(context).textTheme.bodyMedium!.copyWith(
-          color: mv.text,
-        );
+    return Theme.of(context).textTheme.bodyMedium!.copyWith(color: mv.text);
   }
 
   static TextStyle bodySecondary(BuildContext context) {
     final mv = context.mv;
-    return Theme.of(context).textTheme.bodyMedium!.copyWith(
-          color: mv.textMuted,
-        );
+    return Theme.of(
+      context,
+    ).textTheme.bodyMedium!.copyWith(color: mv.textMuted);
   }
 
   static TextStyle caption(BuildContext context) {
     final mv = context.mv;
-    return Theme.of(context).textTheme.bodySmall!.copyWith(
-          color: mv.textMuted,
-        );
+    return Theme.of(context).textTheme.bodySmall!.copyWith(color: mv.textMuted);
   }
 
   static TextStyle price(BuildContext context) {

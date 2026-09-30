@@ -107,21 +107,30 @@ Future<void> _pumpMarketplace(WidgetTester tester) async {
   expect(find.byType(MainNavigationScreen), findsOneWidget);
 }
 
+/// Matches [matching] inside the floating bottom bar. Several bottom-bar glyphs
+/// (`grid_view_outlined`, `shopping_bag_outlined`) also appear elsewhere in the
+/// storefront, so bar assertions must be scoped.
+Finder inBottomNav(Finder matching) => find.descendant(
+  of: find.byKey(const ValueKey<String>('bottom-nav-bar')),
+  matching: matching,
+);
+
+/// Matches [matching] inside the category strip under the top bar.
+Finder inCategoryBar(Finder matching) => find.descendant(
+  of: find.byKey(const ValueKey<String>('category-bar')),
+  matching: matching,
+);
+
 /// Colour the bottom-nav icon for [icon] is currently painted in.
 Color? _iconColor(WidgetTester tester, IconData icon) =>
-    tester.widget<Icon>(find.byIcon(icon)).color;
+    tester.widget<Icon>(inBottomNav(find.byIcon(icon))).color;
 
 /// Effective colour of a bottom-nav [label], resolved through the animated
 /// default text style the bar applies. Scoped to the bar because the active
 /// tab's screen can repeat the same word as its own heading.
 Color? _labelColor(WidgetTester tester, String label) =>
     DefaultTextStyle.of(
-      tester.element(
-        find.descendant(
-          of: find.byKey(const ValueKey<String>('bottom-nav-bar')),
-          matching: find.text(label),
-        ),
-      ),
+      tester.element(inBottomNav(find.text(label))),
     ).style.color;
 
 /// Background the marketplace scaffold is currently filled with.
@@ -363,39 +372,49 @@ void main() {
     ) async {
       await _pumpMarketplace(tester);
 
-      // Bottom nav carries the four primary destinations, icon and label.
-      expect(find.byIcon(Icons.home_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.grid_view_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.pie_chart_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
+      // Bottom nav carries the four primary destinations as light outlined
+      // glyphs, icon and label.
+      expect(inBottomNav(find.byIcon(Icons.home_outlined)), findsOneWidget);
+      expect(
+        inBottomNav(find.byIcon(Icons.grid_view_outlined)),
+        findsOneWidget,
+      );
+      expect(
+        inBottomNav(find.byIcon(Icons.pie_chart_outline_rounded)),
+        findsOneWidget,
+      );
+      expect(
+        inBottomNav(find.byIcon(Icons.favorite_border_rounded)),
+        findsOneWidget,
+      );
       for (final label in <String>['Home', 'Shop', 'For You', 'Deals']) {
-        expect(
-          find.descendant(
-            of: find.byKey(const ValueKey<String>('bottom-nav-bar')),
-            matching: find.text(label),
-          ),
-          findsOneWidget,
-          reason: label,
-        );
+        expect(inBottomNav(find.text(label)), findsOneWidget, reason: label);
       }
+
+      // The cart is the raised centre action of the bottom bar.
+      expect(
+        inBottomNav(find.byIcon(Icons.shopping_bag_outlined)),
+        findsOneWidget,
+      );
 
       expect(find.text('MVEC MARKETPLACE'), findsOneWidget);
       expect(find.text('Shop. Sell.\nGrow together.'), findsOneWidget);
 
-      // Top bar keeps search, wishlist, notifications, cart, the dark-mode
-      // toggle and account reachable.
+      // Top bar keeps search, wishlist, notifications, the dark-mode toggle and
+      // account reachable — the cart moved down to the bottom bar.
       expect(find.text('Search products, brands & more'), findsOneWidget);
       expect(find.byTooltip('Wishlist'), findsOneWidget);
       expect(find.byTooltip('Notifications'), findsOneWidget);
-      expect(find.byTooltip('Cart'), findsOneWidget);
       expect(find.byTooltip('Switch to dark mode'), findsOneWidget);
       expect(find.byTooltip('Account'), findsOneWidget);
+      expect(find.byTooltip('Cart'), findsNothing);
 
-      // The destinations that do not fit in the bottom nav stay reachable.
-      expect(find.byTooltip('All Categories'), findsOneWidget);
-      expect(find.byTooltip('Vendors'), findsOneWidget);
-      expect(find.byTooltip('Orders'), findsOneWidget);
+      // The category strip stays expanded, and the destinations that no longer
+      // have a home in the bars sit behind the "More" trigger.
       expect(find.text('Categories'), findsOneWidget);
+      expect(find.text('All'), findsOneWidget);
+      expect(find.text('More'), findsOneWidget);
+      expect(find.byIcon(Icons.category_outlined), findsOneWidget);
 
       expect(find.textContaining('demo data'), findsOneWidget);
     });
@@ -407,26 +426,97 @@ void main() {
 
       final palette = MvPalette.light();
       // Home starts selected: sky-blue icon and label, muted neighbours.
-      expect(_iconColor(tester, Icons.home_rounded), AppColors.primary);
-      expect(_labelColor(tester, 'Home'), AppColors.primary);
-      expect(_iconColor(tester, Icons.grid_view_rounded), palette.textMuted);
+      expect(_iconColor(tester, Icons.home_outlined), AppColors.skyBlueSolid);
+      expect(_labelColor(tester, 'Home'), AppColors.skyBlueSolid);
+      expect(_iconColor(tester, Icons.grid_view_outlined), palette.textMuted);
       expect(_labelColor(tester, 'Shop'), palette.textMuted);
 
       // Switching tabs moves the accent and slides the indicator along.
       final before = tester.getTopLeft(
         find.byKey(const ValueKey<String>('bottom-nav-indicator')),
       );
-      await tester.tap(find.byIcon(Icons.grid_view_rounded));
+      await tester.tap(inBottomNav(find.byIcon(Icons.grid_view_outlined)));
       await tester.pumpAndSettle();
       final after = tester.getTopLeft(
         find.byKey(const ValueKey<String>('bottom-nav-indicator')),
       );
 
-      expect(_iconColor(tester, Icons.grid_view_rounded), AppColors.primary);
-      expect(_labelColor(tester, 'Shop'), AppColors.primary);
-      expect(_iconColor(tester, Icons.home_rounded), palette.textMuted);
+      expect(
+        _iconColor(tester, Icons.grid_view_outlined),
+        AppColors.skyBlueSolid,
+      );
+      expect(_labelColor(tester, 'Shop'), AppColors.skyBlueSolid);
+      expect(_iconColor(tester, Icons.home_outlined), palette.textMuted);
       expect(_labelColor(tester, 'Home'), palette.textMuted);
       expect(after.dx, greaterThan(before.dx));
+
+      // The bar splits into five slots, not four: Home→Shop advances one slot,
+      // while Home→Deals crosses the cart's centre slot and advances four. That
+      // asymmetry is what proves the cart really occupies a slot of its own.
+      final slotWidth =
+          (tester
+                  .getSize(find.byKey(const ValueKey<String>('bottom-nav-bar')))
+                  .width -
+              2) /
+          5;
+      expect(after.dx - before.dx, closeTo(slotWidth, 1));
+
+      await tester.tap(inBottomNav(find.byIcon(Icons.favorite_border_rounded)));
+      await tester.pumpAndSettle();
+      final deals = tester.getTopLeft(
+        find.byKey(const ValueKey<String>('bottom-nav-indicator')),
+      );
+      expect(deals.dx - before.dx, closeTo(slotWidth * 4, 1));
+      expect(_labelColor(tester, 'Deals'), AppColors.skyBlueSolid);
+      expect(_labelColor(tester, 'Shop'), palette.textMuted);
+    });
+
+    testWidgets('only the selected category pill is sky-blue', (tester) async {
+      await _pumpMarketplace(tester);
+
+      /// Fill painted behind the category chip labelled [label].
+      Color chipFill(String label) =>
+          tester
+              .widget<Material>(
+                find
+                    .ancestor(
+                      of: inCategoryBar(find.text(label)),
+                      matching: find.byType(Material),
+                    )
+                    .first,
+              )
+              .color!;
+
+      /// Colour of the category chip's own label text, resolved through the
+      /// animated default text style the pill applies.
+      Color? chipText(String label) =>
+          DefaultTextStyle.of(
+            tester.element(inCategoryBar(find.text(label))),
+          ).style.color;
+
+      // "All" starts selected: the one chip allowed to carry the accent.
+      expect(chipFill('All'), AppColors.skyBlueSolid);
+      expect(chipText('All'), Colors.white);
+
+      // Everything else is neutral grey, never sky-blue.
+      final muted = MvPalette.light().textMuted;
+      for (final label in <String>['Electronics', 'Fashion', 'Home & Garden']) {
+        expect(chipFill(label), AppColors.chipNeutral, reason: label);
+        expect(chipFill(label), isNot(AppColors.skyBlueSolid), reason: label);
+        expect(chipText(label), muted, reason: label);
+      }
+
+      // Selecting a category hands the accent over, and hands over cleanly:
+      // still exactly one sky-blue chip in the strip.
+      await tester.tap(
+        inCategoryBar(find.widgetWithText(InkWell, 'Electronics')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(chipFill('Electronics'), AppColors.skyBlueSolid);
+      expect(chipText('Electronics'), Colors.white);
+      expect(chipFill('All'), AppColors.chipNeutral);
+      expect(chipFill('Fashion'), AppColors.chipNeutral);
     });
 
     testWidgets('the dark-mode toggle flips every surface and text colour', (
@@ -435,7 +525,7 @@ void main() {
       await _pumpMarketplace(tester);
 
       expect(_scaffoldBackground(tester), MvColors.page);
-      expect(_labelColor(tester, 'Home'), AppColors.primary);
+      expect(_labelColor(tester, 'Home'), AppColors.skyBlueSolid);
 
       await tester.tap(find.byTooltip('Switch to dark mode'));
       await tester.pumpAndSettle();
@@ -444,7 +534,7 @@ void main() {
       // nothing disappears once the theme flips.
       final dark = MvPalette.dark();
       expect(_scaffoldBackground(tester), MvColors.darkPage);
-      expect(_labelColor(tester, 'Home'), AppColors.primary);
+      expect(_labelColor(tester, 'Home'), AppColors.skyBlueSolid);
       expect(_labelColor(tester, 'Deals'), dark.textMuted);
 
       // The control now offers the way back.
@@ -482,7 +572,7 @@ void main() {
       expect(_scaffoldBackground(tester), MvColors.darkPage);
       // Body copy is light, and the sky-blue accent still stands out on it.
       expect(_labelColor(tester, 'Deals'), dark.textMuted);
-      expect(_iconColor(tester, Icons.home_rounded), AppColors.primary);
+      expect(_iconColor(tester, Icons.home_outlined), AppColors.skyBlueSolid);
       expect(
         Theme.of(
           tester.element(find.byType(HomeScreen)),
@@ -513,7 +603,9 @@ void main() {
     testWidgets('tapping a bottom nav icon switches the body', (tester) async {
       await _pumpMarketplace(tester);
 
-      await tester.tap(find.byIcon(Icons.pie_chart_rounded));
+      await tester.tap(
+        inBottomNav(find.byIcon(Icons.pie_chart_outline_rounded)),
+      );
       await tester.pumpAndSettle();
 
       // The For You screen renders its sections once it is active.
@@ -526,7 +618,9 @@ void main() {
       await _pumpMarketplace(tester);
 
       // Category pills jump straight to the Shop tab.
-      await tester.tap(find.widgetWithText(Ink, 'Electronics'));
+      await tester.tap(
+        inCategoryBar(find.widgetWithText(InkWell, 'Electronics')),
+      );
       await tester.pumpAndSettle();
 
       // Electronics product visible, Fashion product filtered out.
@@ -534,7 +628,7 @@ void main() {
       expect(find.text('Linen Summer Dress'), findsNothing);
     });
 
-    testWidgets('opens search, categories, vendors and orders pages', (
+    testWidgets('opens search plus every destination behind the More sheet', (
       tester,
     ) async {
       await _pumpMarketplace(tester);
@@ -546,23 +640,55 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('All Categories'));
+      // All Categories, Vendors and Orders lost their top-bar quick links to
+      // the "More" overflow sheet; none of them is reachable from the bars.
+      expect(find.text('All categories'), findsNothing);
+      expect(find.byTooltip('Vendors'), findsNothing);
+
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      expect(find.text('All categories'), findsOneWidget);
+      expect(find.text('Vendors'), findsOneWidget);
+      expect(find.text('Orders & history'), findsOneWidget);
+      expect(find.text('My wishlist'), findsOneWidget);
+
+      await tester.tap(find.text('All categories'));
       await tester.pumpAndSettle();
       expect(find.text('All Categories'), findsWidgets);
 
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('Vendors'));
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Vendors'));
       await tester.pumpAndSettle();
       expect(find.text('Vendors'), findsWidgets);
 
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('Orders'));
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Orders & history'));
       await tester.pumpAndSettle();
       expect(find.text('My Orders'), findsWidgets);
+    });
+
+    testWidgets('the More sheet is dismissible without navigating', (
+      tester,
+    ) async {
+      await _pumpMarketplace(tester);
+
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      expect(find.text('Orders & history'), findsOneWidget);
+
+      await tester.tapAt(const Offset(200, 100));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Orders & history'), findsNothing);
+      expect(find.byType(MainNavigationScreen), findsOneWidget);
     });
   });
 
@@ -590,11 +716,11 @@ void main() {
       await scrollToProducts(tester);
 
       expect(find.byTooltip('Add to cart'), findsWidgets);
-      expect(badgeFor(tester, 'home-cart-count').isLabelVisible, isFalse);
+      expect(badgeFor(tester, 'bottom-cart-badge').isLabelVisible, isFalse);
 
       await tester.tap(find.byTooltip('Add to cart').first);
       await tester.pumpAndSettle();
-      expect((badgeFor(tester, 'home-cart-count').label as Text).data, '1');
+      expect((badgeFor(tester, 'bottom-cart-badge').label as Text).data, '1');
 
       await tester.tap(find.byTooltip('Add to wishlist').first);
       await tester.pumpAndSettle();
@@ -615,9 +741,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(badgeFor(tester, 'home-wishlist-count').isLabelVisible, isFalse);
-      expect((badgeFor(tester, 'home-cart-count').label as Text).data, '1');
+      expect((badgeFor(tester, 'bottom-cart-badge').label as Text).data, '1');
 
-      await tester.tap(find.byTooltip('Cart'));
+      await tester.tap(inBottomNav(find.byIcon(Icons.shopping_bag_outlined)));
       await tester.pumpAndSettle();
       expect(find.text('My Cart'), findsOneWidget);
       expect(
