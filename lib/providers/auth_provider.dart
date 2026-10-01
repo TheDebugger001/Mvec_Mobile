@@ -117,6 +117,7 @@ class AuthController extends Notifier<AuthState> {
   Future<bool> login(String emailOrPhone, String password) async {
     if (kDemoMode) {
       // Demo mode: any non-empty credentials open a role-specific local account.
+      // Demo identities route to the admin, vendor or buyer experience locally.
       final identity = emailOrPhone.trim();
       if (identity.isEmpty || password.isEmpty) {
         state = state.copyWith(
@@ -136,6 +137,9 @@ class AuthController extends Notifier<AuthState> {
               : normalizedIdentity.contains('affiliate')
               ? 'affiliate'
               : 'buyer';
+      final wantsAdmin = normalizedIdentity.contains('admin');
+      final wantsAffiliate = normalizedIdentity.contains('affiliate');
+      final wantsVendor = normalizedIdentity.contains('vendor');
       state = AuthState(
         session: AuthSession(
           token: 'demo-token',
@@ -150,6 +154,30 @@ class AuthController extends Notifier<AuthState> {
                     role: role,
                     companyName:
                         role == 'supplier' ? 'Rwanda Fresh Produce Co.' : null,
+              wantsAdmin
+                  ? _demoUser
+                  : wantsAffiliate
+                  ? UserRecord(
+                    id: 'demo-affiliate',
+                    fullname: 'Demo Affiliate',
+                    email: identity,
+                    role: 'affiliate',
+                    status: 'active',
+                  )
+                  : wantsVendor
+                  ? UserRecord(
+                    id: 'demo-vendor',
+                    fullname: 'Demo Vendor',
+                    email: identity,
+                    role: 'vendor',
+                    status: 'active',
+                    companyName: 'Umucyo Harvest Market',
+                  )
+                  : UserRecord(
+                    id: 'demo-buyer',
+                    fullname: 'Demo Buyer',
+                    email: identity,
+                    role: 'buyer',
                     status: 'active',
                   ),
         ),
@@ -340,6 +368,10 @@ String roleHome(UserRecord user) {
       return '/admin';
     case 'supplier':
       return '/supplier';
+    case 'affiliate':
+      return '/affiliate';
+    case 'vendor':
+      return '/vendor';
     default:
       return '/home';
   }

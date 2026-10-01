@@ -20,6 +20,7 @@ import 'package:mvec_mobile/providers/auth_provider.dart';
 import 'package:mvec_mobile/screens/layout/admin_shell.dart';
 import 'package:mvec_mobile/screens/suppliers/supplier_overview_screen.dart';
 import 'package:mvec_mobile/screens/suppliers/supplier_shell.dart';
+import 'package:mvec_mobile/screens/vendor/vendor_shell.dart';
 
 void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
@@ -118,6 +119,7 @@ void main() {
     }, skip: !kDemoMode);
 
     testWidgets('the supplier product form collects only the web fields', (
+    testWidgets('a vendor identity opens the local vendor dashboard', (
       tester,
     ) async {
       final container = ProviderContainer();
@@ -126,6 +128,7 @@ void main() {
       await container
           .read(authControllerProvider.notifier)
           .login('supplier@mvec.rw', 'demo123');
+          .login('vendor@umucyo.rw', 'anything');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(container: container, child: const MvecApp()),
@@ -309,6 +312,13 @@ void main() {
       },
       skip: !kDemoMode,
     );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.byType(VendorShell), findsOneWidget);
+      expect(find.text('VENDOR PORTAL'), findsOneWidget);
+    }, skip: !kDemoMode);
 
     test('empty demo credentials are rejected', () async {
       final container = ProviderContainer();

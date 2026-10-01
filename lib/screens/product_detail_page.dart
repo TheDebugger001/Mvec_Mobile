@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../core/utils/app_theme.dart';
+import '../features/marketplace/presentation/Screens/vendor_store_screen.dart';
 import '../models/product.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -59,6 +60,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     widget.onToggleWishlist?.call(product);
   }
 
+  void _openVendorStore() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => VendorStoreScreen(storeName: product.vendor.name),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -106,72 +115,76 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: product.images.isEmpty
-                  ? Container(
-                      color: mv.soft,
-                      child: Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          size: 80,
-                          color: mv.textMuted,
+              background:
+                  product.images.isEmpty
+                      ? Container(
+                        color: mv.soft,
+                        child: Center(
+                          child: Icon(
+                            Icons.image_not_supported,
+                            size: 80,
+                            color: mv.textMuted,
+                          ),
                         ),
-                      ),
-                    )
-                  : Stack(
-                      children: [
-                        PageView.builder(
-                          controller: _pageController,
-                          itemCount: product.images.length,
-                          onPageChanged: (index) {
-                            setState(() {
-                              _currentImageIndex = index;
-                            });
-                          },
-                          itemBuilder: (context, index) {
-                            return Image.network(
-                              product.images[index],
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: mv.soft,
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    size: 80,
-                                    color: mv.textMuted,
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                        if (product.images.length > 1)
-                          Positioned(
-                            bottom: 16,
-                            left: 0,
-                            right: 0,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(
-                                product.images.length,
-                                (index) => AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  width: _currentImageIndex == index ? 20 : 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: _currentImageIndex == index
-                                        ? AppColors.primary
-                                        : Colors.white.withValues(alpha: 0.7),
-                                    borderRadius: BorderRadius.circular(4),
+                      )
+                      : Stack(
+                        children: [
+                          PageView.builder(
+                            controller: _pageController,
+                            itemCount: product.images.length,
+                            onPageChanged: (index) {
+                              setState(() {
+                                _currentImageIndex = index;
+                              });
+                            },
+                            itemBuilder: (context, index) {
+                              return Image.network(
+                                product.images[index],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: mv.soft,
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      size: 80,
+                                      color: mv.textMuted,
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                          if (product.images.length > 1)
+                            Positioned(
+                              bottom: 16,
+                              left: 0,
+                              right: 0,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(
+                                  product.images.length,
+                                  (index) => AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    width: _currentImageIndex == index ? 20 : 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          _currentImageIndex == index
+                                              ? AppColors.primary
+                                              : Colors.white.withValues(
+                                                alpha: 0.7,
+                                              ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
+                        ],
+                      ),
             ),
           ),
 
@@ -224,11 +237,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: isOutOfStock
-                              ? Colors.red.withValues(alpha: 0.12)
-                              : isLowStock
-                              ? Colors.orange.withValues(alpha: 0.12)
-                              : Colors.green.withValues(alpha: 0.12),
+                          color:
+                              isOutOfStock
+                                  ? Colors.red.withValues(alpha: 0.12)
+                                  : isLowStock
+                                  ? Colors.orange.withValues(alpha: 0.12)
+                                  : Colors.green.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -285,12 +299,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                product.vendor.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                  color: mv.text,
+                              InkWell(
+                                onTap: _openVendorStore,
+                                child: Text(
+                                  product.vendor.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    color: mv.text,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -315,9 +332,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () {
-                            // TODO: Navigate to Vendor Store
-                          },
+                          onPressed: _openVendorStore,
                           child: const Text('Visit Store'),
                         ),
                       ],
@@ -338,40 +353,43 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 10,
-                      children: product.colors.map((color) {
-                        final isSelected = _selectedColor == color;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedColor = color;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primary : mv.surface,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color:
-                                    isSelected
-                                        ? AppColors.primary
-                                        : mv.border,
+                      children:
+                          product.colors.map((color) {
+                            final isSelected = _selectedColor == color;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedColor = color;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isSelected
+                                          ? AppColors.primary
+                                          : mv.surface,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color:
+                                        isSelected
+                                            ? AppColors.primary
+                                            : mv.border,
+                                  ),
+                                ),
+                                child: Text(
+                                  color,
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : mv.text,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              color,
-                              style: TextStyle(
-                                color:
-                                    isSelected ? Colors.white : mv.text,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                            );
+                          }).toList(),
                     ),
                     const SizedBox(height: 20),
                   ],
@@ -389,40 +407,43 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 10,
-                      children: product.sizes.map((size) {
-                        final isSelected = _selectedSize == size;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedSize = size;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primary : mv.surface,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color:
-                                    isSelected
-                                        ? AppColors.primary
-                                        : mv.border,
+                      children:
+                          product.sizes.map((size) {
+                            final isSelected = _selectedSize == size;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedSize = size;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isSelected
+                                          ? AppColors.primary
+                                          : mv.surface,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color:
+                                        isSelected
+                                            ? AppColors.primary
+                                            : mv.border,
+                                  ),
+                                ),
+                                child: Text(
+                                  size,
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : mv.text,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              size,
-                              style: TextStyle(
-                                color:
-                                    isSelected ? Colors.white : mv.text,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                            );
+                          }).toList(),
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -448,13 +469,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.remove, size: 20),
-                          onPressed: _quantity > 1
-                              ? () {
-                                  setState(() {
-                                    _quantity--;
-                                  });
-                                }
-                              : null,
+                          onPressed:
+                              _quantity > 1
+                                  ? () {
+                                    setState(() {
+                                      _quantity--;
+                                    });
+                                  }
+                                  : null,
                         ),
                         Text(
                           '$_quantity',
@@ -466,13 +488,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.add, size: 20),
-                          onPressed: _quantity < product.stock
-                              ? () {
-                                  setState(() {
-                                    _quantity++;
-                                  });
-                                }
-                              : null,
+                          onPressed:
+                              _quantity < product.stock
+                                  ? () {
+                                    setState(() {
+                                      _quantity++;
+                                    });
+                                  }
+                                  : null,
                         ),
                       ],
                     ),
@@ -522,9 +545,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           child: Row(
             children: [
               Tooltip(
-                message: _isWishlisted
-                    ? 'Remove from wishlist'
-                    : 'Add to wishlist',
+                message:
+                    _isWishlisted ? 'Remove from wishlist' : 'Add to wishlist',
                 child: OutlinedButton(
                   onPressed: _toggleWishlist,
                   style: OutlinedButton.styleFrom(
@@ -542,36 +564,37 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: isOutOfStock || _isAddingToCart
-                      ? null
-                      : () async {
-                          setState(() {
-                            _isAddingToCart = true;
-                          });
+                  onPressed:
+                      isOutOfStock || _isAddingToCart
+                          ? null
+                          : () async {
+                            setState(() {
+                              _isAddingToCart = true;
+                            });
 
-                          // Simulate adding to cart
-                          await Future.delayed(
-                            const Duration(milliseconds: 800),
-                          );
+                            // Simulate adding to cart
+                            await Future.delayed(
+                              const Duration(milliseconds: 800),
+                            );
 
-                          if (!context.mounted) {
-                            return;
-                          }
+                            if (!context.mounted) {
+                              return;
+                            }
 
-                          setState(() {
-                            _isAddingToCart = false;
-                          });
-                          widget.onAddToCart?.call(product);
+                            setState(() {
+                              _isAddingToCart = false;
+                            });
+                            widget.onAddToCart?.call(product);
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Added $_quantity × ${product.name} to cart',
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Added $_quantity × ${product.name} to cart',
+                                ),
+                                behavior: SnackBarBehavior.floating,
                               ),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
+                            );
+                          },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -581,22 +604,23 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     elevation: 0,
                   ),
-                  child: _isAddingToCart
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
+                  child:
+                      _isAddingToCart
+                          ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Text(
+                            'Add to Cart',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        )
-                      : const Text(
-                          'Add to Cart',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                 ),
               ),
             ],

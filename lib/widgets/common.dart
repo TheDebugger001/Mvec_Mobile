@@ -12,7 +12,8 @@ class StatusChip extends StatelessWidget {
   final Color? overrideColor;
 
   @override
-  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) => status ?? 'UNKNOWN';
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      status ?? 'UNKNOWN';
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +33,18 @@ class StatusChip extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
       child: Text(
         titleCase(s),
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fg, letterSpacing: .3),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          color: fg,
+          letterSpacing: .3,
+        ),
       ),
     );
   }
@@ -47,6 +56,7 @@ class MetricCard extends StatelessWidget {
     required this.label,
     required this.value,
     this.delta,
+    this.deltaColor,
     this.icon = 'chart',
     this.onTap,
   });
@@ -54,12 +64,19 @@ class MetricCard extends StatelessWidget {
   final String label;
   final String value;
   final String? delta;
+
+  /// Colour of the [delta] line. Defaults to the success green, which is wrong
+  /// for a negative movement — pass [MvColors.errorText] for those.
+  final Color? deltaColor;
+
   final String icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: .65) ?? MvColors.muted;
+    final muted =
+        Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: .65) ??
+        MvColors.muted;
     return Card(
       child: InkWell(
         onTap: onTap,
@@ -71,15 +88,27 @@ class MetricCard extends StatelessWidget {
               Container(
                 width: 42,
                 height: 42,
-                decoration: BoxDecoration(color: MvColors.metricIconBg, borderRadius: BorderRadius.circular(9)),
-                child: Center(child: MvIcon(icon, size: 20, color: MvColors.primaryDeep)),
+                decoration: BoxDecoration(
+                  color: MvColors.metricIconBg,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Center(
+                  child: MvIcon(icon, size: 20, color: MvColors.primaryDeep),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: muted)),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: muted,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       value,
@@ -89,7 +118,14 @@ class MetricCard extends StatelessWidget {
                     ),
                     if (delta != null) ...[
                       const SizedBox(height: 2),
-                      Text(delta!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: MvColors.successText)),
+                      Text(
+                        delta!,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: deltaColor ?? MvColors.successText,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -104,8 +140,11 @@ class MetricCard extends StatelessWidget {
 
 /// Small helper so metric values use Manrope 800 20px like the frontend.
 class GoogleFontsManrope {
-  static TextStyle get metricValue =>
-      GoogleFonts.manrope(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.2);
+  static TextStyle get metricValue => GoogleFonts.manrope(
+    fontSize: 20,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -.2,
+  );
 }
 
 class PageHead extends StatelessWidget {
@@ -126,33 +165,69 @@ class PageHead extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 25),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final heading = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(eyebrow.toUpperCase(), style: context.mvEyebrow),
+              const SizedBox(height: 7),
+              Text(title, style: context.mvH1),
+              if (subtitle != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  subtitle!,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: Theme.of(context).hintColor,
+                  ),
+                ),
+              ],
+            ],
+          );
+          final actionRow = Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            alignment: WrapAlignment.end,
+            children: actions,
+          );
+
+          if (constraints.maxWidth <= 560) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(eyebrow.toUpperCase(), style: context.mvEyebrow),
-                const SizedBox(height: 7),
-                Text(title, style: context.mvH1),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 6),
-                  Text(subtitle!, style: TextStyle(fontSize: 13.5, color: Theme.of(context).hintColor)),
+                heading,
+                if (actions.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  actionRow,
                 ],
               ],
-            ),
-          ),
-          const SizedBox(width: 20),
-          Wrap(spacing: 10, runSpacing: 10, children: actions),
-        ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(child: heading),
+              const SizedBox(width: 20),
+              actionRow,
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 class GradientButton extends StatelessWidget {
-  const GradientButton({super.key, required this.label, this.onPressed, this.icon, this.expanded = false, this.danger = false});
+  const GradientButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.expanded = false,
+    this.danger = false,
+  });
   final String label;
   final VoidCallback? onPressed;
   final String? icon;
@@ -164,8 +239,17 @@ class GradientButton extends StatelessWidget {
     final child = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (icon != null) ...[MvIcon(icon!, size: 15, color: Colors.white), const SizedBox(width: 8)],
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white)),
+        if (icon != null) ...[
+          MvIcon(icon!, size: 15, color: Colors.white),
+          const SizedBox(width: 8),
+        ],
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
       ],
     );
     final btn = Material(
@@ -191,7 +275,12 @@ class GradientButton extends StatelessWidget {
 }
 
 class OutlineMvButton extends StatelessWidget {
-  const OutlineMvButton({super.key, required this.label, this.onPressed, this.icon});
+  const OutlineMvButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+  });
   final String label;
   final VoidCallback? onPressed;
   final String? icon;
@@ -224,7 +313,16 @@ class InfoBox extends StatelessWidget {
         children: [
           MvIcon(icon, size: 18, color: MvColors.primaryDeep),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 12.5, color: MvColors.infoBoxText, height: 1.45))),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: MvColors.infoBoxText,
+                height: 1.45,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -232,7 +330,14 @@ class InfoBox extends StatelessWidget {
 }
 
 class DataCard extends StatelessWidget {
-  const DataCard({super.key, required this.child, this.title, this.subtitle, this.trailing, this.padding = const EdgeInsets.all(18)});
+  const DataCard({
+    super.key,
+    required this.child,
+    this.title,
+    this.subtitle,
+    this.trailing,
+    this.padding = const EdgeInsets.all(18),
+  });
   final Widget child;
   final String? title;
   final String? subtitle;
@@ -244,32 +349,59 @@ class DataCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (title != null) ...[
-              Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            Widget? header;
+            if (title != null) {
+              final titleBlock = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 2),
-                          Text(subtitle!, style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor)),
-                        ],
-                      ],
+                  Text(
+                    title!,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  if (trailing != null) trailing!,
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).hintColor,
+                      ),
+                    ),
+                  ],
                 ],
-              ),
-              const SizedBox(height: 14),
-            ],
-            child,
-          ],
+              );
+
+              if (trailing == null) {
+                header = titleBlock;
+              } else if (constraints.maxWidth <= 420) {
+                header = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    titleBlock,
+                    Align(alignment: Alignment.centerRight, child: trailing),
+                  ],
+                );
+              } else {
+                header = Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [Expanded(child: titleBlock), trailing!],
+                );
+              }
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (header != null) ...[header, const SizedBox(height: 14)],
+                child,
+              ],
+            );
+          },
         ),
       ),
     );
@@ -277,42 +409,70 @@ class DataCard extends StatelessWidget {
 }
 
 /// Modal bottom sheet mirroring the frontend `.modal` detail view.
-Future<void> showMvDetailModal(BuildContext context, {required String title, required List<Widget> children, Widget? footer}) {
+Future<void> showMvDetailModal(
+  BuildContext context, {
+  required String title,
+  required List<Widget> children,
+  Widget? footer,
+}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => Container(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * .85),
-      decoration: BoxDecoration(
-        color: Theme.of(ctx).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(color: Theme.of(ctx).dividerColor, borderRadius: BorderRadius.circular(4)),
-            ),
+    builder:
+        (ctx) => Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * .85,
           ),
-          const SizedBox(height: 16),
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 16),
-          Flexible(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children))),
-          const SizedBox(height: 20),
-          footer ??
-              SizedBox(
-                width: double.infinity,
-                child: GradientButton(label: 'Done', onPressed: () => Navigator.pop(ctx), expanded: true),
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).dividerColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
               ),
-        ],
-      ),
-    ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: children,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              footer ??
+                  SizedBox(
+                    width: double.infinity,
+                    child: GradientButton(
+                      label: 'Done',
+                      onPressed: () => Navigator.pop(ctx),
+                      expanded: true,
+                    ),
+                  ),
+            ],
+          ),
+        ),
   );
 }
 
@@ -325,21 +485,36 @@ class KeyValueGrid extends StatelessWidget {
     return Wrap(
       spacing: 16,
       runSpacing: 12,
-      children: entries
-          .map(
-            (e) => SizedBox(
-              width: 220,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(e.key, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .6, color: Theme.of(context).hintColor)),
-                  const SizedBox(height: 3),
-                  Text(e.value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-          )
-          .toList(),
+      children:
+          entries
+              .map(
+                (e) => SizedBox(
+                  width: 220,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e.key,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .6,
+                          color: Theme.of(context).hintColor,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        e.value,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
     );
   }
 }
@@ -353,7 +528,10 @@ class EmptyState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 36),
       child: Center(
-        child: Text(message, style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor)),
+        child: Text(
+          message,
+          style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor),
+        ),
       ),
     );
   }
@@ -362,7 +540,12 @@ class EmptyState extends StatelessWidget {
 class LoadingState extends StatelessWidget {
   const LoadingState({super.key});
   @override
-  Widget build(BuildContext context) => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(strokeWidth: 2.5)));
+  Widget build(BuildContext context) => const Center(
+    child: Padding(
+      padding: EdgeInsets.all(32),
+      child: CircularProgressIndicator(strokeWidth: 2.5),
+    ),
+  );
 }
 
 class ErrorState extends StatelessWidget {
@@ -380,10 +563,18 @@ class ErrorState extends StatelessWidget {
           children: [
             const MvIcon('bell', size: 28, color: MvColors.dangerIcon),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13.5, color: MvColors.muted)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13.5, color: MvColors.muted),
+            ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh, size: 16), label: const Text('Retry')),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Retry'),
+              ),
             ],
           ],
         ),
@@ -394,5 +585,6 @@ class ErrorState extends StatelessWidget {
 
 Future<void> copyToClipboard(BuildContext context, String value) async {
   await Clipboard.setData(ClipboardData(text: value));
-  if (context.mounted) showMvSnack(context, 'Copied to clipboard', success: true);
+  if (context.mounted)
+    showMvSnack(context, 'Copied to clipboard', success: true);
 }

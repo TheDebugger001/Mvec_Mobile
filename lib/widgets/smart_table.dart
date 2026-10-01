@@ -27,6 +27,7 @@ class SmartTable extends StatefulWidget {
     this.filterKey,
     this.filterLabel,
     this.filterOptions,
+    this.showSearch = true,
     this.pageSize = 8,
     this.serverPage,
     this.serverTotalPages,
@@ -45,6 +46,10 @@ class SmartTable extends StatefulWidget {
   final String? filterKey;
   final String? filterLabel;
   final List<String>? filterOptions;
+
+  /// Set to false when the host screen supplies its own search box (e.g. a
+  /// server-side search feeding a `family` provider).
+  final bool showSearch;
 
   final int pageSize;
 
@@ -242,24 +247,25 @@ class _SmartTableState extends State<SmartTable> {
       runSpacing: 10,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        SizedBox(
-          width: 240,
-          height: 40,
-          child: TextField(
-            controller: _search,
-            style: const TextStyle(fontSize: 13),
-            decoration: const InputDecoration(
-              hintText: 'Search…',
-              prefixIcon: Padding(
-                padding: EdgeInsets.all(11),
-                child: MvIcon('search', size: 16),
+        if (widget.showSearch)
+          SizedBox(
+            width: 240,
+            height: 40,
+            child: TextField(
+              controller: _search,
+              style: const TextStyle(fontSize: 13),
+              decoration: const InputDecoration(
+                hintText: 'Search…',
+                prefixIcon: Padding(
+                  padding: EdgeInsets.all(11),
+                  child: MvIcon('search', size: 16),
+                ),
+                prefixIconConstraints: BoxConstraints(minWidth: 40, minHeight: 0),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
-              prefixIconConstraints: BoxConstraints(minWidth: 40, minHeight: 0),
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
-        ),
         if (widget.filterKey != null && widget.filterOptions != null)
           SizedBox(
             height: 40,

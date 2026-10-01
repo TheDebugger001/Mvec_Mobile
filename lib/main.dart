@@ -22,9 +22,7 @@ Future<void> main() async {
   final preferences = await SharedPreferences.getInstance();
   runApp(
     ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
       child: const MvecApp(),
     ),
   );
