@@ -116,6 +116,7 @@ class AuthController extends Notifier<AuthState> {
   /// Logs in with an email or a phone number plus a password.
   Future<bool> login(String emailOrPhone, String password) async {
     if (kDemoMode) {
+      // Demo mode: any non-empty credentials open a role-specific local account.
       // Demo identities route to the admin, vendor or buyer experience locally.
       final identity = emailOrPhone.trim();
       if (identity.isEmpty || password.isEmpty) {
@@ -126,6 +127,16 @@ class AuthController extends Notifier<AuthState> {
         return false;
       }
       final normalizedIdentity = identity.toLowerCase();
+      final role =
+          normalizedIdentity.contains('admin')
+              ? 'super_admin'
+              : normalizedIdentity.contains('supplier')
+              ? 'supplier'
+              : normalizedIdentity.contains('vendor')
+              ? 'vendor'
+              : normalizedIdentity.contains('affiliate')
+              ? 'affiliate'
+              : 'buyer';
       final wantsAdmin = normalizedIdentity.contains('admin');
       final wantsAffiliate = normalizedIdentity.contains('affiliate');
       final wantsVendor = normalizedIdentity.contains('vendor');
@@ -133,6 +144,16 @@ class AuthController extends Notifier<AuthState> {
         session: AuthSession(
           token: 'demo-token',
           user:
+              role == 'super_admin'
+                  ? _demoUser
+                  : UserRecord(
+                    id: 'demo-$role',
+                    fullname:
+                        'Demo ${role[0].toUpperCase()}${role.substring(1)}',
+                    email: identity,
+                    role: role,
+                    companyName:
+                        role == 'supplier' ? 'Rwanda Fresh Produce Co.' : null,
               wantsAdmin
                   ? _demoUser
                   : wantsAffiliate

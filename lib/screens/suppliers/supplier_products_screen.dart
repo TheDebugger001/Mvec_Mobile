@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../core/utils.dart';
+import '../../features/supplier/data/supplier_workspace.dart';
 import '../../models/supplier.dart';
 import '../../providers/supplier_providers.dart';
 import '../../widgets/common.dart';
@@ -18,12 +19,22 @@ class SupplierProductsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final workspace = ref.watch(supplierWorkspaceProvider);
     final productsAsync = ref.watch(supplierProductsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PageHead(
+          eyebrow: 'SUPPLIER PORTAL',
+          title: 'Wholesale products',
+          subtitle: 'Manage products that vendors can buy in bulk.',
+          actions: [
+            GradientButton(
+              label: 'Add wholesale product',
+              icon: 'plus',
+              onPressed: () => _openForm(context),
+            ),
           eyebrow: 'SUPPLIER PLATFORM',
           title: 'Wholesale products',
           subtitle: 'Manage products that vendors can buy in bulk.',
@@ -33,6 +44,13 @@ class SupplierProductsScreen extends ConsumerWidget {
         ),
         const InfoBox('Products stay hidden from buyers until your business is verified.'),
         const SizedBox(height: 18),
+        switch (workspace) {
+          AsyncLoading() => const LoadingState(),
+          AsyncError(:final error) => ErrorState(
+              message: friendlyError(error),
+              onRetry: () => ref.invalidate(supplierWorkspaceProvider),
+            ),
+          AsyncData(:final value) => _table(context, ref, value.products),
         switch (productsAsync) {
           AsyncLoading() => const LoadingState(),
           AsyncError(:final error) => ErrorState(
@@ -51,6 +69,11 @@ class SupplierProductsScreen extends ConsumerWidget {
         .map(
           (p) => {
             '_product': p,
+            'product': p.name,
+            'category': p.category,
+            'unit': p.unit,
+            'price': money(p.price),
+            'stock': '${p.stock}',
             'product': _productCell(p),
             'category': p.category ?? '—',
             'unit': p.unit ?? '—',
@@ -121,6 +144,10 @@ class SupplierProductsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(p.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${p.category} · per ${p.unit}',
                   Text(p.display, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 2),
                   Text(
@@ -136,6 +163,22 @@ class SupplierProductsScreen extends ConsumerWidget {
         const SizedBox(height: 18),
         KeyValueGrid(
           entries: [
+            MapEntry('Wholesale price', money(p.price)),
+            // The supplier form no longer collects a retail price and the
+            // backend defaults it to 0, so only show it when a real value was
+            // actually stored.
+            if (p.retailPrice != null && p.retailPrice! > 0)
+              MapEntry('Retail price', money(p.retailPrice!)),
+            MapEntry('Effective unit price', money(p.effectivePrice)),
+            if (p.bulkDiscount > 0)
+              MapEntry('Bulk discount', '${numFmt(p.bulkDiscount)}%'),
+            MapEntry('Stock', '${p.stock}'),
+            MapEntry('Minimum order', '${p.minimumOrderQuantity}'),
+            MapEntry('Status', titleCase(p.status)),
+            if (p.shortDescription.isNotEmpty)
+              MapEntry('Description', p.shortDescription),
+            if (p.gallery.isNotEmpty)
+              MapEntry('Gallery', '${p.gallery.length} image(s)'),
             MapEntry('Wholesale price', p.wholesalePrice == null ? '—' : money(p.wholesalePrice)),
             MapEntry('Retail price', p.retailPrice == null ? '—' : money(p.retailPrice)),
             MapEntry('Effective unit price', money(p.effectivePrice)),
@@ -185,6 +228,7 @@ class SupplierProductsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirm'),
+        content: Text('Remove "${p.name}" from your catalogue? This cannot be undone.'),
         content: Text('Remove "${p.display}" from your catalogue? This cannot be undone.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
@@ -192,6 +236,11 @@ class SupplierProductsScreen extends ConsumerWidget {
         ],
       ),
     );
+    if (ok != true || p.id.isEmpty) return;
+
+    try {
+      await ref.read(supplierWorkspaceProvider.notifier).deleteProduct(p.id);
+      if (context.mounted) showMvSnack(context, 'Product removed', success: true);
     if (ok != true || p.id == null) return;
 
     try {
@@ -205,6 +254,7 @@ class SupplierProductsScreen extends ConsumerWidget {
 }
 
 Widget _thumb(SupplierProduct p) {
+  final image = p.imageUrl;
   final image = p.mainImage;
   return Container(
     width: 46,
@@ -212,6 +262,9 @@ Widget _thumb(SupplierProduct p) {
     decoration: BoxDecoration(
       color: MvColors.metricIconBg,
       borderRadius: BorderRadius.circular(9),
+      image: image.isEmpty ? null : DecorationImage(image: NetworkImage(image), fit: BoxFit.cover),
+    ),
+    child: image.isEmpty
       image: (image == null || image.isEmpty) ? null : DecorationImage(image: NetworkImage(image), fit: BoxFit.cover),
     ),
     child: (image == null || image.isEmpty)
@@ -220,6 +273,7 @@ Widget _thumb(SupplierProduct p) {
   );
 }
 
+/// Stock availability pill driven by [SupplierProduct.stockStatus].
 /// Product cell mirroring the web `.admin-product-main`: thumbnail plus the
 /// name over a muted "category · MOQ n" caption.
 Widget _productCell(SupplierProduct p) {
@@ -294,6 +348,25 @@ class _ProductFormSheet extends ConsumerStatefulWidget {
 }
 
 class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
+  // Exactly the fields the web supplier form collects, in the same order:
+  // name, category, wholesalePrice, moq, stock, bulkDiscount, description.
+  late final TextEditingController _name =
+      TextEditingController(text: widget.product?.name ?? '');
+  late final TextEditingController _category =
+      TextEditingController(text: widget.product?.category ?? '');
+  late final TextEditingController _wholesalePrice =
+      TextEditingController(text: widget.product == null ? '' : '${widget.product!.price}');
+  late final TextEditingController _moq =
+      TextEditingController(text: '${widget.product?.minimumOrderQuantity ?? 1}');
+  late final TextEditingController _stock =
+      TextEditingController(text: '${widget.product?.stock ?? 0}');
+  late final TextEditingController _bulkDiscount =
+      TextEditingController(text: '${widget.product?.bulkDiscount ?? 0}');
+  late final TextEditingController _description =
+      TextEditingController(text: widget.product?.description ?? '');
+
+  bool _busy = false;
+
   late final TextEditingController _name = TextEditingController(text: widget.product?.name ?? '');
   late final TextEditingController _shortDescription =
       TextEditingController(text: widget.product?.shortDescription ?? '');
@@ -324,6 +397,12 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
   void dispose() {
     for (final c in [
       _name,
+      _category,
+      _wholesalePrice,
+      _moq,
+      _stock,
+      _bulkDiscount,
+      _description,
       _shortDescription,
       _category,
       _unit,
@@ -340,6 +419,25 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
     super.dispose();
   }
 
+  /// Mirrors the web form's `required` set — the six value fields are
+  /// mandatory and `description` is the only optional one. The numeric bounds
+  /// match the backend schema (`wholesalePrice >= 0`, `moq >= 1`,
+  /// `stockQuantity >= 0`, `bulkDiscount` 0–100) so a bad value is caught here
+  /// instead of coming back as an opaque API error.
+  String? _validate() {
+    if (_name.text.trim().isEmpty) return 'Enter a product name';
+    if (_category.text.trim().isEmpty) return 'Enter a category';
+    final price = num.tryParse(_wholesalePrice.text.trim());
+    if (_wholesalePrice.text.trim().isEmpty) return 'Enter a wholesale price';
+    if (price == null || price < 0) return 'Enter a valid wholesale price';
+    final moq = int.tryParse(_moq.text.trim());
+    if (moq == null || moq < 1) return 'Minimum order must be 1 or more';
+    final stock = int.tryParse(_stock.text.trim());
+    if (stock == null || stock < 0) return 'Enter a valid stock quantity';
+    final discount = num.tryParse(_bulkDiscount.text.trim());
+    if (discount == null || discount < 0 || discount > 100) {
+      return 'Bulk discount must be between 0 and 100';
+    }
   String? _validate() {
     if (_name.text.trim().isEmpty) return 'Enter a product name';
     final price = num.tryParse(_wholesalePrice.text.trim());
@@ -362,6 +460,31 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
     }
     setState(() => _busy = true);
 
+    final isEdit = widget.product != null;
+    final existing = widget.product;
+    final stock = int.parse(_stock.text.trim());
+    final product = SupplierProduct(
+      // An empty id is what tells the workspace service to POST rather
+      // than PUT, so a create keeps the sheet's product unset.
+      id: existing?.id ?? '',
+      name: _name.text.trim(),
+      category: _category.text.trim(),
+      description: _description.text.trim(),
+      price: num.parse(_wholesalePrice.text.trim()).toDouble(),
+      stock: stock,
+      minimumOrderQuantity: int.parse(_moq.text.trim()),
+      bulkDiscount: num.parse(_bulkDiscount.text.trim()).toDouble(),
+      // Not collected by this form, so carry the stored values through. The
+      // payload omits them, and the backend preserves them on update.
+      unit: existing?.unit ?? 'piece',
+      retailPrice: existing?.retailPrice,
+      imageUrl: existing?.imageUrl ?? '',
+      gallery: existing?.gallery ?? const <String>[],
+      status: existing?.status ?? 'ACTIVE',
+    );
+
+    try {
+      await ref.read(supplierWorkspaceProvider.notifier).saveProduct(product);
     final body = <String, dynamic>{
       'name': _name.text.trim(),
       'shortDescription': _shortDescription.text.trim(),
@@ -424,6 +547,64 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
             ),
             const SizedBox(height: 16),
             Text(
+              isEdit ? 'Edit wholesale product' : 'Add wholesale product',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Enter the wholesale product details vendors will see when sourcing stock.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _name,
+              decoration: const InputDecoration(labelText: 'Product name *'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _category,
+              decoration: const InputDecoration(labelText: 'Category *'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _wholesalePrice,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Wholesale price (RWF) *',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _moq,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Minimum order quantity *',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _stock,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Stock *'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _bulkDiscount,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Bulk discount (%) *'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _description,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                helperText: 'Optional',
+              ),
+            ),
+            const SizedBox(height: 20),
+            GradientButton(
+              label: isEdit ? 'Save changes' : 'Add wholesale product',
               isEdit ? 'Edit product' : 'Add product',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),

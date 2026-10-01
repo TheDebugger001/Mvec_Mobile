@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils.dart';
+import '../../features/supplier/data/supplier_workspace.dart';
+import '../../widgets/common.dart';
 import '../../models/supplier.dart';
 import '../../providers/supplier_providers.dart';
 import '../../widgets/common.dart';
@@ -11,6 +13,9 @@ import 'supplier_shell.dart';
 ///
 /// Only the fields the backend actually persists are shown:
 /// `businessName`, `description`, `phone`, `email` and `logoUrl` — see
+/// [SupplierProfile.toJson] and `PATCH /api/suppliers/me/profile`. Tax IDs,
+/// registration numbers and a structured address would silently be dropped, so
+/// they are not presented.
 /// `PATCH /api/suppliers/me/profile`. Tax IDs, registration numbers and a
 /// structured address would silently be dropped, so they are not presented.
 class SupplierProfileScreen extends ConsumerWidget {
@@ -18,12 +23,28 @@ class SupplierProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final workspace = ref.watch(supplierWorkspaceProvider);
     final profileAsync = ref.watch(supplierProfileProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PageHead(
+          eyebrow: 'SUPPLIER PORTAL',
+          title: 'Business profile',
+          subtitle: 'Keep the details buyers and the MVEC team rely on up to date.',
+        ),
+        switch (workspace) {
+          AsyncLoading() => const LoadingState(),
+          AsyncError(:final error) => ErrorState(
+              message: friendlyError(error),
+              onRetry: () => ref.invalidate(supplierWorkspaceProvider),
+            ),
+          // An empty profile means the account exists but has not been onboarded.
+          AsyncData(:final value) =>
+              value.profile.isOnboarded
+                  ? _ProfileBody(profile: value.profile)
+                  : const _OnboardingPrompt(),
           eyebrow: 'SUPPLIER PLATFORM',
           title: 'Business profile',
           subtitle: 'Manage supplier profile and marketplace preferences.',
@@ -78,6 +99,7 @@ class _OnboardingPrompt extends ConsumerWidget {
   }
 }
 
+void _openForm(BuildContext context, WidgetRef ref, SupplierProfile? initial) {
 void _openForm(BuildContext context, WidgetRef ref, SupplierDetail? initial) {
   showMvDetailModal(
     context,
@@ -88,6 +110,17 @@ void _openForm(BuildContext context, WidgetRef ref, SupplierDetail? initial) {
 }
 
 class _ProfileBody extends ConsumerWidget {
+  const _ProfileBody({required this.profile});
+
+  final SupplierProfile profile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = profile;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _VerificationPanel(profile: s),
   const _ProfileBody({required this.detail});
 
   final SupplierDetail detail;
@@ -110,6 +143,7 @@ class _ProfileBody extends ConsumerWidget {
           ),
           child: KeyValueGrid(
             entries: [
+              MapEntry('Business name', s.businessName.isEmpty ? '—' : s.businessName),
               MapEntry('Business name', s.businessName ?? '—'),
               MapEntry('Description', _ellipsis(s.description)),
               if (s.publicId != null) MapEntry('Supplier ID', s.publicId!),
@@ -126,6 +160,8 @@ class _ProfileBody extends ConsumerWidget {
           subtitle: 'How the MVEC team reaches you',
           child: KeyValueGrid(
             entries: [
+              MapEntry('Email', s.email.isEmpty ? '—' : s.email),
+              MapEntry('Phone', s.phone.isEmpty ? '—' : s.phone),
               MapEntry('Email', s.email ?? '—'),
               MapEntry('Phone', s.phone ?? '—'),
               MapEntry('Logo URL', _ellipsis(s.logoUrl)),
@@ -156,6 +192,13 @@ class _ProfileBody extends ConsumerWidget {
 /// reports the state and explains what to do next rather than pretending to
 /// submit anything.
 class _VerificationPanel extends StatelessWidget {
+  const _VerificationPanel({required this.profile});
+
+  final SupplierProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final (headline, note) = switch (profile.verificationStatusOrDefault) {
   const _VerificationPanel({required this.detail});
 
   final SupplierDetail detail;
@@ -185,6 +228,7 @@ class _VerificationPanel extends StatelessWidget {
     return DataCard(
       title: 'Verification status',
       subtitle: 'Determines whether buyers can order from you',
+      trailing: StatusChip(profile.effectiveStatus),
       trailing: StatusPill(
         status: detail.verificationStatus,
         label: titleCase(detail.effectiveStatus),
@@ -206,6 +250,7 @@ class _SupplierProfileForm extends ConsumerStatefulWidget {
   const _SupplierProfileForm({required this.initial});
 
   /// Null when creating the profile for the first time.
+  final SupplierProfile? initial;
   final SupplierDetail? initial;
 
   @override
@@ -249,6 +294,32 @@ class _SupplierProfileFormState extends ConsumerState<_SupplierProfileForm> {
       return;
     }
     setState(() => _busy = true);
+    final previous = widget.initial;
+    final isNew = previous == null;
+    try {
+      await ref
+          .read(supplierWorkspaceProvider.notifier)
+          .saveProfile(
+            SupplierProfile(
+              // Carrying the id (and the fields this form does not edit)
+              // forward is what tells the workspace service to PATCH the
+              // existing supplier instead of re-onboarding them.
+              id: previous?.id ?? '',
+              publicId: previous?.publicId,
+              slug: previous?.slug,
+              verificationStatus: previous?.verificationStatus ?? 'UNVERIFIED',
+              accountStatus: previous?.accountStatus ?? 'ACTIVE',
+              ratingAvg: previous?.ratingAvg,
+              address: previous?.address ?? '',
+              orderNotifications: previous?.orderNotifications ?? true,
+              stockNotifications: previous?.stockNotifications ?? true,
+              businessName: _f['businessName']!.text.trim(),
+              description: _f['description']!.text.trim(),
+              email: _f['email']!.text.trim(),
+              phone: _f['phone']!.text.trim(),
+              logoUrl: _f['logoUrl']!.text.trim(),
+            ),
+          );
     final isNew = widget.initial == null;
     try {
       await ref.read(supplierServiceProvider).saveProfile(

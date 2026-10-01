@@ -140,6 +140,41 @@ class SupplierNav {
   }
 }
 
+/// Supplier portal navigation.
+///
+/// Mirrors the web app's `supplierNavGroups` in `src/data/navItems.jsx`
+/// group-for-group and item-for-item, so the mobile portal presents the same
+/// information architecture as the website. Every path stays under `/supplier`
+/// so the supplier-only guard in `router.dart` applies.
+class SupplierNav {
+  SupplierNav._();
+
+  static const groups = <NavGroup>[
+    NavGroup('Overview', [
+      NavItem('Dashboard', '/supplier', 'grid'),
+    ]),
+    NavGroup('Catalog & Orders', [
+      NavItem('Wholesale Products', '/supplier/products', 'box'),
+      NavItem('Inventory', '/supplier/inventory', 'grid'),
+      NavItem('Vendor Orders', '/supplier/orders', 'cart'),
+      NavItem('Supply Requests', '/supplier/supply-requests', 'cart'),
+      NavItem('Delivery & Settlement', '/supplier/delivery', 'box'),
+    ]),
+    NavGroup('Finance & Insights', [
+      NavItem('Payments', '/supplier/payments', 'wallet'),
+      NavItem('Transactions', '/supplier/transactions', 'wallet'),
+      NavItem('Analytics', '/supplier/analytics', 'chart'),
+      NavItem('Reports', '/supplier/reports', 'chart'),
+      NavItem('Reviews', '/supplier/reviews', 'heart'),
+    ]),
+    NavGroup('Team & Settings', [
+      NavItem('Team / Staff', '/supplier/team', 'users'),
+      NavItem('Settings', '/supplier/settings', 'settings'),
+    ]),
+    NavGroup('Support', [
+      NavItem('Messages', '/supplier/messages', 'users'),
+      NavItem('Notifications', '/supplier/notifications', 'bell'),
+      NavItem('MVEC Support', '/supplier/support', 'bell'),
 /// Vendor portal navigation.
 ///
 /// Same shape as [AdminNav] (accordion groups + mobile bottom bar) so the
@@ -168,6 +203,19 @@ class VendorNav {
 
   static List<NavItem> get all => [for (final g in groups) ...g.items];
 
+  /// The four primary items pinned to the mobile bottom bar, plus "More"
+  /// (the drawer) — the same split the web uses in `MobileBottomNav.jsx`.
+  static const bottomNav = <NavItem>[
+    NavItem('Dashboard', '/supplier', 'grid'),
+    NavItem('Products', '/supplier/products', 'box'),
+    NavItem('Orders', '/supplier/orders', 'cart'),
+    NavItem('Payments', '/supplier/payments', 'wallet'),
+  ];
+
+  /// Find the group containing a path (used to auto-open the drawer group).
+  static String? groupFor(String path) {
+    for (final g in groups) {
+      if (g.items.any((i) => i.path == path || (path.startsWith(i.path) && i.path != '/supplier'))) {
   /// Primary items for the mobile bottom bar, plus a "More" entry that opens
   /// the grouped drawer (added by the shell).
   static const bottomNav = <NavItem>[

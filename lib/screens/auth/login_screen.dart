@@ -144,13 +144,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 6),
                 OutlinedButton.icon(
-                  onPressed: loading
-                      ? null
-                      : () {
-                          _identity.text = kAdminEmail;
-                          _password.text = kAdminPassword;
-                          _submit();
-                        },
+                  onPressed:
+                      loading
+                          ? null
+                          : () {
+                            _identity.text = kAdminEmail;
+                            _password.text = kAdminPassword;
+                            _submit();
+                          },
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                   ),

@@ -52,6 +52,14 @@ import '../screens/settings/settings_screen.dart';
 import '../screens/subscriptions/subscriptions_screen.dart';
 import '../screens/support/support_screen.dart';
 import '../screens/suppliers/suppliers_screen.dart';
+import '../screens/suppliers/supplier_inventory_screen.dart';
+import '../screens/suppliers/supplier_notifications_screen.dart';
+import '../screens/suppliers/supplier_orders_screen.dart';
+import '../screens/suppliers/supplier_overview_screen.dart';
+import '../screens/suppliers/supplier_products_screen.dart';
+import '../screens/suppliers/supplier_profile_screen.dart';
+import '../screens/suppliers/supplier_shell.dart';
+import '../screens/suppliers/supplier_unavailable_screen.dart';
 import '../screens/suppliers/supplier_dashboard_screen.dart';
 import '../screens/suppliers/supplier_products_screen.dart';
 import '../screens/suppliers/supplier_profile_screen.dart';
@@ -71,6 +79,89 @@ import '../features/vendor/screens/vendor_orders_screen.dart';
 import '../features/vendor/screens/vendor_sales_screen.dart';
 import '../features/vendor/screens/vendor_notifications_screen.dart';
 import '../features/vendor/screens/vendor_settings_screen.dart';
+
+/// A supplier portal destination the API does not serve yet.
+class _UnavailablePage {
+  const _UnavailablePage(this.path, this.title, this.icon, this.detail);
+
+  final String path;
+  final String title;
+  final String icon;
+  final String detail;
+}
+
+/// The remaining entries of the frontend's `supplierNavGroups`. The web app
+/// fills these with hard-coded seed rows, so the mobile app routes them to a
+/// clear "not connected yet" state rather than inventing payouts, staff
+/// records or delivery milestones.
+const _unavailableSupplierPages = <_UnavailablePage>[
+  _UnavailablePage(
+    '/supplier/supply-requests',
+    'Supply requests',
+    'cart',
+    'Inbound supply requests are not exposed for supplier accounts yet. The '
+        'API only serves your wholesale catalogue, profile and orders.',
+  ),
+  _UnavailablePage(
+    '/supplier/delivery',
+    'Delivery & settlement',
+    'box',
+    'Delivery milestones and settlement releases are not served to suppliers '
+        'yet. The order list tracks the supply status that the API returns.',
+  ),
+  _UnavailablePage(
+    '/supplier/payments',
+    'Payments',
+    'wallet',
+    'Supplier payouts are not exposed by the MVEC API for supplier accounts '
+        'yet, so no amounts are shown here.',
+  ),
+  _UnavailablePage(
+    '/supplier/transactions',
+    'Transactions',
+    'wallet',
+    'A supplier-scoped transaction ledger is not available yet.',
+  ),
+  _UnavailablePage(
+    '/supplier/analytics',
+    'Analytics',
+    'chart',
+    'Trend reporting is not served for suppliers yet. Your catalogue and order '
+        'totals are available on the dashboard.',
+  ),
+  _UnavailablePage(
+    '/supplier/reports',
+    'Reports',
+    'chart',
+    'Scheduled and historical supplier reports are not available yet.',
+  ),
+  _UnavailablePage(
+    '/supplier/reviews',
+    'Reviews',
+    'heart',
+    'Buyer reviews for your business are not served by the API yet.',
+  ),
+  _UnavailablePage(
+    '/supplier/team',
+    'Team & staff',
+    'users',
+    'Supplier staff accounts are not managed through the API yet.',
+  ),
+  _UnavailablePage(
+    '/supplier/messages',
+    'Messages',
+    'users',
+    'Supplier messaging is not available yet. Use MVEC support for anything '
+        'urgent.',
+  ),
+  _UnavailablePage(
+    '/supplier/support',
+    'MVEC Support',
+    'bell',
+    'The in-portal support desk is not available yet. Contact the MVEC team '
+        'through your usual channel.',
+  ),
+];
 
 /// Routes that a signed-in user must never stay on.
 const _publicAuthPaths = <String>[
@@ -159,6 +250,88 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ResetPasswordScreen(),
       ),
       GoRoute(path: '/home', builder: (_, __) => const MainNavigationScreen()),
+      // Supplier portal. Deliberately outside /admin so the super-admin-only
+      // guard below never bounces a supplier away from their own dashboard.
+      //
+      // Every route is mounted inside SupplierShell so the grouped nav, header
+      // and bottom bar are shared, mirroring the web's DashboardLayout. The
+      // paths match `supplierNavGroups` in the frontend's src/data/navItems.js
+      // exactly; pages without an API are routed to an explicit unavailable
+      // state instead of mock numbers.
+      GoRoute(
+        path: '/supplier',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier',
+              child: SupplierOverviewScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/products',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/products',
+              child: SupplierProductsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/inventory',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/inventory',
+              child: SupplierInventoryScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/orders',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/orders',
+              child: SupplierOrdersScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/settings',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/settings',
+              child: SupplierProfileScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/notifications',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/notifications',
+              child: SupplierNotificationsScreen(),
+            ),
+      ),
+      // Legacy alias kept so older deep links keep working.
+      GoRoute(
+        path: '/supplier/profile',
+        redirect: (_, __) => '/supplier/settings',
+      ),
+      GoRoute(
+        path: '/supplier/search',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/search',
+              child: SearchScreen(),
+            ),
+      ),
+      for (final page in _unavailableSupplierPages)
+        GoRoute(
+          path: page.path,
+          builder:
+              (context, state) => SupplierShell(
+                path: page.path,
+                child: SupplierUnavailableScreen(
+                  feature: page.title,
+                  detail: page.detail,
+                  icon: page.icon,
+                ),
+              ),
+        ),
       GoRoute(
         path: '/affiliate',
         builder:

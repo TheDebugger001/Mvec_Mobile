@@ -178,6 +178,10 @@ void main() {
       expect(roleHome(_user('super_admin')), '/admin');
     });
 
+    test('buyer, vendor and affiliate land on the home feed', () {
+      for (final role in ['buyer', 'vendor', 'affiliate']) {
+        expect(roleHome(_user(role)), '/home', reason: role);
+      }
     test('supplier lands on the supplier portal', () {
       expect(roleHome(_user('supplier')), '/supplier');
     });
@@ -192,6 +196,10 @@ void main() {
 
     test('buyer lands on the home feed', () {
       expect(roleHome(_user('buyer')), '/home');
+    });
+
+    test('supplier lands on the supplier portal', () {
+      expect(roleHome(_user('supplier')), '/supplier');
     });
   });
 
@@ -635,6 +643,7 @@ void main() {
       expect(find.text('Linen Summer Dress'), findsNothing);
     });
 
+    testWidgets('opens search, categories, vendors and orders pages', (
     testWidgets('opens search plus every destination behind the More drawer', (
       tester,
     ) async {
@@ -725,6 +734,7 @@ void main() {
                 matching: find.byType(ListView),
               )
               .first;
+      await tester.drag(homeList, const Offset(0, -600));
       await tester.drag(homeList, const Offset(0, -650));
       await tester.pumpAndSettle();
     }
