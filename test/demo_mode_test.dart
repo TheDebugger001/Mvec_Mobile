@@ -117,7 +117,7 @@ void main() {
       expect(find.text('Confirmed'), findsWidgets);
     }, skip: !kDemoMode);
 
-    testWidgets('the supplier product form collects only the web fields', (
+    testWidgets('the supplier product form collects the web fields plus a local photo', (
       tester,
     ) async {
       final container = ProviderContainer();
@@ -156,6 +156,12 @@ void main() {
         );
       }
 
+      // The photo is picked off the device, never pasted as a link, so both
+      // sources are offered and there is still no URL box.
+      expect(find.text('Product image'), findsOneWidget);
+      expect(find.text('Gallery'), findsOneWidget);
+      expect(find.text('Files'), findsOneWidget);
+
       // Fields the web form does not have must not be asked for.
       for (final removed in [
         'Unit',
@@ -171,7 +177,7 @@ void main() {
         );
       }
 
-      // Description is the only optional field on the web form.
+      // Description is the only optional value field on the web form.
       expect(find.text('Optional'), findsOneWidget);
     }, skip: !kDemoMode);
 
@@ -306,6 +312,40 @@ void main() {
         await service.saveProfile(updated, isNewProfile: false);
         expect((await service.profile()).businessName, 'Demo Updated Co.');
         expect((await service.profile()).orderNotifications, isFalse);
+      },
+      skip: !kDemoMode,
+    );
+
+    test(
+      'a device-local photo survives the demo workspace and never reaches the API payload',
+      () async {
+        final service = DemoSupplierWorkspaceService();
+
+        await service.saveProduct(
+          const SupplierProduct(
+            id: '',
+            name: 'Demo Photo Product',
+            category: 'Produce',
+            description: 'Picked straight off the phone.',
+            // No backend URL — the picture exists only on this device.
+            imageUrl: '',
+            price: 3200,
+            stock: 20,
+            status: 'ACTIVE',
+            localImagePath: '/data/user/0/com.mvec.mobile/app_flutter/product_images/product_1.jpg',
+          ),
+        );
+
+        final created = (await service.products()).first;
+        expect(created.localImagePath, endsWith('product_1.jpg'));
+
+        // A later edit must not drop the photo.
+        await service.saveProduct(created.copyWith(stock: 5));
+        expect((await service.products()).first.localImagePath, created.localImagePath);
+
+        // The path is meaningless to the backend, so it stays out of `media`.
+        expect(created.toJson().containsKey('media'), isFalse);
+        expect(created.toJson().values, isNot(contains(created.localImagePath)));
       },
       skip: !kDemoMode,
     );

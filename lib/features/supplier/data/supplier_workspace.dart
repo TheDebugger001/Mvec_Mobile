@@ -25,6 +25,7 @@ class SupplierProduct {
     this.minimumOrderQuantity = 1,
     this.bulkDiscount = 0,
     this.gallery = const <String>[],
+    this.localImagePath = '',
   });
 
   final String id;
@@ -55,6 +56,13 @@ class SupplierProduct {
   final double bulkDiscount;
 
   final List<String> gallery;
+
+  /// A picture the supplier picked off *this* device, as an absolute file path.
+  ///
+  /// Deliberately not part of the API contract: there is no upload endpoint to
+  /// send the bytes to, so this is a local-only reference that the demo
+  /// workspace keeps in memory. The backend only ever knows [imageUrl].
+  final String localImagePath;
 
   factory SupplierProduct.fromJson(Map<String, dynamic> json) {
     final media = json['media'] is Map
@@ -109,6 +117,11 @@ class SupplierProduct {
   /// `status: "ACTIVE"` demoted to `OUT_OF_STOCK` when stock is 0). On update
   /// `sanitizeWholesalePayload` falls back to the stored product, so omitting
   /// them preserves existing data instead of blanking it.
+  ///
+  /// A device-local photo never reaches here. [localImagePath] points at a file
+  /// on this phone, which would be meaningless to the backend and to any other
+  /// vendor's client, so the media object stays out of the payload until there
+  /// is an upload endpoint to turn those bytes into a URL.
   Map<String, dynamic> toJson() => {
     'name': name,
     // The backend's WholesaleProduct has no `description` field; the long text
@@ -135,6 +148,7 @@ class SupplierProduct {
     int? minimumOrderQuantity,
     double? bulkDiscount,
     List<String>? gallery,
+    String? localImagePath,
   }) => SupplierProduct(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -150,6 +164,7 @@ class SupplierProduct {
     minimumOrderQuantity: minimumOrderQuantity ?? this.minimumOrderQuantity,
     bulkDiscount: bulkDiscount ?? this.bulkDiscount,
     gallery: gallery ?? this.gallery,
+    localImagePath: localImagePath ?? this.localImagePath,
   );
 
   /// The backend flips status to `OUT_OF_STOCK` whenever `stockQuantity <= 0`,
@@ -504,6 +519,11 @@ abstract interface class SupplierWorkspaceService {
   Future<void> saveProfile(SupplierProfile profile, {required bool isNewProfile});
 }
 
+/// In-memory stand-in for the supplier portal, used in demo mode.
+///
+/// Because nothing is persisted, `SupplierProduct.localImagePath` survives for
+/// the session exactly as the catalogue entry was saved — a photo picked on
+/// the device shows up in every supplier surface for as long as the app runs.
 class DemoSupplierWorkspaceService implements SupplierWorkspaceService {
   final List<SupplierProduct> _products = [
     const SupplierProduct(
