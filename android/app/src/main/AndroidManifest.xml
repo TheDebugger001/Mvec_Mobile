@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Product photos are picked off the device, so the app needs to be able to
+         see them. READ_MEDIA_IMAGES covers Android 13+; READ_EXTERNAL_STORAGE is
+         the equivalent on Android 12L and below. Both pickers hand back a
+         one-shot read grant, so no broad storage permission is needed. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <application
         android:label="mvec_mobile"
         android:name="${applicationName}"

@@ -6,7 +6,7 @@ import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../features/supplier/data/supplier_workspace.dart';
 import '../../widgets/common.dart';
-import '../../widgets/mv_icon.dart';
+import '../../widgets/product_image.dart';
 
 /// Stock levels across the wholesale catalogue, mirroring the web app's
 /// `SupplierInventory`: the "INVENTORY" page head, a metric grid and the
@@ -115,7 +115,7 @@ class _StockRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            _Thumb(url: product.imageUrl),
+            _Thumb(product: product),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
@@ -168,29 +168,13 @@ class _StockRow extends StatelessWidget {
 /// Product thumbnail with the brand-tinted placeholder the web shows for
 /// image-less products.
 class _Thumb extends StatelessWidget {
-  const _Thumb({required this.url});
+  const _Thumb({required this.product});
 
-  final String url;
+  final SupplierProduct product;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: context.mv.surfaceMuted,
-        borderRadius: BorderRadius.circular(9),
-        image:
-            url.isEmpty
-                ? null
-                : DecorationImage(image: NetworkImage(url), fit: BoxFit.cover),
-      ),
-      alignment: Alignment.center,
-      child:
-          url.isEmpty
-              ? MvIcon('box', size: 18, color: context.mv.accentDeep)
-              : null,
-    );
+    return ProductImage(url: product.imageUrl, localPath: product.localImagePath, size: 40);
   }
 }
 
