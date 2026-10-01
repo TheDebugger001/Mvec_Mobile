@@ -13,6 +13,12 @@ class WishlistPage extends StatefulWidget {
   final VoidCallback? onOpenCart;
   final ValueChanged<Product>? onAddToCart;
 
+  /// Live cart size for the app-bar badge. A getter rather than an int so the
+  /// count is read at build time and stays correct after "Move to Cart" (and
+  /// after a product added from the detail page) without the caller having to
+  /// rebuild this page.
+  final int Function() cartItemCount;
+
   const WishlistPage({
     super.key,
     required this.wishlistItems,
@@ -21,13 +27,20 @@ class WishlistPage extends StatefulWidget {
     this.onToggleWishlist,
     this.onOpenCart,
     this.onAddToCart,
+    this.cartItemCount = _noCartItems,
   });
+
+  static int _noCartItems() => 0;
 
   @override
   State<WishlistPage> createState() => _WishlistPageState();
 }
 
 class _WishlistPageState extends State<WishlistPage> {
+  /// Total units in the cart, matching the count the bottom nav and home top
+  /// bar use so the badge agrees everywhere.
+  int get cartCount => widget.cartItemCount();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,9 +55,16 @@ class _WishlistPageState extends State<WishlistPage> {
         actions: [
           if (widget.onOpenCart != null)
             IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined),
               tooltip: 'Open cart',
               onPressed: widget.onOpenCart,
+              icon: Badge(
+                key: const ValueKey<String>('wishlist-cart-count'),
+                isLabelVisible: cartCount > 0,
+                backgroundColor: AppColors.error,
+                textColor: Colors.white,
+                label: Text(cartCount > 99 ? '99+' : '$cartCount'),
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
             ),
         ],
       ),

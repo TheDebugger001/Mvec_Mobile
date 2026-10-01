@@ -118,8 +118,34 @@ void main() {
       expect(find.text('Confirmed'), findsWidgets);
     }, skip: !kDemoMode);
 
-    testWidgets('the supplier product form collects only the web fields', (
     testWidgets('a vendor identity opens the local vendor dashboard', (
+      tester,
+    ) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final signedIn = await container
+          .read(authControllerProvider.notifier)
+          .login('vendor@umucyo.rw', 'anything');
+      expect(signedIn, isTrue);
+      expect(
+        container.read(authControllerProvider).session!.user.userType,
+        'vendor',
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const MvecApp()),
+      );
+      await tester.pumpAndSettle();
+
+      // roleHome() sends a vendor straight to /vendor, so the portal (not the
+      // marketplace feed) is the landing screen.
+      expect(find.byType(VendorShell), findsOneWidget);
+      expect(find.byType(MainNavigationScreen), findsNothing);
+      expect(find.text('VENDOR PORTAL'), findsWidgets);
+    }, skip: !kDemoMode);
+
+    testWidgets('the supplier product form collects only the web fields', (
       tester,
     ) async {
       final container = ProviderContainer();
@@ -128,7 +154,6 @@ void main() {
       await container
           .read(authControllerProvider.notifier)
           .login('supplier@mvec.rw', 'demo123');
-          .login('vendor@umucyo.rw', 'anything');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(container: container, child: const MvecApp()),
@@ -312,13 +337,6 @@ void main() {
       },
       skip: !kDemoMode,
     );
-
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-
-      expect(find.byType(VendorShell), findsOneWidget);
-      expect(find.text('VENDOR PORTAL'), findsOneWidget);
-    }, skip: !kDemoMode);
 
     test('empty demo credentials are rejected', () async {
       final container = ProviderContainer();

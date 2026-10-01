@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme.dart';
 import '../../../../core/utils/app_theme.dart';
@@ -238,81 +237,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder:
-          (sheetContext) => SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 18),
-                  Center(
-                    child: Container(
-                      width: 42,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: sheetContext.mv.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _AccountHeader(user: user),
-                  const Divider(height: 26),
-                  if (user != null && user.userType == 'supplier')
-                    _SheetAction(
-                      icon: Icons.storefront_outlined,
-                      label: 'Supplier account',
-                      onTap: () {
-                        Navigator.of(sheetContext).pop();
-                        context.push('/supplier');
-                      },
-                    ),
-                  if (user != null && user.userType == 'super_admin')
-                    _SheetAction(
-                      icon: Icons.dashboard_outlined,
-                      label: 'Go to dashboard',
-                      onTap: () {
-                        Navigator.of(sheetContext).pop();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  _SheetAction(
-                    icon: Icons.shopping_bag_outlined,
-                    label: 'My orders',
-                    onTap: () {
-                      Navigator.of(sheetContext).pop();
-                      _openOrders();
-                    },
-                  ),
-                  _SheetAction(
-                    icon: Icons.favorite_border,
-                    label: 'My wishlist',
-                    onTap: () {
-                      Navigator.of(sheetContext).pop();
-                      _openWishlist(context);
-                    },
-                  ),
-                  _SheetAction(
-                    icon: isDark ? Icons.light_mode : Icons.dark_mode,
-                    label: isDark ? 'Light mode' : 'Dark mode',
-                    onTap: () {
-                      Navigator.of(sheetContext).pop();
-                      _toggleTheme();
-                    },
-                  ),
-                  _SheetAction(
-                    icon: Icons.logout,
-                    label: 'Sign out',
-                    destructive: true,
-                    onTap: () async {
-                      Navigator.of(sheetContext).pop();
-                      await ref.read(authControllerProvider.notifier).logout();
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ),
-            ),
           (sheetContext) => _SheetScaffold(
             children: [
               _AccountHeader(user: user),
@@ -449,10 +373,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   isDark: context.isDarkMode,
                   onTap: _toggleTheme,
                 ),
-                _ThemeToggleButton(
-                  isDark: context.isDarkMode,
-                  onTap: _toggleTheme,
-                ),
                 IconButton(
                   tooltip: 'Account',
                   visualDensity: VisualDensity.compact,
@@ -538,8 +458,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     duration: const Duration(milliseconds: 260),
                     curve: Curves.easeOutCubic,
                     left:
-                        tabWidth * _currentIndex +
-                        (tabWidth - indicatorWidth) / 2,
                         slotWidth * activeSlot +
                         (slotWidth - indicatorWidth) / 2,
                     bottom: 6,
@@ -985,7 +903,6 @@ class _CategoriesBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
           child: Row(
             children: [
-              Icon(Icons.category_outlined, size: 16, color: mv.accentDeep),
               Icon(Icons.category_outlined, size: 16, color: mv.textMuted),
               const SizedBox(width: 6),
               Text(
@@ -993,32 +910,6 @@ class _CategoriesBar extends StatelessWidget {
                 style: AppTextStyles.caption(
                   context,
                 ).copyWith(color: mv.text, fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              _QuickLink(
-                icon: Icons.grid_view_outlined,
-                tooltip: 'All Categories',
-                onPressed: onOpenAllCategories,
-              ),
-              _QuickLink(
-                icon: Icons.store_mall_directory_outlined,
-                tooltip: 'Vendors',
-                onPressed: onOpenVendors,
-              ),
-              _QuickLink(
-                icon: Icons.receipt_long_outlined,
-                tooltip: 'Orders',
-                onPressed: onOpenOrders,
-              ),
-              IconButton(
-                tooltip: expanded ? 'Collapse categories' : 'Expand categories',
-                visualDensity: VisualDensity.compact,
-                iconSize: 18,
-                icon: Icon(
-                  expanded ? Icons.expand_less : Icons.expand_more,
-                  color: mv.textMuted,
-                ),
-                onPressed: onToggleExpanded,
               ),
             ],
           ),

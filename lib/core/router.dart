@@ -60,10 +60,6 @@ import '../screens/suppliers/supplier_products_screen.dart';
 import '../screens/suppliers/supplier_profile_screen.dart';
 import '../screens/suppliers/supplier_shell.dart';
 import '../screens/suppliers/supplier_unavailable_screen.dart';
-import '../screens/suppliers/supplier_dashboard_screen.dart';
-import '../screens/suppliers/supplier_products_screen.dart';
-import '../screens/suppliers/supplier_profile_screen.dart';
-import '../screens/suppliers/supplier_shell.dart';
 import '../screens/system/system_screen.dart';
 import '../screens/transactions/transactions_screen.dart';
 import '../screens/trust/trust_screen.dart';
@@ -411,29 +407,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: '/affiliate/notifications',
               child: AffiliateNotificationsScreen(),
             ),
-      ),
-      // Supplier portal. Deliberately outside /admin so the super-admin-only
-      // guard below never bounces a supplier away from their own dashboard.
-      GoRoute(
-        path: '/supplier',
-        builder: (context, state) => const SupplierShell(
-          path: '/supplier',
-          child: SupplierDashboardScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/supplier/products',
-        builder: (context, state) => const SupplierShell(
-          path: '/supplier/products',
-          child: SupplierProductsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/supplier/profile',
-        builder: (context, state) => const SupplierShell(
-          path: '/supplier/profile',
-          child: SupplierProfileScreen(),
-        ),
       ),
       GoRoute(
         path: '/admin',

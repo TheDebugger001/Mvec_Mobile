@@ -243,11 +243,15 @@ class GradientButton extends StatelessWidget {
           MvIcon(icon!, size: 15, color: Colors.white),
           const SizedBox(width: 8),
         ],
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -290,7 +294,7 @@ class OutlineMvButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onPressed,
       icon: icon != null ? MvIcon(icon!, size: 15) : const SizedBox.shrink(),
-      label: Text(label),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
   }
 }
@@ -585,6 +589,7 @@ class ErrorState extends StatelessWidget {
 
 Future<void> copyToClipboard(BuildContext context, String value) async {
   await Clipboard.setData(ClipboardData(text: value));
-  if (context.mounted)
+  if (context.mounted) {
     showMvSnack(context, 'Copied to clipboard', success: true);
+  }
 }

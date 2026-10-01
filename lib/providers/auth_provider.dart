@@ -137,9 +137,6 @@ class AuthController extends Notifier<AuthState> {
               : normalizedIdentity.contains('affiliate')
               ? 'affiliate'
               : 'buyer';
-      final wantsAdmin = normalizedIdentity.contains('admin');
-      final wantsAffiliate = normalizedIdentity.contains('affiliate');
-      final wantsVendor = normalizedIdentity.contains('vendor');
       state = AuthState(
         session: AuthSession(
           token: 'demo-token',
@@ -154,30 +151,6 @@ class AuthController extends Notifier<AuthState> {
                     role: role,
                     companyName:
                         role == 'supplier' ? 'Rwanda Fresh Produce Co.' : null,
-              wantsAdmin
-                  ? _demoUser
-                  : wantsAffiliate
-                  ? UserRecord(
-                    id: 'demo-affiliate',
-                    fullname: 'Demo Affiliate',
-                    email: identity,
-                    role: 'affiliate',
-                    status: 'active',
-                  )
-                  : wantsVendor
-                  ? UserRecord(
-                    id: 'demo-vendor',
-                    fullname: 'Demo Vendor',
-                    email: identity,
-                    role: 'vendor',
-                    status: 'active',
-                    companyName: 'Umucyo Harvest Market',
-                  )
-                  : UserRecord(
-                    id: 'demo-buyer',
-                    fullname: 'Demo Buyer',
-                    email: identity,
-                    role: 'buyer',
                     status: 'active',
                   ),
         ),

@@ -178,10 +178,6 @@ void main() {
       expect(roleHome(_user('super_admin')), '/admin');
     });
 
-    test('buyer, vendor and affiliate land on the home feed', () {
-      for (final role in ['buyer', 'vendor', 'affiliate']) {
-        expect(roleHome(_user(role)), '/home', reason: role);
-      }
     test('supplier lands on the supplier portal', () {
       expect(roleHome(_user('supplier')), '/supplier');
     });
@@ -196,10 +192,6 @@ void main() {
 
     test('buyer lands on the home feed', () {
       expect(roleHome(_user('buyer')), '/home');
-    });
-
-    test('supplier lands on the supplier portal', () {
-      expect(roleHome(_user('supplier')), '/supplier');
     });
   });
 
@@ -643,7 +635,6 @@ void main() {
       expect(find.text('Linen Summer Dress'), findsNothing);
     });
 
-    testWidgets('opens search, categories, vendors and orders pages', (
     testWidgets('opens search plus every destination behind the More drawer', (
       tester,
     ) async {
@@ -734,7 +725,6 @@ void main() {
                 matching: find.byType(ListView),
               )
               .first;
-      await tester.drag(homeList, const Offset(0, -600));
       await tester.drag(homeList, const Offset(0, -650));
       await tester.pumpAndSettle();
     }
@@ -820,9 +810,23 @@ void main() {
       expect(find.text('My Wishlist'), findsOneWidget);
       expect(find.text('Wireless Over-Ear Headphones'), findsWidgets);
 
+      // The cart starts empty, so the wishlist app bar hides its badge.
+      final wishlistCartBadge = tester.widget<Badge>(
+        find.byKey(const ValueKey<String>('wishlist-cart-count')),
+      );
+      expect(wishlistCartBadge.isLabelVisible, isFalse);
+
       await tester.tap(find.text('Move to Cart'));
       await tester.pumpAndSettle();
       expect(find.text('Your wishlist is empty'), findsOneWidget);
+
+      // Moving the item in must light the wishlist app-bar cart badge, so the
+      // count is the same one the bottom nav and home top bar show.
+      final badgeAfterMove = tester.widget<Badge>(
+        find.byKey(const ValueKey<String>('wishlist-cart-count')),
+      );
+      expect(badgeAfterMove.isLabelVisible, isTrue);
+      expect((badgeAfterMove.label as Text).data, '1');
 
       await tester.tap(find.byTooltip('Open cart'));
       await tester.pumpAndSettle();
@@ -949,7 +953,9 @@ void main() {
       expect(find.byType(SupplierShell), findsOneWidget);
       expect(find.text('SUPPLIER PLATFORM'), findsOneWidget);
       expect(find.text('Supplier dashboard'), findsOneWidget);
-      expect(find.text('SUPPLIER'), findsOneWidget);
+      // The topbar is search-driven; the brand sits in the sidebar, which
+      // only builds above the 900pt breakpoint.
+      expect(find.widgetWithText(TextField, 'Search…'), findsOneWidget);
     });
 
     testWidgets('a buyer is kept out of the supplier portal', (tester) async {

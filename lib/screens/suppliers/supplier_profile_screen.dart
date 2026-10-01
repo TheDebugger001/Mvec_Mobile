@@ -4,10 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils.dart';
 import '../../features/supplier/data/supplier_workspace.dart';
 import '../../widgets/common.dart';
-import '../../models/supplier.dart';
-import '../../providers/supplier_providers.dart';
-import '../../widgets/common.dart';
-import 'supplier_shell.dart';
 
 /// Supplier self-service profile.
 ///
@@ -16,15 +12,12 @@ import 'supplier_shell.dart';
 /// [SupplierProfile.toJson] and `PATCH /api/suppliers/me/profile`. Tax IDs,
 /// registration numbers and a structured address would silently be dropped, so
 /// they are not presented.
-/// `PATCH /api/suppliers/me/profile`. Tax IDs, registration numbers and a
-/// structured address would silently be dropped, so they are not presented.
 class SupplierProfileScreen extends ConsumerWidget {
   const SupplierProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workspace = ref.watch(supplierWorkspaceProvider);
-    final profileAsync = ref.watch(supplierProfileProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -45,19 +38,6 @@ class SupplierProfileScreen extends ConsumerWidget {
               value.profile.isOnboarded
                   ? _ProfileBody(profile: value.profile)
                   : const _OnboardingPrompt(),
-          eyebrow: 'SUPPLIER PLATFORM',
-          title: 'Business profile',
-          subtitle: 'Manage supplier profile and marketplace preferences.',
-        ),
-        switch (profileAsync) {
-          AsyncLoading() => const LoadingState(),
-          AsyncError(:final error) => ErrorState(
-              message: friendlyError(error),
-              onRetry: () => ref.invalidate(supplierProfileProvider),
-            ),
-          // A null profile means the account exists but has not been onboarded.
-          AsyncData(value: null) => const _OnboardingPrompt(),
-          AsyncData(:final value?) => _ProfileBody(detail: value),
           _ => const LoadingState(),
         },
       ],
@@ -100,7 +80,6 @@ class _OnboardingPrompt extends ConsumerWidget {
 }
 
 void _openForm(BuildContext context, WidgetRef ref, SupplierProfile? initial) {
-void _openForm(BuildContext context, WidgetRef ref, SupplierDetail? initial) {
   showMvDetailModal(
     context,
     title: initial == null ? 'NEW SUPPLIER PROFILE' : 'EDIT PROFILE',
@@ -121,17 +100,6 @@ class _ProfileBody extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _VerificationPanel(profile: s),
-  const _ProfileBody({required this.detail});
-
-  final SupplierDetail detail;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = detail;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _VerificationPanel(detail: s),
         const SizedBox(height: 16),
         DataCard(
           title: 'Business information',
@@ -144,13 +112,11 @@ class _ProfileBody extends ConsumerWidget {
           child: KeyValueGrid(
             entries: [
               MapEntry('Business name', s.businessName.isEmpty ? '—' : s.businessName),
-              MapEntry('Business name', s.businessName ?? '—'),
               MapEntry('Description', _ellipsis(s.description)),
               if (s.publicId != null) MapEntry('Supplier ID', s.publicId!),
               if (s.slug != null) MapEntry('Store slug', s.slug!),
               MapEntry('Account status', titleCase(s.effectiveStatus)),
               if (s.ratingAvg != null) MapEntry('Rating', '${s.ratingAvg!.toStringAsFixed(1)} / 5'),
-              if (s.createdAt != null) MapEntry('Joined', shortDate(s.createdAt)),
             ],
           ),
         ),
@@ -162,8 +128,6 @@ class _ProfileBody extends ConsumerWidget {
             entries: [
               MapEntry('Email', s.email.isEmpty ? '—' : s.email),
               MapEntry('Phone', s.phone.isEmpty ? '—' : s.phone),
-              MapEntry('Email', s.email ?? '—'),
-              MapEntry('Phone', s.phone ?? '—'),
               MapEntry('Logo URL', _ellipsis(s.logoUrl)),
             ],
           ),
@@ -199,13 +163,6 @@ class _VerificationPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (headline, note) = switch (profile.verificationStatusOrDefault) {
-  const _VerificationPanel({required this.detail});
-
-  final SupplierDetail detail;
-
-  @override
-  Widget build(BuildContext context) {
-    final (headline, note) = switch (detail.verificationStatusOrDefault) {
       'VERIFIED' => (
           'Verified',
           'Your business was approved. The products in your catalogue are visible to buyers.'
@@ -229,10 +186,6 @@ class _VerificationPanel extends StatelessWidget {
       title: 'Verification status',
       subtitle: 'Determines whether buyers can order from you',
       trailing: StatusChip(profile.effectiveStatus),
-      trailing: StatusPill(
-        status: detail.verificationStatus,
-        label: titleCase(detail.effectiveStatus),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -251,7 +204,6 @@ class _SupplierProfileForm extends ConsumerStatefulWidget {
 
   /// Null when creating the profile for the first time.
   final SupplierProfile? initial;
-  final SupplierDetail? initial;
 
   @override
   ConsumerState<_SupplierProfileForm> createState() => _SupplierProfileFormState();
@@ -320,15 +272,6 @@ class _SupplierProfileFormState extends ConsumerState<_SupplierProfileForm> {
               logoUrl: _f['logoUrl']!.text.trim(),
             ),
           );
-    final isNew = widget.initial == null;
-    try {
-      await ref.read(supplierServiceProvider).saveProfile(
-            {
-              for (final e in _f.entries) e.key: e.value.text.trim(),
-            },
-            isNewProfile: isNew,
-          );
-      refreshSupplierData(ref);
       if (mounted) {
         Navigator.pop(context);
         showMvSnack(context, isNew ? 'Business profile created' : 'Profile updated', success: true);

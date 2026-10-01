@@ -60,7 +60,7 @@ void main() {
     );
     final layoutException = tester.takeException();
     if (layoutException != null) {
-      debugPrint(tester.binding.renderView.toStringDeep());
+      debugPrint(tester.binding.renderViews.first.toStringDeep());
     }
     expect(layoutException, isNull);
   });

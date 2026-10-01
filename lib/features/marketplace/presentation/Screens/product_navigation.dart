@@ -58,6 +58,10 @@ void openWishlist(BuildContext context, CommerceProvider commerce) {
         onToggleWishlist: commerce.toggleWishlist,
         onOpenCart: () => openCart(context, commerce),
         onAddToCart: commerce.addToCart,
+        cartItemCount: () => commerce.cartItems.fold<int>(
+          0,
+          (count, item) => count + item.quantity,
+        ),
       ),
     ),
   );
