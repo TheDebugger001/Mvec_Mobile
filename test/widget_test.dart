@@ -746,6 +746,18 @@ void main() {
       expect(find.text('Orders & history'), findsNothing);
       expect(find.byType(MainNavigationScreen), findsOneWidget);
     });
+
+    testWidgets('a signed-in shopper is offered Sign out, not Sign in', (
+      tester,
+    ) async {
+      await _pumpMarketplace(tester);
+
+      await tester.tap(find.byTooltip('Menu'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign out'), findsOneWidget);
+      expect(find.text('Sign in'), findsNothing);
+    });
   });
 
   group('marketplace cart and wishlist', () {
@@ -1026,6 +1038,34 @@ void main() {
 
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(find.byType(MainNavigationScreen), findsNothing);
+    });
+
+    testWidgets('the account sheet offers a guest the way in, not a way out', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      await tester.tap(find.byTooltip('Account'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Guest'), findsOneWidget);
+      expect(find.text('Sign in'), findsOneWidget);
+      expect(find.text('Sign out'), findsNothing);
+    });
+
+    testWidgets('tapping Sign in as a guest opens the login page', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      await tester.tap(find.byTooltip('Account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign in'));
+      await tester.pumpAndSettle();
+
+      // The same page the app used to open cold, reached deliberately this time.
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.text('Welcome back'), findsOneWidget);
     });
 
     testWidgets('a guest can keep browsing after that detour', (tester) async {

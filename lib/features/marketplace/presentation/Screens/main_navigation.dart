@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme.dart';
@@ -207,15 +208,26 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               ),
             ),
             const Divider(height: 1),
-            _MoreDrawerAction(
-              icon: Icons.logout,
-              label: 'Sign out',
-              destructive: true,
-              onTap: () async {
-                Navigator.of(context).pop();
-                await ref.read(authControllerProvider.notifier).logout();
-              },
-            ),
+            // Same rule as the account sheet: a guest is offered the way in.
+            if (ref.watch(currentUserProvider) == null)
+              _MoreDrawerAction(
+                icon: Icons.login,
+                label: 'Sign in',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/login');
+                },
+              )
+            else
+              _MoreDrawerAction(
+                icon: Icons.logout,
+                label: 'Sign out',
+                destructive: true,
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await ref.read(authControllerProvider.notifier).logout();
+                },
+              ),
             const SizedBox(height: 8),
           ],
         ),
@@ -274,15 +286,27 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   _toggleTheme();
                 },
               ),
-              _SheetAction(
-                icon: Icons.logout,
-                label: 'Sign out',
-                destructive: true,
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  await ref.read(authControllerProvider.notifier).logout();
-                },
-              ),
+              // A guest gets the way in rather than a way out; signing out is
+              // meaningless until there is a session to end.
+              if (user == null)
+                _SheetAction(
+                  icon: Icons.login,
+                  label: 'Sign in',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    context.go('/login');
+                  },
+                )
+              else
+                _SheetAction(
+                  icon: Icons.logout,
+                  label: 'Sign out',
+                  destructive: true,
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await ref.read(authControllerProvider.notifier).logout();
+                  },
+                ),
             ],
           ),
     );
