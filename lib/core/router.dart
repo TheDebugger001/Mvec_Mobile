@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/marketplace/presentation/Screens/main_navigation.dart';
+import '../widgets/common.dart';
 import '../features/affiliate/presentation/screens/affiliate_dashboard_screen.dart';
 import '../features/affiliate/presentation/screens/affiliate_profile_screen.dart';
 import '../features/affiliate/presentation/screens/affiliate_settings_screen.dart';
@@ -124,6 +125,37 @@ const _publicAuthPaths = <String>[
   '/reset-password',
 ];
 
+/// Rendered at `/` while the stored session is still being read off disk.
+///
+/// `/` has no page of its own — it exists only to choose a landing route once
+/// the session is known. It still has to build something, otherwise every cold
+/// start spends the length of the token read showing an empty frame.
+class _SessionGate extends StatelessWidget {
+  const _SessionGate();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: LoadingState()));
+}
+
+/// Routes a guest may reach without an account.
+///
+/// This is a storefront: browsing the catalogue is the point of the app, so a
+/// cold start must not cost someone an account before they can see any of it.
+/// Everything that is *about* a person — carts in flight, orders, wallets,
+/// consoles — stays behind the auth wall, and only the way in to it is public.
+const _guestPaths = <String>['/home'];
+
+/// Whether [loc] is browsable without a session.
+///
+/// `'/'` is included because GoRouter runs this redirect for the location
+/// itself *before* the `/` route's own redirect gets to pick a landing page,
+/// so `/` has to pass or every cold start is bounced to the login wall. It is
+/// matched exactly rather than by prefix: `'/'.startsWith('/')` is true, which
+/// would wave the entire app through.
+bool _isGuestPath(String loc) =>
+    loc == '/' || _guestPaths.any((p) => loc == p || loc.startsWith('$p/'));
+
 final routerProvider = Provider<GoRouter>((ref) {
   final gate = ValueNotifier(0);
   ref.onDispose(gate.dispose);
@@ -135,7 +167,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   });
 
   return GoRouter(
-    initialLocation: '/login',
+    // `/` rather than `/login`: the landing page is decided by the session, not
+    // hardcoded. See the `/` redirect below.
+    initialLocation: '/',
     refreshListenable: gate,
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
@@ -176,15 +210,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc == '/verify-code' && !pendingReset) return '/forgot-password';
         return null;
       }
+      // The storefront itself, so browsing never requires an account.
+      if (_isGuestPath(loc)) return null;
       return '/login';
     },
     routes: [
       GoRoute(
         path: '/',
+        builder: (_, __) => const _SessionGate(),
         redirect: (_, __) {
           final auth = ref.read(authControllerProvider);
+          // Hold here while a stored session is being read, so a returning user
+          // is not flashed the storefront on the way to their dashboard.
+          if (auth.restoring) return null;
           if (auth.isLoggedIn) return roleHome(auth.session!.user);
-          return '/login';
+          // Cold start with no session: open the marketplace, not a login wall.
+          return '/home';
         },
       ),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),

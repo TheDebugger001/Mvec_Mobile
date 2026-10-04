@@ -10,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mvec_mobile/core/api_client.dart';
+import 'package:mvec_mobile/core/router.dart';
 import 'package:mvec_mobile/core/theme.dart';
 import 'package:mvec_mobile/core/utils/app_theme.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/home_screen.dart';
@@ -21,7 +22,9 @@ import 'package:mvec_mobile/models/supplier.dart';
 import 'package:mvec_mobile/models/user.dart';
 import 'package:mvec_mobile/providers/auth_provider.dart';
 import 'package:mvec_mobile/screens/auth/auth_validation.dart';
+import 'package:mvec_mobile/screens/auth/login_screen.dart';
 import 'package:mvec_mobile/screens/suppliers/supplier_shell.dart';
+import 'package:mvec_mobile/widgets/common.dart';
 
 Product _demoProduct() => Product(
   id: 'p1',
@@ -62,14 +65,19 @@ Future<void> _pumpDashboard(WidgetTester tester, String role) async {
 /// Auth controller stub so a test can boot the app as a signed-in role
 /// without touching secure storage or the network.
 class _StubAuthController extends AuthController {
-  _StubAuthController(this.user);
+  _StubAuthController(this.user, {this.restoring = false});
 
   final UserRecord? user;
+
+  /// When true the controller stays in the session-read state, the way the real
+  /// one is until the stored token has been pulled off disk.
+  final bool restoring;
 
   @override
   AuthState build() => AuthState(
     session:
         user == null ? null : AuthSession(token: 'test-token', user: user!),
+    restoring: restoring,
   );
 }
 
@@ -81,8 +89,33 @@ UserRecord _user(String role) => UserRecord(
 );
 
 /// Boots the signed-out app (login screen).
+/// Boots the app with no session at all, i.e. a first-time visitor. The
+/// storefront is the landing page, so this settles on the marketplace.
+///
+/// The real controller sits in `restoring` until secure storage answers, which
+/// never happens in a widget test, so the session state is stubbed instead.
+Future<void> _pumpGuest(WidgetTester tester) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authControllerProvider.overrideWith(() => _StubAuthController(null)),
+      ],
+      child: const MvecApp(),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Like [_pumpGuest] but parked on the login page.
+///
+/// A signed-out launch lands on the marketplace now, so tests that are about
+/// the auth screens have to walk there on purpose.
 Future<void> _pumpSignedOut(WidgetTester tester) async {
-  await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+  await _pumpGuest(tester);
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(MaterialApp)),
+  );
+  container.read(routerProvider).go('/login');
   await tester.pumpAndSettle();
 }
 
@@ -963,6 +996,74 @@ void main() {
 
       expect(find.byType(SupplierShell), findsNothing);
       expect(find.byType(MainNavigationScreen), findsOneWidget);
+    });
+  });
+
+  // MVEC is a storefront, so browsing the catalogue must not cost someone an
+  // account before they have seen a single product. A first-time visitor lands
+  // on the marketplace and only meets the login wall when they reach a page
+  // that is actually about them.
+  group('guest entry', () {
+    testWidgets('a cold start with no session opens the marketplace', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      expect(find.byType(MainNavigationScreen), findsOneWidget);
+      expect(find.byType(LoginScreen), findsNothing);
+    });
+
+    testWidgets('a guest reaching a protected page is sent to login', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MainNavigationScreen)),
+      );
+      container.read(routerProvider).go('/supplier');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(MainNavigationScreen), findsNothing);
+    });
+
+    testWidgets('a guest can keep browsing after that detour', (tester) async {
+      await _pumpGuest(tester);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MainNavigationScreen)),
+      );
+      container.read(routerProvider).go('/supplier');
+      await tester.pumpAndSettle();
+      // Leaving the login page without an account returns to the storefront
+      // rather than trapping the visitor on the auth wall.
+      container.read(routerProvider).go('/home');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MainNavigationScreen), findsOneWidget);
+    });
+
+    testWidgets('a cold start waits for the session behind a splash', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(null, restoring: true),
+            ),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pump();
+
+      // Nothing has been decided yet, so neither the marketplace nor the login
+      // wall may be on screen — just something in place of an empty frame.
+      expect(find.byType(LoadingState), findsOneWidget);
+      expect(find.byType(MainNavigationScreen), findsNothing);
+      expect(find.byType(LoginScreen), findsNothing);
     });
   });
 
