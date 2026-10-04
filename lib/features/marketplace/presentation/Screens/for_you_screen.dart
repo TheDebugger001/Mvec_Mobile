@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme.dart';
 import '../../../../core/utils/app_theme.dart';
+import '../../data/interest/interest_profile.dart';
+import '../../data/interest/interest_store.dart';
 import '../../data/models/product_model.dart';
 import '../providers/home_provider.dart';
 import '../Widgets/product_card.dart';
@@ -10,14 +13,29 @@ import 'product_navigation.dart';
 
 /// For You tab: personalized recommendations plus products the user
 /// recently viewed.
-class ForYouScreen extends StatelessWidget {
+///
+/// For a signed-in account the recommendations are the catalogue ranked by
+/// what they actually buy, strongest match first. A guest sees the same list
+/// the feed has always shipped with.
+class ForYouScreen extends ConsumerWidget {
   const ForYouScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final provider = context.watch<HomeProvider>();
-    final recommended = provider.recommendedProducts;
+    final profile = ref.watch(myInterestProvider);
+    final now = DateTime.now();
+    // The personalised block replaces the static recommendations only when
+    // there is a real history behind it; otherwise the authored list stands.
+    final matched =
+        rankByInterest(provider.products, profile)
+            .where((p) => (profile?.scoreOf(p.categoryId, now) ?? 0) > 0)
+            .take(12)
+            .toList();
+    final recommended =
+        matched.isNotEmpty ? matched : provider.recommendedProducts;
     final recent = provider.recentlyViewed;
+    final personalised = matched.isNotEmpty;
 
     if (recommended.isEmpty && recent.isEmpty) {
       return Center(
@@ -61,7 +79,9 @@ class ForYouScreen extends StatelessWidget {
           const SizedBox(height: 20),
         ],
         if (recommended.isNotEmpty) ...<Widget>[
-          _Header('Recommended for You'),
+          _Header(
+            personalised ? 'Matched to what you buy' : 'Recommended for You',
+          ),
           const SizedBox(height: 10),
           _Grid(products: recommended),
         ],

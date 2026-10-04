@@ -13,6 +13,8 @@ import 'package:mvec_mobile/core/api_client.dart';
 import 'package:mvec_mobile/core/router.dart';
 import 'package:mvec_mobile/core/theme.dart';
 import 'package:mvec_mobile/core/utils/app_theme.dart';
+import 'package:mvec_mobile/features/marketplace/data/interest/interest_profile.dart';
+import 'package:mvec_mobile/features/marketplace/data/interest/interest_store.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/home_screen.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/main_navigation.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/providers/commerce_provider.dart';
@@ -1104,6 +1106,163 @@ void main() {
       expect(find.byType(LoadingState), findsOneWidget);
       expect(find.byType(MainNavigationScreen), findsNothing);
       expect(find.byType(LoginScreen), findsNothing);
+    });
+  });
+
+  // Personalisation is an account feature: a guest must never see another
+  // person's taste, and must never have their own browsing recorded.
+  group('personalised storefront', () {
+    /// An account that has bought from Electronics (category 1).
+    InterestProfile electronicsBuyer() => InterestProfile.empty.record(
+      categoryId: 1,
+      signal: InterestSignal.purchased,
+      productId: null,
+    );
+
+    testWidgets('a guest is offered no recommendations on the home feed', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      expect(find.text('Picked for you'), findsNothing);
+    });
+
+    testWidgets('a guest is told to sign in rather than shown alerts', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      await tester.tap(find.byTooltip('Notifications'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign in to get new-product alerts'), findsOneWidget);
+      expect(find.text('New in categories you buy from'), findsNothing);
+    });
+
+    testWidgets('an account with no history yet is told to browse first', (
+      tester,
+    ) async {
+      await _pumpSignedIn(tester, 'buyer');
+
+      await tester.tap(find.byTooltip('Notifications'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No alerts yet'), findsOneWidget);
+      expect(find.text('Picked for you'), findsNothing);
+    });
+
+    testWidgets('a buyer sees their own categories first on the home feed', (
+      tester,
+    ) async {
+      // A tall surface so the whole feed is laid out: the lazy list would
+      // otherwise not have built the rows past the hero and category chips.
+      tester.view.physicalSize = const Size(1400, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(_user('buyer')),
+            ),
+            myInterestProvider.overrideWithValue(electronicsBuyer()),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Picked for you'), findsOneWidget);
+      // The personalised row sits ahead of the general catalogue row.
+      final picked = tester.getTopLeft(find.text('Picked for you')).dy;
+      final popular = tester.getTopLeft(find.text('Popular Products')).dy;
+      expect(picked, lessThan(popular));
+    });
+
+    testWidgets('the strongest matching category leads, not just any match', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1400, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      // Bought Sports (5), but only ever browsed Fashion (2).
+      final profile = InterestProfile.empty
+          .record(
+            categoryId: 5,
+            signal: InterestSignal.purchased,
+            productId: null,
+          )
+          .record(
+            categoryId: 2,
+            signal: InterestSignal.viewed,
+            productId: null,
+          );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(_user('buyer')),
+            ),
+            myInterestProvider.overrideWithValue(profile),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Section headers share one style, so their order in the tree is the
+      // order they appear in the feed. Collected rather than scraped by
+      // position, because product cards repeat the same words.
+      final sectionStyle = AppTextStyles.sectionTitle(
+        tester.element(find.byType(HomeScreen)),
+      );
+      final sections =
+          tester
+              .widgetList<Text>(find.byType(Text))
+              .where((text) => text.style == sectionStyle)
+              .map((text) => text.data)
+              .toList();
+
+      expect(
+        sections,
+        containsAll(<String>['Picked for you', 'Sports', 'Fashion']),
+      );
+      // Bought Sports leads, then browsed Fashion, then the rest queues up.
+      expect(sections.indexOf('Sports'), lessThan(sections.indexOf('Fashion')));
+      expect(
+        sections.indexOf('Picked for you'),
+        lessThan(sections.indexOf('Sports')),
+      );
+    });
+
+    testWidgets('alerts name the product and the reason they were sent', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(_user('buyer')),
+            ),
+            myInterestProvider.overrideWithValue(electronicsBuyer()),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Notifications'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New in categories you buy from'), findsOneWidget);
+      // The bundled catalogue's only new arrival in Electronics.
+      expect(find.text('Smart Watch Series 5'), findsOneWidget);
+      expect(find.textContaining('a category you buy from'), findsWidgets);
     });
   });
 

@@ -19,6 +19,7 @@ import 'orders_screen.dart';
 import 'product_navigation.dart';
 import 'search_screen.dart';
 import 'shop_screen.dart';
+import 'shopper_notifications_screen.dart';
 import 'vendors_screen.dart';
 
 /// Root marketplace navigation container.
@@ -422,7 +423,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   }
 
   void _openNotifications() =>
-      _pushPage(const _NotificationsPage(), title: 'Notifications');
+      _pushPage(const ShopperNotificationsScreen(), title: 'Notifications');
 
   // ---------------------------------------------------------------------------
   // Floating bottom navigation bar: a rounded white pill that hovers clear of
@@ -862,39 +863,6 @@ class _ThemeToggleButton extends StatelessWidget {
               color: context.mv.accentDeep,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Placeholder inbox: the storefront has no notification feed yet, but the
-/// top-bar bell needs a destination so the action is never dead.
-class _NotificationsPage extends StatelessWidget {
-  const _NotificationsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.notifications_none_rounded,
-              size: 56,
-              color: context.mv.accentDeep,
-            ),
-            const SizedBox(height: 12),
-            Text('No new notifications', style: AppTextStyles.title(context)),
-            const SizedBox(height: 4),
-            Text(
-              'Order updates and vendor offers will show up here.',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodySecondary(context),
-            ),
-          ],
         ),
       ),
     );

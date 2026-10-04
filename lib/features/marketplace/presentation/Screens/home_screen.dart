@@ -1,9 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme.dart';
 import '../../../../core/utils/app_theme.dart';
+import '../../data/interest/interest_store.dart';
 import '../../data/models/category_model.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/vendor_model.dart';
@@ -19,7 +21,12 @@ import 'vendor_store_screen.dart';
 /// Renders the marketplace hero, category grid, featured products,
 /// recommended products, and featured vendors from [HomeProvider].
 /// Search lives in the shell's top bar, so it is not repeated here.
-class HomeScreen extends StatelessWidget {
+///
+/// For a signed-in account with recorded interests, the product rows and the
+/// category sections are reordered so what they already buy comes first and
+/// the rest of the catalogue follows behind it. A guest, or an account with no
+/// interest recorded yet, sees the feed in its authored order.
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({
     super.key,
     this.onBrowseAll,
@@ -33,8 +40,10 @@ class HomeScreen extends StatelessWidget {
   final ValueChanged<Category>? onCategoryTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final provider = context.watch<HomeProvider>();
+    final profile = ref.watch(myInterestProvider);
+    final personalised = profile?.hasSignal ?? false;
 
     if (provider.isLoading && provider.feed.banners.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -43,6 +52,25 @@ class HomeScreen extends StatelessWidget {
     final categories = provider.categories;
     final visibleCategories =
         categories.length > 8 ? categories.sublist(0, 8) : categories;
+    // A signed-in shopper sees the categories they buy from first, so their
+    // own sections lead and everything else queues up behind them. Those
+    // sections are ordered by how strong the evidence is; every other category
+    // keeps its authored order after them.
+    final now = DateTime.now();
+    final rankedIds =
+        personalised ? profile!.rankedCategoryIds(now) : const <int>[];
+    final rankedIdSet = rankedIds.toSet();
+    final visibleById = <int, Category>{
+      for (final category in visibleCategories) category.id: category,
+    };
+    final orderedCategories =
+        personalised
+            ? <Category>[
+              for (final id in rankedIds)
+                if (visibleById.containsKey(id)) visibleById[id]!,
+              ...visibleCategories.where((c) => !rankedIdSet.contains(c.id)),
+            ]
+            : visibleCategories;
     final featuredIds =
         provider.featuredProducts.map((product) => product.id).toSet();
     final popularProducts = <Product>[
@@ -51,6 +79,29 @@ class HomeScreen extends StatelessWidget {
         (product) => !featuredIds.contains(product.id),
       ),
     ];
+    // The personalised section: products from the categories this account
+    // leans towards, strongest match first. Empty for a guest, so the guest
+    // feed is exactly the one they saw before.
+    final pickedForYou =
+        personalised
+            ? provider.products
+                .where(
+                  (product) =>
+                      (rankedIdSet.contains(product.categoryId)) &&
+                      product.inStock,
+                )
+                .toList()
+            : <Product>[];
+    if (pickedForYou.isNotEmpty) {
+      pickedForYou.sort(
+        (a, b) => profile!
+            .scoreOf(b.categoryId, now)
+            .compareTo(profile.scoreOf(a.categoryId, now)),
+      );
+    }
+    if (pickedForYou.length > 8) {
+      pickedForYou.removeRange(8, pickedForYou.length);
+    }
 
     return Column(
       children: [
@@ -80,13 +131,19 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                 ],
+                if (pickedForYou.isNotEmpty) ...<Widget>[
+                  _SectionHeader(title: 'Picked for you'),
+                  const SizedBox(height: 12),
+                  _ProductRow(products: pickedForYou),
+                  const SizedBox(height: 20),
+                ],
                 if (popularProducts.isNotEmpty) ...<Widget>[
                   _SectionHeader(title: 'Popular Products'),
                   const SizedBox(height: 12),
                   _ProductRow(products: popularProducts),
                   const SizedBox(height: 20),
                 ],
-                for (final category in visibleCategories)
+                for (final category in orderedCategories)
                   if (provider.products.any(
                     (product) =>
                         product.categoryId == category.id ||

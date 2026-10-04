@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/router.dart';
 import 'core/theme.dart';
+import 'features/marketplace/data/interest/interest_store.dart';
 import 'features/marketplace/presentation/providers/commerce_provider.dart';
 import 'features/marketplace/presentation/providers/home_provider.dart';
 
@@ -40,7 +41,22 @@ class MvecApp extends ConsumerWidget {
     return p.MultiProvider(
       providers: [
         p.ChangeNotifierProvider(create: (_) => HomeProvider()..loadHomeFeed()),
-        p.ChangeNotifierProvider(create: (_) => CommerceProvider()),
+        p.ChangeNotifierProvider(
+          create:
+              (_) => CommerceProvider(
+                // Wishlisting and adding to a cart are the two actions a shopper
+                // takes deliberately, and both feed the signed-in account's feed.
+                // Guests are filtered out inside the store.
+                onInterest:
+                    (product, signal) => ref
+                        .read(interestStoreProvider.notifier)
+                        .record(
+                          categoryId: product.categoryId,
+                          productId: int.tryParse(product.id),
+                          signal: signal,
+                        ),
+              ),
+        ),
       ],
       child: MaterialApp.router(
         title: 'MVEC',
