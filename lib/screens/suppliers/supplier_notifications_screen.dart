@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme.dart';
@@ -90,29 +91,53 @@ class _Notices extends ConsumerWidget {
           for (final notice in notices)
             _NoticeRow(
               notice: notice,
-              onTap:
-                  () => ref
-                      .read(supplierWorkspaceProvider.notifier)
-                      .markNotificationRead(notice.id),
+              // Tapping opens the page that can act on the notice, and marks it
+              // read on the way. Notices with nowhere to go still mark read.
+              onTap: () => _open(context, ref, notice),
+              onAction:
+                  notice.destination == null
+                      ? null
+                      : () => _open(context, ref, notice),
             ),
         ],
       ),
     );
   }
+
+  Future<void> _open(
+    BuildContext context,
+    WidgetRef ref,
+    SupplierNotice notice,
+  ) async {
+    final destination = notice.destination;
+    if (!notice.read) {
+      ref
+          .read(supplierWorkspaceProvider.notifier)
+          .markNotificationRead(notice.id);
+    }
+    if (destination == null) return;
+    if (!context.mounted) return;
+    context.go(destination);
+  }
 }
 
 class _NoticeRow extends StatelessWidget {
-  const _NoticeRow({required this.notice, required this.onTap});
+  const _NoticeRow({
+    required this.notice,
+    required this.onTap,
+    required this.onAction,
+  });
 
   final SupplierNotice notice;
   final VoidCallback onTap;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
     return Opacity(
       opacity: notice.read ? .78 : 1,
       child: InkWell(
-        onTap: notice.read ? null : onTap,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -166,16 +191,36 @@ class _NoticeRow extends StatelessWidget {
                   ],
                 ),
               ),
-              if (!notice.read)
-                Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.only(top: 4),
-                  decoration: const BoxDecoration(
-                    color: MvColors.badgeRed,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+              const SizedBox(width: 8),
+              Column(
+                children: [
+                  if (onAction != null)
+                    TextButton(
+                      onPressed: onAction,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        supplierNoticeActionLabel(
+                          notice.destination,
+                          notice.actionLabel,
+                        ),
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  if (!notice.read)
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: MvColors.badgeRed,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),

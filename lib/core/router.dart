@@ -60,6 +60,14 @@ import '../screens/suppliers/supplier_products_screen.dart';
 import '../screens/suppliers/supplier_profile_screen.dart';
 import '../screens/suppliers/supplier_shell.dart';
 import '../screens/suppliers/supplier_unavailable_screen.dart';
+import '../features/supplier/screens/supplier_analytics_screen.dart';
+import '../features/supplier/screens/supplier_delivery_screen.dart';
+import '../features/supplier/screens/supplier_payments_screen.dart';
+import '../features/supplier/screens/supplier_reports_screen.dart';
+import '../features/supplier/screens/supplier_reviews_screen.dart';
+import '../features/supplier/screens/supplier_supply_requests_screen.dart';
+import '../features/supplier/screens/supplier_team_screen.dart';
+import '../features/supplier/screens/supplier_transactions_screen.dart';
 import '../screens/system/system_screen.dart';
 import '../screens/transactions/transactions_screen.dart';
 import '../screens/trust/trust_screen.dart';
@@ -86,63 +94,11 @@ class _UnavailablePage {
   final String detail;
 }
 
-/// The remaining entries of the frontend's `supplierNavGroups`. The web app
-/// fills these with hard-coded seed rows, so the mobile app routes them to a
-/// clear "not connected yet" state rather than inventing payouts, staff
-/// records or delivery milestones.
+/// The remaining entries of the frontend's `supplierNavGroups` that the API
+/// does not serve. Everything the supplier module answers from its own bundled
+/// dataset has its own route above; what is left here is messaging and the
+/// in-portal support desk.
 const _unavailableSupplierPages = <_UnavailablePage>[
-  _UnavailablePage(
-    '/supplier/supply-requests',
-    'Supply requests',
-    'cart',
-    'Inbound supply requests are not exposed for supplier accounts yet. The '
-        'API only serves your wholesale catalogue, profile and orders.',
-  ),
-  _UnavailablePage(
-    '/supplier/delivery',
-    'Delivery & settlement',
-    'box',
-    'Delivery milestones and settlement releases are not served to suppliers '
-        'yet. The order list tracks the supply status that the API returns.',
-  ),
-  _UnavailablePage(
-    '/supplier/payments',
-    'Payments',
-    'wallet',
-    'Supplier payouts are not exposed by the MVEC API for supplier accounts '
-        'yet, so no amounts are shown here.',
-  ),
-  _UnavailablePage(
-    '/supplier/transactions',
-    'Transactions',
-    'wallet',
-    'A supplier-scoped transaction ledger is not available yet.',
-  ),
-  _UnavailablePage(
-    '/supplier/analytics',
-    'Analytics',
-    'chart',
-    'Trend reporting is not served for suppliers yet. Your catalogue and order '
-        'totals are available on the dashboard.',
-  ),
-  _UnavailablePage(
-    '/supplier/reports',
-    'Reports',
-    'chart',
-    'Scheduled and historical supplier reports are not available yet.',
-  ),
-  _UnavailablePage(
-    '/supplier/reviews',
-    'Reviews',
-    'heart',
-    'Buyer reviews for your business are not served by the API yet.',
-  ),
-  _UnavailablePage(
-    '/supplier/team',
-    'Team & staff',
-    'users',
-    'Supplier staff accounts are not managed through the API yet.',
-  ),
   _UnavailablePage(
     '/supplier/messages',
     'Messages',
@@ -284,6 +240,79 @@ final routerProvider = Provider<GoRouter>((ref) {
             (context, state) => const SupplierShell(
               path: '/supplier/orders',
               child: SupplierOrdersScreen(),
+            ),
+      ),
+      // Finance & Insights. The backend does not serve `/suppliers/me/finance`
+      // yet, so `FallbackSupplierFinanceService` answers from the bundled
+      // dataset and labels the numbers as such — see
+      // `features/supplier/supplier_dependencies.dart`.
+      GoRoute(
+        path: '/supplier/payments',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/payments',
+              child: SupplierPaymentsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/transactions',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/transactions',
+              child: SupplierTransactionsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/analytics',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/analytics',
+              child: SupplierAnalyticsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/reports',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/reports',
+              child: SupplierReportsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/reviews',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/reviews',
+              child: SupplierReviewsScreen(),
+            ),
+      ),
+      // Operations. The backend does not serve `/suppliers/me/deliveries`,
+      // `/suppliers/me/supply-requests` or `/suppliers/me/team` yet, so
+      // `FallbackSupplierOperationsService` and `FallbackSupplierTeamService`
+      // answer from the bundled dataset and label the pages as such — see
+      // `features/supplier/supplier_dependencies.dart`.
+      GoRoute(
+        path: '/supplier/supply-requests',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/supply-requests',
+              child: SupplierSupplyRequestsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/delivery',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/delivery',
+              child: SupplierDeliveryScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/team',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/team',
+              child: SupplierTeamScreen(),
             ),
       ),
       GoRoute(
