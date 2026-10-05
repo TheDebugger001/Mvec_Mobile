@@ -197,12 +197,17 @@ class PlatformService {
   // keep their own file, so they no longer widen this shared service.
   // See `lib/services/admin_intelligence_service.dart`.
 
-  /// Orders placed by the signed-in shopper. The API scopes this to the bearer
-  /// token, so the shopper's tab needs no buyer filter. Degrades to an empty list
-  /// while the route is unshipped, which renders the tab's empty state.
+  /// Orders placed by the signed-in shopper.
+  ///
+  /// `GET /orders` is admin-only on the backend (`authorize('super_admin',
+  /// 'admin')`) and answers 403 to a shopper, so the shopper's own list lives at
+  /// `/orders/my-orders`, which is scoped to the bearer token.
   Future<List<OrderRecord>> myOrders({int page = 1, int limit = 20}) async {
     try {
-      final res = await _api.get('/orders', query: {'page': page, 'limit': limit});
+      final res = await _api.get(
+        '/orders/my-orders',
+        query: {'page': page, 'limit': limit},
+      );
       return listJson(res, ['data', 'orders']).map(OrderRecord.fromJson).toList();
     } on ApiException catch (e) {
       if (e.statusCode == null || e.statusCode == 404 || e.statusCode == 501) {

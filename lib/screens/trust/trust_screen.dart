@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_fields.dart';
 import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../providers/admin_intelligence_providers.dart';
@@ -16,14 +17,14 @@ class TrustScreen extends ConsumerWidget {
       title: 'TRUST PROFILE',
       children: [
         KeyValueGrid(entries: [
-          MapEntry('Party', _text(t['party'])),
-          MapEntry('Type', _text(t['type'])),
-          MapEntry('Trust score', _text(t['score'])),
-          MapEntry('Order completion', _text(t['completion'])),
-          MapEntry('Refund rate', _text(t['refundRate'])),
-          MapEntry('Dispute rate', _text(t['disputeRate'])),
-          MapEntry('Rating', _text(t['rating'])),
-          MapEntry('Trend', _text(t['trend'])),
+          MapEntry('Party', _text(stringField(t, ['party', ...spellings('name')]))),
+          MapEntry('Type', _text(stringField(t, spellings('type')))),
+          MapEntry('Trust score', _text(stringField(t, ['score', ...spellings('trustScore')]))),
+          MapEntry('Order completion', _text(stringField(t, ['completion', ...spellings('completionRate')]))),
+          MapEntry('Refund rate', _text(stringField(t, spellings('refundRate')))),
+          MapEntry('Dispute rate', _text(stringField(t, spellings('disputeRate')))),
+          MapEntry('Rating', _text(stringField(t, spellings('rating')))),
+          MapEntry('Trend', _text(stringField(t, spellings('trend')))),
         ]),
       ],
     );
@@ -120,15 +121,17 @@ class TrustScreen extends ConsumerWidget {
 
   /// Projects a trust record onto the columns above. Absent metrics show a dash.
   Map<String, dynamic> _trustRow(Map<String, dynamic> t) {
-    final trend = (t['trend'] ?? 'NEUTRAL').toString().toUpperCase();
+    final trend = stringField(t, spellings('trend'))?.toUpperCase() ?? 'NEUTRAL';
     return {
-      'Party': _text(t['party'] ?? t['name']),
-      'Type': _text(t['type'] ?? t['role']),
-      'Score': _plain(t['score'] ?? t['trustScore']),
-      'Completion': _percent(t['completion'] ?? t['completionRate']),
-      'Refund rate': _percent(t['refundRate']),
-      'Dispute rate': _percent(t['disputeRate']),
-      'Rating': _rating(t['rating']),
+      'Party': _text(stringField(t, ['party', ...spellings('name')])),
+      'Type': _text(stringField(t, spellings('type')) ?? stringField(t, spellings('role'))),
+      'Score': _plain(numField(t, ['score', ...spellings('trustScore')])),
+      'Completion': _percent(
+        numField(t, ['completion', ...spellings('completionRate')]),
+      ),
+      'Refund rate': _percent(numField(t, spellings('refundRate'))),
+      'Dispute rate': _percent(numField(t, spellings('disputeRate'))),
+      'Rating': _rating(numField(t, spellings('rating'))),
       'Trend': StatusChip(
         trend,
         overrideColor: trend == 'POSITIVE' ? MvColors.successText : MvColors.errorText,

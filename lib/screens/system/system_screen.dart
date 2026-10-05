@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_fields.dart';
 import '../../core/utils.dart';
 import '../../providers/admin_intelligence_providers.dart';
 import '../../widgets/common.dart';
@@ -58,11 +59,21 @@ class SystemScreen extends ConsumerWidget {
   /// a dash rather than a placeholder.
   Map<String, dynamic> _settingRow(Map<String, dynamic> s) {
     return {
-      'setting': _text(s['setting'] ?? s['key'] ?? s['name']),
-      'value': _text(s['value']),
-      'scope': _text(s['scope']),
-      'changed': _dateOf(s['changed'] ?? s['updatedAt'] ?? s['lastChanged']),
-      'owner': _text(s['owner'] ?? s['team']),
+      'setting': _text(
+        stringField(s, ['setting', ...spellings('key'), ...spellings('name')]),
+      ),
+      'value': _text(stringField(s, spellings('value'))),
+      'scope': _text(stringField(s, spellings('scope'))),
+      'changed': _dateOf(
+        field(s, [
+          ...spellings('changed'),
+          ...spellings('updatedAt'),
+          ...spellings('lastChanged'),
+        ]),
+      ),
+      'owner': _text(
+        stringField(s, [...spellings('owner'), ...spellings('team')]),
+      ),
     };
   }
 

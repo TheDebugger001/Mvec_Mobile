@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_fields.dart';
 import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../providers/admin_intelligence_providers.dart';
@@ -92,11 +93,13 @@ class RecommendationsScreen extends ConsumerWidget {
   /// Projects a signal onto the columns above. Absent fields render as a dash.
   Map<String, dynamic> _signalRow(Map<String, dynamic> s) {
     return {
-      'Signal': (s['signal'] ?? s['name'] ?? '—').toString(),
-      'Source': (s['source'] ?? '—').toString(),
-      'Weight': _weight(s['weight']),
-      'Enabled': _statusChip(s['enabled'] == true),
-      'Last updated': _dateOf(s['updated'] ?? s['updatedAt']),
+      'Signal': cellText(s, ['signal', ...spellings('name')]),
+      'Source': cellText(s, spellings('source')),
+      'Weight': _weight(numField(s, spellings('weight'))),
+      'Enabled': _statusChip(boolField(s, spellings('enabled'))),
+      'Last updated': _dateOf(
+        field(s, [...spellings('updated'), ...spellings('updatedAt')]),
+      ),
       '_s': s,
     };
   }

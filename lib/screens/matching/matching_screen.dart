@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_fields.dart';
 import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../providers/admin_intelligence_providers.dart';
@@ -59,15 +60,18 @@ class MatchingScreen extends ConsumerWidget {
   /// Projects a match record onto the columns above. Percent columns omit the
   /// sign when the value is absent so a partial payload still reads cleanly.
   Map<String, dynamic> _matchRow(Map<String, dynamic> m) {
-    final status = (m['status'] ?? 'PENDING').toString().toUpperCase();
+    final status =
+        (stringField(m, spellings('status')) ?? 'PENDING').toUpperCase();
     return {
-      'Supplier': (m['supplier'] ?? m['supplierName'] ?? m['name'] ?? '—').toString(),
-      'Category': (m['category'] ?? '—').toString(),
-      'Score': _percent(m['score'] ?? m['matchScore']),
-      'Price': money((m['price'] ?? m['unitPrice']) as num?),
-      'Stock': _stock(m['stock'] ?? m['quantity']),
-      'Reliability': _percent(m['reliability'] ?? m['reliabilityScore']),
-      'Distance': (m['distance'] ?? m['distanceKm'])?.toString() ?? '—',
+      'Supplier': cellText(m, ['supplier', ...spellings('supplierName'), ...spellings('name')]),
+      'Category': cellText(m, spellings('category')),
+      'Score': _percent(numField(m, ['score', ...spellings('matchScore')])),
+      'Price': money(numField(m, ['price', ...spellings('unitPrice')])),
+      'Stock': _stock(numField(m, [...spellings('stock'), ...spellings('quantity')])),
+      'Reliability': _percent(
+        numField(m, ['reliability', ...spellings('reliabilityScore')]),
+      ),
+      'Distance': cellText(m, ['distance', ...spellings('distanceKm')]),
       'Status': StatusChip(
         status,
         overrideColor: status == 'MATCHED' ? MvColors.successText : MvColors.warningText,

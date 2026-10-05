@@ -81,36 +81,102 @@ class HomeFeed {
   /// All known vendors (featured set acts as the default store list).
   List<Vendor> get vendors => featuredVendors;
 
-  factory HomeFeed.fromJson(Map<String, dynamic> json) => HomeFeed(
-        banners: _parse(
-          json['banners'],
-          (map) => BannerItem.fromJson(map),
-        ),
-        categories: _parse(
-          json['categories'],
-          Category.fromJson,
-        ),
-        featuredVendors: _parse(
-          json['featuredVendors'],
-          Vendor.fromJson,
-        ),
-        featuredProducts: _parse(
-          json['featuredProducts'],
-          Product.fromJson,
-        ),
-        recommendedProducts: _parse(
-          json['recommendedProducts'],
-          Product.fromJson,
-        ),
-        products: _parse(
-          json['products'],
-          Product.fromJson,
-        ),
-        recentlyViewed: _parse(
-          json['recentlyViewed'],
-          Product.fromJson,
-        ),
-      );
+  /// Parses the feed payload.
+  ///
+  /// Every section is looked up under both spellings. The app reads either a
+  /// camelCase payload or the snake_case a Node/Express backend sends, and
+  /// guessing one of them wrong is not loud: the request succeeds, the section
+  /// comes back empty and the storefront renders without its vendors or its
+  /// featured row. Accepting both means a naming difference can never quietly
+  /// empty the page.
+  factory HomeFeed.fromJson(Map<String, dynamic> raw) {
+    final json = _sourceOf(raw);
+    return HomeFeed(
+      banners: _section(json, 'banners', BannerItem.fromJson),
+      categories: _section(json, 'categories', Category.fromJson),
+      featuredVendors: _section(
+        json,
+        'featuredVendors',
+        Vendor.fromJson,
+        'featured_vendors',
+      ),
+      featuredProducts: _section(
+        json,
+        'featuredProducts',
+        Product.fromJson,
+        'featured_products',
+      ),
+      recommendedProducts: _section(
+        json,
+        'recommendedProducts',
+        Product.fromJson,
+        'recommended_products',
+      ),
+      products: _section(json, 'products', Product.fromJson),
+      recentlyViewed: _section(
+        json,
+        'recentlyViewed',
+        Product.fromJson,
+        'recently_viewed',
+      ),
+    );
+  }
+
+  /// The map the sections actually live in.
+  ///
+  /// Most endpoints answer with the feed at the top level, but some wrap it in
+  /// `{data: {...}}` or `{success: true, data: [...]}`. Unwrapping once here
+  /// means the section lookups do not each have to repeat it, and a payload
+  /// that is neither shape is returned untouched so it reads as empty rather
+  /// than throwing.
+  static Map<String, dynamic> _sourceOf(Map<String, dynamic> raw) {
+    for (final key in const ['data', 'result']) {
+      final inner = raw[key];
+      if (inner is Map) {
+        final map = Map<String, dynamic>.from(inner);
+        // Only unwrap when the inner object is the sectioned feed; a `data`
+        // object that holds the row itself is handled per section.
+        const sectionKeys = {
+          'banners',
+          'categories',
+          'featuredVendors',
+          'featured_vendors',
+          'featuredProducts',
+          'featured_products',
+          'recommendedProducts',
+          'recommended_products',
+          'products',
+          'recentlyViewed',
+          'recently_viewed',
+        };
+        if (map.keys.any(sectionKeys.contains)) return map;
+      }
+    }
+    return raw;
+  }
+
+  /// Reads one section under [camel] or any of its [snake] aliases.
+  ///
+  /// Also unwraps a `{data: [...]}` or `{items: [...]}` envelope, and falls
+  /// back to a single `data` payload spread across the sections when the server
+  /// sends one flat object rather than a sectioned feed.
+  static List<T> _section<T>(
+    Map<String, dynamic> json,
+    String camel,
+    T Function(Map<String, dynamic>) fromJson, [
+    String? snake,
+  ]) {
+    var value = json[camel];
+    value ??= snake == null ? null : json[snake];
+
+    // A single-item endpoint can answer with the row itself rather than a list.
+    if (value is Map) value = _unwrap(Map<String, dynamic>.from(value));
+
+    return _parse(value, fromJson);
+  }
+
+  static dynamic _unwrap(Map<String, dynamic> value) =>
+      value['data'] ?? value['items'] ?? value['results'] ?? const <dynamic>[];
 
   static List<T> _parse<T>(dynamic value, T Function(Map<String, dynamic>) fromJson) {
     if (value is! List<dynamic>) return <T>[];

@@ -67,26 +67,39 @@ class Product {
     final media = json['media'];
     final category = json['category'];
     final vendor = json['vendor'];
-    final fallbackImage = json['image_url'] ?? json['image'];
+    final fallbackImage = json['image_url'] ?? json['imageUrl'] ?? json['image'];
+
+    // The backend Product stores the undiscounted amount in `price` and the
+    // sale amount in `discountPrice`, which is the inverse of what a card
+    // renders. Read both spellings, then orient the pair the way the UI wants:
+    // `price` is what you pay now and `originalPrice` is what you struck out.
+    final rawDiscount = json['discountPrice'] ?? json['discount_price'];
+    final basePrice = _toDouble(json['price'] ?? json['sale_price'] ?? json['salePrice']);
+    final discountPrice = rawDiscount == null ? null : _toDouble(rawDiscount);
+    final onDiscount = discountPrice != null && discountPrice < basePrice;
+
     final original = json['originalPrice'] ??
+        json['original_price'] ??
         (json['discount'] is Map
             ? (json['discount'] as Map<String, dynamic>)['originalPrice']
-            : null);
+            : null) ??
+        (onDiscount ? basePrice : null);
 
     return Product(
-      id: _toInt(json['id']),
-      name: _toString(json['name']),
+      id: _toInt(json['id'] ?? json['publicId']),
+      name: _toString(json['name'] ?? json['title'] ?? json['product_name']),
       slug: _toString(json['slug']),
       description: _toString(json['description']),
-      price: _toDouble(json['price']),
+      price: onDiscount ? discountPrice : basePrice,
       originalPrice: original != null ? _toDouble(original) : null,
       imageUrl: media is Map
-          ? _toString(media['mainImage'])
+          ? _toString(media['mainImage'] ?? media['main_image'] ?? media['url'])
           : _toString(fallbackImage),
       brand: json['brand']?.toString(),
-      stockQuantity: _toInt(json['stockQuantity']),
+      stockQuantity: _toInt(json['stockQuantity'] ?? json['stock'] ?? json['stock_quantity']),
       rating: _toDouble(json['rating'] ?? json['averageRating']),
-      ratingCount: _toInt(json['ratingCount'] ?? json['reviewCount']),
+      ratingCount:
+          _toInt(json['ratingCount'] ?? json['rating_count'] ?? json['reviewCount']),
       badges: json['badges'] is List
           ? (json['badges'] as List<dynamic>).map((e) => e.toString()).toList()
           : const <String>[],
@@ -102,9 +115,15 @@ class Product {
       vendorName: vendor is Map
           ? vendor['name']?.toString()
           : json['vendor_name']?.toString(),
-      isFeatured: json['isFeatured'] == true || json['featured'] == true,
+      isFeatured:
+          json['isFeatured'] == true ||
+          json['is_featured'] == true ||
+          json['featured'] == true,
       isOnSale:
-          json['isOnSale'] == true || json['onSale'] == true || original != null,
+          json['isOnSale'] == true ||
+          json['is_on_sale'] == true ||
+          json['onSale'] == true ||
+          original != null,
     );
   }
 
