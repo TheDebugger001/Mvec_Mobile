@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'api_config.dart';
 import '../features/marketplace/presentation/Screens/main_navigation.dart';
 import '../features/affiliate/presentation/screens/affiliate_dashboard_screen.dart';
 import '../features/affiliate/presentation/screens/affiliate_profile_screen.dart';
@@ -71,6 +72,7 @@ import '../screens/vendor/vendor_shell.dart';
 import '../screens/vendor/vendor_overview_screen.dart';
 import '../screens/vendor/vendor_products_screen.dart';
 import '../screens/vendor/vendor_profile_screen.dart';
+import '../screens/vendor/vendor_workspace_screen.dart';
 import '../features/vendor/screens/vendor_orders_screen.dart';
 import '../features/vendor/screens/vendor_sales_screen.dart';
 import '../features/vendor/screens/vendor_notifications_screen.dart';
@@ -764,6 +766,31 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: VendorSettingsScreen(),
             ),
       ),
+      GoRoute(path: '/vendor/payouts', redirect: (_, __) => '/vendor/sales'),
+      GoRoute(
+        path: '/vendor/transactions',
+        redirect: (_, __) => '/vendor/sales',
+      ),
+      GoRoute(
+        path: '/vendor/messages',
+        builder:
+            (context, state) => VendorShell(
+              path: '/vendor/messages',
+              child:
+                  kDemoMode
+                      ? const VendorWorkspaceScreen(path: '/vendor/messages')
+                      : const MessagesScreen(),
+            ),
+      ),
+      for (final path in VendorWorkspaceScreen.paths)
+        GoRoute(
+          path: path,
+          builder:
+              (context, state) => VendorShell(
+                path: path,
+                child: VendorWorkspaceScreen(path: path),
+              ),
+        ),
     ],
   );
 });

@@ -108,9 +108,7 @@ class SupplierNav {
   SupplierNav._();
 
   static const groups = <NavGroup>[
-    NavGroup('Overview', [
-      NavItem('Dashboard', '/supplier', 'grid'),
-    ]),
+    NavGroup('Overview', [NavItem('Dashboard', '/supplier', 'grid')]),
     NavGroup('Catalog & Orders', [
       NavItem('Wholesale Products', '/supplier/products', 'box'),
       NavItem('Inventory', '/supplier/inventory', 'grid'),
@@ -150,7 +148,11 @@ class SupplierNav {
   /// Find the group containing a path (used to auto-open the drawer group).
   static String? groupFor(String path) {
     for (final g in groups) {
-      if (g.items.any((i) => i.path == path || (path.startsWith(i.path) && i.path != '/supplier'))) {
+      if (g.items.any(
+        (i) =>
+            i.path == path ||
+            (path.startsWith(i.path) && i.path != '/supplier'),
+      )) {
         return g.label;
       }
     }
@@ -170,17 +172,44 @@ class VendorNav {
 
   static const groups = <NavGroup>[
     NavGroup('Overview', [NavItem('Overview', '/vendor', 'grid')]),
-    NavGroup('Orders & earnings', [
-      NavItem('Orders', '/vendor/orders', 'cart'),
-      NavItem('Sales & earnings', '/vendor/sales', 'wallet'),
-    ]),
     NavGroup('Store', [
       NavItem('Products', '/vendor/products', 'box'),
+      NavItem('Categories', '/vendor/categories', 'tag'),
+      NavItem('Inventory', '/vendor/inventory', 'grid'),
+      NavItem('Shipping', '/vendor/shipping', 'shop'),
+      NavItem('My Store', '/vendor/stores', 'shop'),
       NavItem('Store Profile', '/vendor/profile', 'user'),
-      NavItem('Account settings', '/vendor/settings', 'settings'),
     ]),
-    NavGroup('Communication', [
+    NavGroup('Orders & customers', [
+      NavItem('Orders', '/vendor/orders', 'cart'),
+      NavItem('Purchases', '/vendor/purchases', 'cart'),
+      NavItem('Customers', '/vendor/customers', 'users'),
+      NavItem('Delivery & settlement', '/vendor/delivery', 'box'),
+      NavItem('Refunds', '/vendor/refunds', 'wallet'),
+    ]),
+    NavGroup('Finance', [
+      NavItem('Payouts', '/vendor/payouts', 'wallet'),
+      NavItem('Transactions', '/vendor/transactions', 'wallet'),
+      NavItem('Sales & earnings', '/vendor/sales', 'chart'),
+      NavItem('Subscription', '/vendor/subscription', 'wallet'),
+    ]),
+    NavGroup('Growth', [
+      NavItem('Find suppliers', '/vendor/suppliers', 'shop'),
+      NavItem('Affiliate marketing', '/vendor/affiliates', 'users'),
+      NavItem('Advertisements', '/vendor/advertisements', 'tag'),
+      NavItem('Promotions', '/vendor/promotions', 'tag'),
+      NavItem('Reviews', '/vendor/reviews', 'heart'),
+      NavItem('Reports', '/vendor/reports', 'chart'),
+      NavItem('Analytics', '/vendor/analytics', 'chart'),
+    ]),
+    NavGroup('Team & settings', [
+      NavItem('Team / staff', '/vendor/team', 'users'),
+      NavItem('Settings', '/vendor/settings', 'settings'),
+    ]),
+    NavGroup('Support', [
+      NavItem('Messages', '/vendor/messages', 'users'),
       NavItem('Notifications', '/vendor/notifications', 'bell'),
+      NavItem('MVEC support', '/vendor/support', 'bell'),
     ]),
   ];
 
