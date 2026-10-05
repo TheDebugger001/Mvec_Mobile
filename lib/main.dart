@@ -40,7 +40,12 @@ class MvecApp extends ConsumerWidget {
     // Both are lazy, so nothing is fetched until the marketplace is opened.
     return p.MultiProvider(
       providers: [
-        p.ChangeNotifierProvider(create: (_) => HomeProvider()..loadHomeFeed()),
+        p.ChangeNotifierProvider(
+          create:
+              (_) =>
+                  HomeProvider(service: ref.read(homeServiceProvider))
+                    ..loadHomeFeed(),
+        ),
         p.ChangeNotifierProvider(
           create:
               (_) => CommerceProvider(

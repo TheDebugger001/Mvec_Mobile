@@ -33,7 +33,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             OutlineMvButton(
               label: 'Record ledger entry',
               icon: 'plus',
-              onPressed: () => showMvSnack(context, 'Demo action — ledger entries are created automatically by the platform.'),
+              onPressed: () => showMvSnack(context, 'Ledger entries are created automatically by the platform.'),
             ),
           ],
         ),

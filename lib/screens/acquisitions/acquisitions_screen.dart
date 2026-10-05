@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
+import '../../core/utils.dart';
+import '../../models/party.dart';
+import '../../providers/admin_providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/smart_table.dart';
 
@@ -10,37 +13,14 @@ class AcquisitionScreen extends ConsumerWidget {
 
   final String type;
 
-  static const _vendorSeed = [
-    ['Kigali Wines', 'hello@kigaliwines.rw', 'Beverages', 'Verified', 'Onboard catalog'],
-    ['Lipton Teas', 'sales@liptonteas.rw', 'Groceries', 'Invited', 'Send intro call'],
-    ['Zara Fits', 'zara@zarafits.rw', 'Fashion', 'Applied', 'Schedule verification'],
-    ["Carl's Electronics", 'sales@carlselectronics.rw', 'Electronics', 'Onboarding', 'Upload catalog'],
-    ['Fresh Produce Co', 'fresh@produceco.rw', 'Agriculture', 'Review', 'Review documents'],
-    ['Urban Moto', 'info@urbanmoto.rw', 'Automotive', 'Invited', 'Follow up'],
-  ];
-
-  static const _supplierSeed = [
-    ['PlumbPro', 'plumb@plumbpro.rw', 'Construction & Plumbing', 'Verified', 'Onboard supplies'],
-    ['SteelWorks', 'sales@steelworks.rw', 'Building Materials', 'Applied', 'Schedule verification'],
-    ['AgroSeeds', 'grow@agroseeds.rw', 'Agriculture', 'Onboarding', 'Upload catalog'],
-    ['Textile Plus', 'textile@plus.rw', 'Textiles', 'Invited', 'Send intro call'],
-    ['SolarKit', 'hello@solar-kit.rw', 'Energy', 'Review', 'Review documents'],
-    ['ChemSupply', 'chem@chemsupply.rw', 'Chemicals', 'Invited', 'Follow up'],
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isVendor = type == 'vendor';
-    final seed = isVendor ? _vendorSeed : _supplierSeed;
-    final rows = seed
-        .map((r) => {
-              'business': r[0],
-              'contact': r[1],
-              'category': r[2],
-              'stage': StatusChip(r[3]),
-              'next': r[4],
-            })
-        .toList();
+    final query = const PartyQuery(page: 1);
+    final pipelineAsync =
+        isVendor
+            ? ref.watch(vendorsProvider(query))
+            : ref.watch(suppliersProvider(query));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -66,24 +46,67 @@ class AcquisitionScreen extends ConsumerWidget {
         const SizedBox(height: 18),
         DataCard(
           title: 'Acquisition pipeline',
-          child: rows.isEmpty
-              ? const EmptyState(message: 'No pipeline records found')
-              : SmartTable(
-                  columns: const [
-                    MvColumn('business', 'Business', bold: true),
-                    MvColumn('contact', 'Contact'),
-                    MvColumn('category', 'Category'),
-                    MvColumn('stage', 'Stage'),
-                    MvColumn('next', 'Next step'),
-                  ],
-                  rows: rows,
-                  actionsLabel: '',
-                  csvFileName: isVendor ? 'vendor-pipeline' : 'supplier-pipeline',
-                ),
+          child: switch (pipelineAsync) {
+            AsyncLoading() => const SizedBox(height: 120, child: LoadingState()),
+            AsyncError(:final error) => ErrorState(
+              message: friendlyError(error),
+              onRetry:
+                  isVendor
+                      ? () => ref.invalidate(vendorsProvider(query))
+                      : () => ref.invalidate(suppliersProvider(query)),
+            ),
+            AsyncData(:final value) =>
+              value.items.isEmpty
+                  ? const EmptyState(message: 'No pipeline records found')
+                  : SmartTable(
+                      columns: const [
+                        MvColumn('business', 'Business', bold: true),
+                        MvColumn('contact', 'Contact'),
+                        MvColumn('category', 'Category'),
+                        MvColumn('stage', 'Stage'),
+                        MvColumn('next', 'Next step'),
+                      ],
+                      rows: _rows(value.items),
+                      actionsLabel: '',
+                      csvFileName:
+                          isVendor ? 'vendor-pipeline' : 'supplier-pipeline',
+                    ),
+            _ => const SizedBox(height: 120, child: LoadingState()),
+          },
         ),
       ],
     );
   }
+
+  /// Maps the API's party records onto the pipeline columns. The "next step" is
+  /// derived from the same verification status the API reports, so the column can
+  /// never disagree with the stage beside it.
+  static List<Map<String, dynamic>> _rows(List<PartyRecord> parties) =>
+      parties.map((party) {
+        final verification = party.verificationStatus ?? '';
+        final stage = verification.isEmpty ? 'Invited' : _titleCase(verification);
+        return <String, dynamic>{
+          'business': party.name ?? '—',
+          'contact': party.email ?? party.phone ?? '—',
+          'category': party.category ?? 'General',
+          'stage': StatusChip(stage),
+          'next': _nextStep(stage),
+        };
+      }).toList();
+
+  static String _titleCase(String value) {
+    final lower = value.toLowerCase();
+    if (lower.isEmpty) return lower;
+    return '${lower[0].toUpperCase()}${lower.substring(1)}';
+  }
+
+  static String _nextStep(String stage) => switch (stage.toUpperCase()) {
+    'VERIFIED' => 'Onboard catalog',
+    'ONBOARDING' || 'PENDING' => 'Complete verification',
+    'APPLIED' => 'Schedule verification',
+    'REJECTED' => 'Review documents',
+    _ => 'Send intro call',
+  };
 }
 
 class _Step extends StatelessWidget {

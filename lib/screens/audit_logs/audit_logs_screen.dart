@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils.dart';
+import '../../providers/admin_intelligence_providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/smart_table.dart';
 
@@ -10,6 +11,7 @@ class AuditLogsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final logsAsync = ref.watch(auditLogsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -25,37 +27,58 @@ class AuditLogsScreen extends ConsumerWidget {
             ),
           ],
         ),
-        SmartTable(
-          columns: const [
-            MvColumn('id', 'ID'),
-            MvColumn('actor', 'Actor', flex: 2),
-            MvColumn('action', 'Action', flex: 2),
-            MvColumn('entity', 'Entity', flex: 2),
-            MvColumn('date', 'Date'),
-          ],
-          rows: _mockLogs(),
-          pageSize: 8,
-          actionsLabel: 'Category',
-          rowActions: (row) => StatusChip(row['category']?.toString()),
-        ),
+        switch (logsAsync) {
+          AsyncLoading() => const SizedBox(height: 160, child: LoadingState()),
+          AsyncError(:final error) => ErrorState(
+            message: friendlyError(error),
+            onRetry: () => ref.invalidate(auditLogsProvider),
+          ),
+          AsyncData(:final value) =>
+            value.isEmpty
+                ? const EmptyState(message: 'No audit activity recorded yet')
+                : SmartTable(
+                  columns: const [
+                    MvColumn('id', 'ID'),
+                    MvColumn('actor', 'Actor', flex: 2),
+                    MvColumn('action', 'Action', flex: 2),
+                    MvColumn('entity', 'Entity', flex: 2),
+                    MvColumn('date', 'Date'),
+                  ],
+                  rows: value.map(_logRow).toList(),
+                  pageSize: 8,
+                  actionsLabel: 'Category',
+                  rowActions: (row) => StatusChip(row['category']?.toString()),
+                ),
+          _ => const SizedBox(height: 160, child: LoadingState()),
+        },
       ],
     );
   }
 
-  List<Map<String, dynamic>> _mockLogs() {
-    return [
-      {'id': 'VND-0002', 'actor': 'admin@mvec.rw', 'action': 'Verify', 'entity': 'Vendor VND-0002', 'category': 'VERIFICATION', 'date': shortDate(DateTime(2026, 9, 20))},
-      {'id': 'USR-012', 'actor': 'admin@mvec.rw', 'action': 'Block', 'entity': 'User USR-012', 'category': 'ACCOUNT', 'date': shortDate(DateTime(2026, 9, 20))},
-      {'id': 'ORD-0098', 'actor': 'finance@mvec.rw', 'action': 'Refund', 'entity': 'Order ORD-0098', 'category': 'PAYMENT', 'date': shortDate(DateTime(2026, 9, 19))},
-      {'id': 'ADM-0003', 'actor': 'admin@mvec.rw', 'action': 'Update', 'entity': 'Commission rule', 'category': 'SETTINGS', 'date': shortDate(DateTime(2026, 9, 18))},
-      {'id': 'SUP-0007', 'actor': 'admin@mvec.rw', 'action': 'Approve', 'entity': 'Supplier SUP-0007', 'category': 'VERIFICATION', 'date': shortDate(DateTime(2026, 9, 18))},
-      {'id': 'PRD-0111', 'actor': 'vendor@shop.rw', 'action': 'Publish', 'entity': 'Product PRD-0111', 'category': 'CATALOG', 'date': shortDate(DateTime(2026, 9, 17))},
-      {'id': 'USR-088', 'actor': 'support@mvec.rw', 'action': 'Resolve', 'entity': 'Support case SPT-009', 'category': 'SUPPORT', 'date': shortDate(DateTime(2026, 9, 17))},
-      {'id': 'SYS-001', 'actor': 'ops@mvec.rw', 'action': 'Deploy', 'entity': 'Platform release v2.4', 'category': 'SYSTEM', 'date': shortDate(DateTime(2026, 9, 16))},
-      {'id': 'PAY-044', 'actor': 'finance@mvec.rw', 'action': 'Release', 'entity': 'Payout PAY-044', 'category': 'PAYMENT', 'date': shortDate(DateTime(2026, 9, 16))},
-      {'id': 'CAT-002', 'actor': 'admin@mvec.rw', 'action': 'Create', 'entity': 'Category CAT-002', 'category': 'CATALOG', 'date': shortDate(DateTime(2026, 9, 15))},
-      {'id': 'USR-121', 'actor': 'owner@mvec.rw', 'action': 'Restore', 'entity': 'User USR-121', 'category': 'ACCOUNT', 'date': shortDate(DateTime(2026, 9, 15))},
-      {'id': 'KEY-003', 'actor': 'ops@mvec.rw', 'action': 'Refresh', 'entity': 'Webhook HMAC key', 'category': 'SECURITY', 'date': shortDate(DateTime(2026, 9, 14))},
-    ];
+  /// Projects an audit record onto the columns above. Absent fields render as a
+  /// dash rather than a placeholder value.
+  Map<String, dynamic> _logRow(Map<String, dynamic> log) {
+    final actor = log['actor'] ?? log['performedBy'] ?? log['user'] ?? log['admin'];
+    return {
+      'id': (log['id'] ?? log['eventId'] ?? '—').toString(),
+      'actor': actor == null ? '—' : _nameOf(actor),
+      'action': (log['action'] ?? log['event'] ?? '—').toString(),
+      'entity': (log['entity'] ?? log['target'] ?? log['resource'] ?? '—').toString(),
+      'category': (log['category'] ?? log['type'] ?? 'SYSTEM').toString().toUpperCase(),
+      'date': _dateOf(log['createdAt'] ?? log['date'] ?? log['timestamp']),
+    };
+  }
+
+  String _nameOf(Object? actor) =>
+      actor is Map ? (actor['name'] ?? actor['email'] ?? '—').toString() : actor.toString();
+
+  String _dateOf(Object? raw) {
+    if (raw is DateTime) return shortDate(raw);
+    if (raw is String) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return shortDate(parsed);
+      if (raw.isNotEmpty) return raw;
+    }
+    return '—';
   }
 }

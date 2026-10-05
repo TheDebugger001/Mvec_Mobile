@@ -1,65 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme.dart';
+import '../../../../core/utils.dart';
 import '../../../../core/utils/app_theme.dart';
-
-/// A single demo order placeholder for the current/past order list.
-class _Order {
-  const _Order({
-    required this.id,
-    required this.status,
-    required this.date,
-    required this.total,
-    required this.items,
-  });
-
-  final String id;
-  final String status;
-  final String date;
-  final double total;
-  final int items;
-}
+import '../../../../models/catalog.dart';
+import '../../../../providers/admin_providers.dart';
+import '../../../../widgets/common.dart';
 
 /// Orders tab: current (active) and previous orders.
 ///
-/// Renders local sample entries for now; later this screen will be backed
-/// by `GET /api/orders` through the same service pattern.
-class OrdersScreen extends StatelessWidget {
+/// Backed by `GET /api/orders`, which the API scopes to the signed-in shopper.
+/// Orders with no status yet are treated as active so a fresh order is not hidden.
+class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
 
-  static const List<_Order> _sampleOrders = <_Order>[
-    _Order(
-      id: '#MV-20415',
-      status: 'Out for delivery',
-      date: 'Sep 21, 2026',
-      total: 189.99,
-      items: 1,
-    ),
-    _Order(
-      id: '#MV-20398',
-      status: 'Processing',
-      date: 'Sep 19, 2026',
-      total: 123.49,
-      items: 3,
-    ),
-    _Order(
-      id: '#MV-20321',
-      status: 'Delivered',
-      date: 'Sep 10, 2026',
-      total: 64.00,
-      items: 2,
-    ),
-    _Order(
-      id: '#MV-20277',
-      status: 'Delivered',
-      date: 'Aug 28, 2026',
-      total: 34.50,
-      items: 1,
-    ),
-  ];
+  /// Statuses that count as an in-flight order. Anything else (delivered,
+  /// cancelled, refunded) belongs under Past.
+  static const Set<String> _activeStatuses = <String>{
+    'PENDING',
+    'CONFIRMED',
+    'PROCESSING',
+    'PACKED',
+    'SHIPPED',
+    'OUT_FOR_DELIVERY',
+    'ASSIGNED',
+    'ON_THE_WAY',
+  };
+
+  static bool isActive(OrderRecord order) {
+    final status = (order.status ?? '').trim().toUpperCase().replaceAll(RegExp(r'[\s-]+'), '_');
+    if (status.isEmpty) return true;
+    return _activeStatuses.contains(status);
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ordersAsync = ref.watch(myOrdersProvider);
     return DefaultTabController(
       length: 2,
       child: Column(
@@ -75,13 +52,31 @@ class OrdersScreen extends StatelessWidget {
               Tab(text: 'Past'),
             ],
           ),
-          const Expanded(
-            child: TabBarView(
-              children: [
-                _OrdersList(activeOnly: true),
-                _OrdersList(activeOnly: false),
-              ],
-            ),
+          Expanded(
+            child: switch (ordersAsync) {
+              AsyncLoading() => const Center(child: LoadingState()),
+              AsyncError(:final error) => Center(
+                child: ErrorState(
+                  message: friendlyError(error),
+                  onRetry: () => ref.invalidate(myOrdersProvider),
+                ),
+              ),
+              AsyncData(:final value) => TabBarView(
+                children: [
+                  _OrdersList(
+                    orders: value.where(isActive).toList(),
+                    activeOnly: true,
+                    onRetry: () => ref.invalidate(myOrdersProvider),
+                  ),
+                  _OrdersList(
+                    orders: value.where((o) => !isActive(o)).toList(),
+                    activeOnly: false,
+                    onRetry: () => ref.invalidate(myOrdersProvider),
+                  ),
+                ],
+              ),
+              _ => const Center(child: LoadingState()),
+            },
           ),
         ],
       ),
@@ -90,21 +85,18 @@ class OrdersScreen extends StatelessWidget {
 }
 
 class _OrdersList extends StatelessWidget {
-  const _OrdersList({required this.activeOnly});
+  const _OrdersList({
+    required this.orders,
+    required this.activeOnly,
+    required this.onRetry,
+  });
 
+  final List<OrderRecord> orders;
   final bool activeOnly;
-
-  static const Set<String> _activeStatuses = <String>{
-    'Out for delivery',
-    'Processing',
-  };
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final orders = OrdersScreen._sampleOrders
-        .where((order) => _activeStatuses.contains(order.status) == activeOnly)
-        .toList();
-
     if (orders.isEmpty) {
       return Center(
         child: Column(
@@ -120,6 +112,8 @@ class _OrdersList extends StatelessWidget {
               activeOnly ? 'No active orders' : 'No past orders yet',
               style: AppTextStyles.title(context),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton(onPressed: onRetry, child: const Text('Refresh')),
           ],
         ),
       );
@@ -137,13 +131,18 @@ class _OrdersList extends StatelessWidget {
 class _OrderCard extends StatelessWidget {
   const _OrderCard({required this.order});
 
-  final _Order order;
+  final OrderRecord order;
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = order.status == 'Delivered'
-        ? AppColors.success
-        : AppColors.warning;
+    final status = (order.status ?? 'Unknown').trim();
+    final statusColor = switch (status.toUpperCase()) {
+      'DELIVERED' => AppColors.success,
+      'CANCELLED' || 'REFUNDED' => AppColors.error,
+      _ => AppColors.warning,
+    };
+    final items = order.itemsCount ?? order.raw?['itemsCount'];
+    final placed = order.createdAt;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -154,7 +153,7 @@ class _OrderCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  order.id,
+                  order.orderNumber == null ? 'Order' : '#${order.orderNumber}',
                   style: AppTextStyles.title(context).copyWith(fontSize: 13),
                 ),
                 Container(
@@ -167,7 +166,7 @@ class _OrderCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    order.status,
+                    status,
                     style: TextStyle(
                       color: statusColor,
                       fontSize: 11,
@@ -186,17 +185,20 @@ class _OrderCard extends StatelessWidget {
                   size: 14,
                 ),
                 const SizedBox(width: 6),
-                Text(order.date, style: AppTextStyles.caption(context)),
+                Text(
+                  placed == null ? 'Date unavailable' : shortDate(placed),
+                  style: AppTextStyles.caption(context),
+                ),
                 const Spacer(),
                 Text(
-                  '\$${order.total.toStringAsFixed(2)}',
+                  order.total == null ? '—' : money(order.total!),
                   style: AppTextStyles.price(context).copyWith(fontSize: 14),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              '${order.items} item(s) · View details',
+              items == null ? 'View details' : '$items item(s) · View details',
               style: AppTextStyles.bodySecondary(context).copyWith(fontSize: 12),
             ),
           ],

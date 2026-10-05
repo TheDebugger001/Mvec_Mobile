@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils.dart';
 import '../../models/catalog.dart';
+import '../../models/party.dart';
 import '../../providers/admin_providers.dart';
 import '../../widgets/charts.dart';
 import '../../widgets/common.dart';
@@ -11,18 +12,13 @@ import '../../widgets/smart_table.dart';
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
 
-  static final List<Map<String, dynamic>> _vendorRows = [
-    {'vendor': 'TechHub Kigali', 'orders': 312, 'sales': money(14580000), 'rating': '★ 4.8', 'status': 'Active'},
-    {'vendor': 'Garment R Us', 'orders': 248, 'sales': money(9420000), 'rating': '★ 4.6', 'status': 'Active'},
-    {'vendor': 'Farm Fresh Ltd', 'orders': 195, 'sales': money(5310000), 'rating': '★ 4.9', 'status': 'Active'},
-    {'vendor': 'Miko Electronics', 'orders': 176, 'sales': money(12760000), 'rating': '★ 4.5', 'status': 'Active'},
-    {'vendor': 'Kivu Coffee Co', 'orders': 142, 'sales': money(3980000), 'rating': '★ 4.7', 'status': 'Active'},
-  ];
+  static const _vendorQuery = PartyQuery(page: 1);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(reportSummaryProvider('30d'));
     final revenueAsync = ref.watch(reportRevenueProvider('30d'));
+    final vendorsAsync = ref.watch(vendorsProvider(_vendorQuery));
 
     final s = summaryAsync.when(
       data: (v) => v,
@@ -63,18 +59,32 @@ class AnalyticsScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: SmartTable(
-                  pageSize: 5,
-                  csvFileName: 'vendor_performance',
-                  columns: const [
-                    MvColumn('vendor', 'Vendor', bold: true),
-                    MvColumn('orders', 'Orders', align: TextAlign.right),
-                    MvColumn('sales', 'Sales', align: TextAlign.right),
-                    MvColumn('rating', 'Rating', align: TextAlign.right),
-                    MvColumn('status', 'Status'),
-                  ],
-                  rows: _vendorRows,
-                ),
+                child: switch (vendorsAsync) {
+                  AsyncLoading() => const SizedBox(
+                    height: 140,
+                    child: LoadingState(),
+                  ),
+                  AsyncError(:final error) => ErrorState(
+                    message: friendlyError(error),
+                    onRetry: () => ref.invalidate(vendorsProvider(_vendorQuery)),
+                  ),
+                  AsyncData(:final value) =>
+                    value.items.isEmpty
+                        ? const EmptyState(message: 'No vendor performance yet')
+                        : SmartTable(
+                          pageSize: 5,
+                          csvFileName: 'vendor_performance',
+                          columns: const [
+                            MvColumn('vendor', 'Vendor', bold: true),
+                            MvColumn('orders', 'Orders', align: TextAlign.right),
+                            MvColumn('sales', 'Sales', align: TextAlign.right),
+                            MvColumn('rating', 'Rating', align: TextAlign.right),
+                            MvColumn('status', 'Status'),
+                          ],
+                          rows: _vendorRows(value.items),
+                        ),
+                  _ => const SizedBox(height: 140, child: LoadingState()),
+                },
               ),
             ],
           ),
@@ -82,6 +92,22 @@ class AnalyticsScreen extends ConsumerWidget {
       ],
     );
   }
+
+  /// Maps the API's vendor records onto the performance columns. Every figure
+  /// comes straight off the record, so a vendor missing a metric shows a dash
+  /// rather than a made-up number.
+  static List<Map<String, dynamic>> _vendorRows(List<PartyRecord> vendors) =>
+      vendors.map((vendor) {
+        final rating = vendor.rating;
+        final status = vendor.status;
+        return <String, dynamic>{
+          'vendor': vendor.name ?? '—',
+          'orders': numFmt(vendor.orders ?? 0),
+          'sales': vendor.earnings == null ? '—' : money(vendor.earnings!),
+          'rating': rating == null ? '—' : '★ ${rating.toStringAsFixed(1)}',
+          'status': status == null || status.isEmpty ? '—' : status,
+        };
+      }).toList();
 
   Widget _metricGrid(List<Widget> children) {
     return LayoutBuilder(

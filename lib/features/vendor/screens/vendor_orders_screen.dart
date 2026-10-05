@@ -331,14 +331,6 @@ class _VendorOrderDetailsState extends ConsumerState<_VendorOrderDetails> {
                     'Confirm delivery with the buyer’s one-time code. Escrow is released only after this check.',
                     icon: 'shield',
                   ),
-                  if (order.deliveryOtp != null &&
-                      ref.read(vendorOrderModuleProvider).isDemo) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Demo buyer OTP: ${order.deliveryOtp}',
-                      style: TextStyle(color: palette.textMuted, fontSize: 11),
-                    ),
-                  ],
                   const SizedBox(height: 9),
                   _textInput(
                     _otp,

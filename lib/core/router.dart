@@ -250,7 +250,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // and bottom bar are shared, mirroring the web's DashboardLayout. The
       // paths match `supplierNavGroups` in the frontend's src/data/navItems.js
       // exactly; pages without an API are routed to an explicit unavailable
-      // state instead of mock numbers.
+      // state instead of invented numbers.
       GoRoute(
         path: '/supplier',
         builder:

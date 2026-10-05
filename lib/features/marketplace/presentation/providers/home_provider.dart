@@ -1,10 +1,22 @@
 import 'package:flutter/foundation.dart' hide Category;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/api_client.dart';
 import '../../data/models/category_model.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/vendor_model.dart';
+import '../../data/services/fallback_home_service.dart';
 import '../../data/services/home_service.dart';
-import '../../data/services/mock_home_service.dart';
+
+/// The home feed's data source.
+///
+/// Addressed through a provider so tests — and any future offline mode — can
+/// swap the live API for a fixture without the app reading a different source
+/// in `main`.
+final homeServiceProvider = Provider<HomeService>(
+  (ref) => FallbackHomeService(ApiClient.instance),
+);
 
 /// Promotional banner shown inside the home feed carousel.
 class BannerItem {
@@ -111,12 +123,12 @@ class HomeFeed {
 
 /// State manager for the marketpce home feed.
 ///
-/// Depends on an injected [HomeService] (defaults to [MockHomeService]) so the
-/// UI is decoupled from the data source and can switch to the real backend
-/// API later without any widget changes.
+/// Depends on an injected [HomeService]. The default is [FallbackHomeService],
+/// which reads the live feed and degrades to an empty storefront when the
+/// endpoint is unreachable, so the UI stays decoupled from the data source.
 class HomeProvider extends ChangeNotifier {
   HomeProvider({HomeService? service})
-      : _service = service ?? MockHomeService();
+      : _service = service ?? FallbackHomeService(ApiClient.instance);
 
   final HomeService _service;
 
@@ -128,7 +140,7 @@ class HomeProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// Whether the current data comes from the local mock service.
+  /// True only when the feed comes from a bundled/local dataset.
   bool get isDemo => _service.isDemo;
 
   List<BannerItem> get banners => _feed.banners;

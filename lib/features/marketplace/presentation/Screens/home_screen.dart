@@ -103,6 +103,17 @@ class HomeScreen extends ConsumerWidget {
       pickedForYou.removeRange(8, pickedForYou.length);
     }
 
+    // Nothing to show means either the feed failed or the marketplace API is not
+    // connected yet. Say so, with a way out, rather than leaving the shopper on
+    // a blank storefront.
+    final feedUnavailable =
+        provider.error != null ||
+        (provider.banners.isEmpty &&
+            provider.categories.isEmpty &&
+            provider.products.isEmpty &&
+            provider.featuredProducts.isEmpty &&
+            provider.vendors.isEmpty);
+
     return Column(
       children: [
         Expanded(
@@ -111,7 +122,7 @@ class HomeScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
-                if (provider.isDemo) const _DemoNotice(),
+                if (feedUnavailable) const _FeedUnavailableNotice(),
                 _MarketplaceHero(
                   products: popularProducts,
                   onShopNow: onBrowseAll,
@@ -389,15 +400,21 @@ class _DealsBanner extends StatelessWidget {
   }
 }
 
-/// Small notice shown when the feed is served from the mock service.
-class _DemoNotice extends StatelessWidget {
-  const _DemoNotice();
+/// Small notice shown when the storefront feed could not be loaded.
+/// Explains an empty storefront and offers a retry.
+///
+/// There is no bundled feed to disclose, so the only thing worth telling a
+/// shopper is that nothing has loaded yet and how to try again.
+class _FeedUnavailableNotice extends StatelessWidget {
+  const _FeedUnavailableNotice();
 
   @override
   Widget build(BuildContext context) {
     final warning = AppColors.warning;
+    final error = context.watch<HomeProvider>().error;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: warning.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
@@ -408,10 +425,16 @@ class _DemoNotice extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'You are previewing demo data. Live products will appear when '
-              'the marketplace API is connected.',
+              error != null
+                  ? 'We could not load the storefront. $error'
+                  : 'Live products will appear here as soon as the '
+                        'marketplace API is connected.',
               style: TextStyle(color: warning, fontSize: 12, height: 1.3),
             ),
+          ),
+          TextButton(
+            onPressed: () => context.read<HomeProvider>().loadHomeFeed(),
+            child: const Text('Retry'),
           ),
         ],
       ),

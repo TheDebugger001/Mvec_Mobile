@@ -41,13 +41,6 @@ class RefundsScreen extends ConsumerWidget {
                   'Status': (o.raw?['refundStatus'] ?? o.status ?? 'REFUNDED').toString(),
                 },
             ];
-            if (rows.isEmpty) {
-              rows.addAll(const [
-                {'Refund': 'RFD-2026-0911', 'Order': 'MVEC-10234', 'Reason': 'Cancellation', 'Amount': '45,000 RWF', 'Status': 'REFUNDED'},
-                {'Refund': 'RFD-2026-0908', 'Order': 'MVEC-10187', 'Reason': 'Cancellation', 'Amount': '19,500 RWF', 'Status': 'RETURNED'},
-                {'Refund': 'RFD-2026-0902', 'Order': 'MVEC-10155', 'Reason': 'Cancellation', 'Amount': '78,250 RWF', 'Status': 'PENDING'},
-              ]);
-            }
             return SmartTable(
               columns: const [
                 MvColumn('Refund', 'Refund', bold: true),

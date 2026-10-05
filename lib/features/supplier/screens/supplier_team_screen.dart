@@ -347,6 +347,10 @@ class _TeamMemberFormState extends ConsumerState<_TeamMemberForm> {
     setState(() => _saving = true);
 
     final service = ref.read(supplierTeamModuleProvider);
+    // Blank optional fields are stored as absent rather than as empty strings,
+    // so the roster never shows a dangling separator for a member with no email.
+    final email = _email.text.trim().isEmpty ? null : _email.text.trim();
+    final note = _note.text.trim().isEmpty ? null : _note.text.trim();
     try {
       if (_isEditing) {
         await service.updateMember(
@@ -355,16 +359,16 @@ class _TeamMemberFormState extends ConsumerState<_TeamMemberForm> {
           phone: _phone.text,
           role: _role,
           status: _status,
-          email: _email.text,
-          note: _note.text,
+          email: email,
+          note: note,
         );
       } else {
         await service.addMember(
           fullName: _name.text,
           phone: _phone.text,
           role: _role,
-          email: _email.text,
-          note: _note.text,
+          email: email,
+          note: note,
         );
       }
       ref.invalidate(supplierTeamProvider);

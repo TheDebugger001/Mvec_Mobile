@@ -15,12 +15,10 @@ import 'supplier_shell.dart';
 /// Mirrors the web `SupplierDashboard` overview: a `dash-page-head`, a
 /// four-tile metric grid and the "protected settlement" explainer box.
 ///
-/// The web fills those tiles with hardcoded demo figures (126 products,
-/// 84 orders, RWF 8.4M sales). Only two of those — products and catalogue
-/// value — have a real backing endpoint (`GET /suppliers/me/products`), so the
-/// remaining two tiles show stock figures instead of inventing numbers. The
-/// web's "Vendor orders", "Sales" and "Protected funds" tiles have no server
-/// data behind them yet.
+/// Only products and catalogue value have a real backing endpoint
+/// (`GET /suppliers/me/products`), so the remaining two tiles show stock
+/// figures instead of inventing numbers. The "Vendor orders", "Sales" and
+/// "Protected funds" figures have no server data behind them yet.
 class SupplierDashboardScreen extends ConsumerStatefulWidget {
   const SupplierDashboardScreen({super.key});
 

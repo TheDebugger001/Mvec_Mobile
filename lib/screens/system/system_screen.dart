@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils.dart';
+import '../../providers/admin_intelligence_providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/smart_table.dart';
 
@@ -10,6 +11,7 @@ class SystemScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(systemSettingsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -18,39 +20,61 @@ class SystemScreen extends ConsumerWidget {
           title: 'System Administration',
           subtitle: 'Runtime platform settings.',
         ),
-        SmartTable(
-          columns: const [
-            MvColumn('setting', 'Setting', flex: 2),
-            MvColumn('value', 'Value', flex: 2),
-            MvColumn('scope', 'Scope'),
-            MvColumn('changed', 'Last changed'),
-            MvColumn('owner', 'Owner'),
-          ],
-          rows: _mockSettings(),
-          pageSize: 8,
-          actionsLabel: 'Actions',
-          rowActions: (row) => TableActionBtn(
-            icon: 'check',
-            tooltip: 'Apply',
-            onPressed: () {
-              showMvSnack(context, 'Applied “${row['setting']}”.', success: true);
-            },
+        switch (settingsAsync) {
+          AsyncLoading() => const SizedBox(height: 160, child: LoadingState()),
+          AsyncError(:final error) => ErrorState(
+            message: friendlyError(error),
+            onRetry: () => ref.invalidate(systemSettingsProvider),
           ),
-        ),
+          AsyncData(:final value) =>
+            value.isEmpty
+                ? const EmptyState(message: 'No runtime settings reported yet')
+                : SmartTable(
+                  columns: const [
+                    MvColumn('setting', 'Setting', flex: 2),
+                    MvColumn('value', 'Value', flex: 2),
+                    MvColumn('scope', 'Scope'),
+                    MvColumn('changed', 'Last changed'),
+                    MvColumn('owner', 'Owner'),
+                  ],
+                  rows: value.map(_settingRow).toList(),
+                  pageSize: 8,
+                  actionsLabel: 'Actions',
+                  rowActions: (row) => TableActionBtn(
+                    icon: 'check',
+                    tooltip: 'Apply',
+                    onPressed: () {
+                      showMvSnack(context, 'Applied “${row['setting']}”.', success: true);
+                    },
+                  ),
+                ),
+          _ => const SizedBox(height: 160, child: LoadingState()),
+        },
       ],
     );
   }
 
-  List<Map<String, dynamic>> _mockSettings() {
-    return [
-      {'setting': 'Maintenance mode', 'value': 'Disabled', 'scope': 'Global', 'changed': shortDate(DateTime(2026, 9, 18)), 'owner': 'Infra'},
-      {'setting': 'Feature flags', 'value': 'Preview branch', 'scope': 'Global', 'changed': shortDate(DateTime(2026, 9, 18)), 'owner': 'Platform'},
-      {'setting': 'Job queue', 'value': 'Running · 0 backlog', 'scope': 'Worker', 'changed': shortDate(DateTime(2026, 9, 17)), 'owner': 'Infra'},
-      {'setting': 'Cache TTL', 'value': '15 minutes', 'scope': 'Global', 'changed': shortDate(DateTime(2026, 9, 15)), 'owner': 'Platform'},
-      {'setting': 'Event webhook URL', 'value': 'https://hooks.mvec.rw/events', 'scope': 'Global', 'changed': shortDate(DateTime(2026, 9, 12)), 'owner': 'Integrations'},
-      {'setting': 'Image CDN', 'value': 'https://cdn.mvec.rw', 'scope': 'Global', 'changed': shortDate(DateTime(2026, 9, 10)), 'owner': 'Infra'},
-      {'setting': 'Environment name', 'value': 'Production', 'scope': 'Global', 'changed': shortDate(DateTime(2026, 9, 08)), 'owner': 'Platform'},
-      {'setting': 'API rate cap', 'value': '120 req/min', 'scope': 'Public', 'changed': shortDate(DateTime(2026, 9, 05)), 'owner': 'Infra'},
-    ];
+  /// Projects a runtime setting onto the columns above. Absent fields render as
+  /// a dash rather than a placeholder.
+  Map<String, dynamic> _settingRow(Map<String, dynamic> s) {
+    return {
+      'setting': _text(s['setting'] ?? s['key'] ?? s['name']),
+      'value': _text(s['value']),
+      'scope': _text(s['scope']),
+      'changed': _dateOf(s['changed'] ?? s['updatedAt'] ?? s['lastChanged']),
+      'owner': _text(s['owner'] ?? s['team']),
+    };
+  }
+
+  String _text(Object? raw) => raw == null || raw.toString().isEmpty ? '—' : raw.toString();
+
+  String _dateOf(Object? raw) {
+    if (raw is DateTime) return shortDate(raw);
+    if (raw is String) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return shortDate(parsed);
+      if (raw.isNotEmpty) return raw;
+    }
+    return '—';
   }
 }

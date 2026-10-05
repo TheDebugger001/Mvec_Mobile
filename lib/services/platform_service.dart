@@ -190,4 +190,25 @@ class PlatformService {
     final res = await _api.get('/shipping/zones');
     return listJson(res, ['data', 'zones']);
   }
+
+  // ── Admin intelligence lists ─────────────────────────────────────────────
+  //
+  // Moved to `AdminIntelligenceService`: these routes are one feature area and
+  // keep their own file, so they no longer widen this shared service.
+  // See `lib/services/admin_intelligence_service.dart`.
+
+  /// Orders placed by the signed-in shopper. The API scopes this to the bearer
+  /// token, so the shopper's tab needs no buyer filter. Degrades to an empty list
+  /// while the route is unshipped, which renders the tab's empty state.
+  Future<List<OrderRecord>> myOrders({int page = 1, int limit = 20}) async {
+    try {
+      final res = await _api.get('/orders', query: {'page': page, 'limit': limit});
+      return listJson(res, ['data', 'orders']).map(OrderRecord.fromJson).toList();
+    } on ApiException catch (e) {
+      if (e.statusCode == null || e.statusCode == 404 || e.statusCode == 501) {
+        return const [];
+      }
+      rethrow;
+    }
+  }
 }

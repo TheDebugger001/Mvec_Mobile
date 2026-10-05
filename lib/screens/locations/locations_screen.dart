@@ -13,10 +13,6 @@ class LocationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final zones = ref.watch(zonesProvider);
-    final rows = switch (zones) {
-      AsyncData(:final value) when value.isNotEmpty => value.map(_zoneRow).toList(),
-      _ => _mockZones(),
-    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -25,21 +21,35 @@ class LocationsScreen extends ConsumerWidget {
           title: 'Locations',
           subtitle: 'Coverage, provinces and delivery fees.',
         ),
-        SmartTable(
-          columns: const [
-            MvColumn('province', 'Province', flex: 3),
-            MvColumn('districts', 'Districts'),
-            MvColumn('sectors', 'Sectors'),
-            MvColumn('fee', 'Delivery fee', flex: 2),
-          ],
-          rows: rows,
-          pageSize: 8,
-          actionsLabel: 'Coverage',
-          rowActions: (row) => StatusChip(
-            row['coverage']?.toString(),
-            overrideColor: row['coverage'] == 'FULL' ? MvColors.successText : MvColors.warningText,
+        switch (zones) {
+          AsyncLoading() => const SizedBox(height: 160, child: LoadingState()),
+          AsyncError(:final error) => ErrorState(
+            message: friendlyError(error),
+            onRetry: () => ref.invalidate(zonesProvider),
           ),
-        ),
+          AsyncData(:final value) =>
+            value.isEmpty
+                ? const EmptyState(message: 'No delivery zones configured yet')
+                : SmartTable(
+                  columns: const [
+                    MvColumn('province', 'Province', flex: 3),
+                    MvColumn('districts', 'Districts'),
+                    MvColumn('sectors', 'Sectors'),
+                    MvColumn('fee', 'Delivery fee', flex: 2),
+                  ],
+                  rows: value.map(_zoneRow).toList(),
+                  pageSize: 8,
+                  actionsLabel: 'Coverage',
+                  rowActions: (row) => StatusChip(
+                    row['coverage']?.toString(),
+                    overrideColor:
+                        row['coverage'] == 'FULL'
+                            ? MvColors.successText
+                            : MvColors.warningText,
+                  ),
+                ),
+          _ => const SizedBox(height: 160, child: LoadingState()),
+        },
       ],
     );
   }
@@ -55,12 +65,4 @@ class LocationsScreen extends ConsumerWidget {
   }
 
   int? _count(Object? v) => v is int ? v : (v is num ? v.toInt() : (v is String ? int.tryParse(v) : null));
-
-  List<Map<String, dynamic>> _mockZones() => const [
-        {'province': 'Kigali City', 'districts': 3, 'sectors': 35, 'fee': 1000, 'coverage': 'FULL'},
-        {'province': 'Northern Province', 'districts': 5, 'sectors': 17, 'fee': 2000, 'coverage': 'PARTIAL'},
-        {'province': 'Southern Province', 'districts': 8, 'sectors': 14, 'fee': 2000, 'coverage': 'FULL'},
-        {'province': 'Eastern Province', 'districts': 7, 'sectors': 24, 'fee': 1500, 'coverage': 'FULL'},
-        {'province': 'Western Province', 'districts': 7, 'sectors': 14, 'fee': 2500, 'coverage': 'PARTIAL'},
-      ];
 }

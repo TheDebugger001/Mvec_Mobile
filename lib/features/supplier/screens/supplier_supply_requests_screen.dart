@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme.dart';
 import '../../../core/utils.dart';
 import '../../../widgets/common.dart';
+import '../data/supplier_workspace.dart';
 import '../models/supplier_operations.dart';
 import '../supplier_dependencies.dart';
 import '../widgets/supplier_ops_widgets.dart';
@@ -361,23 +362,28 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
   final List<SupplyRequestLine> _lines = [];
   bool _saving = false;
 
-  /// Units the supplier expects to buy from the demo catalogue, so the price
-  /// field can be prefilled the way the real quote would be.
-  static const _catalogue =
-      <String, ({String category, num price, String unit})>{
-        'Arabica Coffee Beans': (
-          category: 'Beverages',
-          price: 12500,
-          unit: 'kg',
-        ),
-        'Raw Forest Honey': (category: 'Pantry', price: 7800, unit: 'kg'),
-        'Dried Red Kidney Beans': (
-          category: 'Grains & pulses',
-          price: 2400,
-          unit: 'kg',
-        ),
-        'Fresh Avocados': (category: 'Produce', price: 900, unit: 'kg'),
-      };
+  /// Units the supplier can ask for, read from their own catalogue so the
+  /// category and price fields prefill the way a real quote would.
+  ///
+  /// Empty until `/suppliers/me/products` answers, in which case the item
+  /// dropdown is disabled and the supplier types the line in by hand.
+  static Map<String, ({String category, num price, String unit})> _catalogueOf(
+    List<SupplierProduct> products,
+  ) => {
+    for (final product in products)
+      product.name: (
+        category: product.category,
+        price: product.price,
+        unit: product.unit,
+      ),
+  };
+
+  /// Catalogue lookup for event handlers, where `ref.watch` is not allowed.
+  Map<String, ({String category, num price, String unit})> _readCatalogue() =>
+      _catalogueOf(
+        ref.read(supplierWorkspaceProvider).valueOrNull?.products ??
+            const <SupplierProduct>[],
+      );
 
   @override
   void initState() {
@@ -402,7 +408,7 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
   void _addLine() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final name = _product.text.trim();
-    final entry = _catalogue[name];
+    final entry = _readCatalogue()[name];
     setState(() {
       _lines.add(
         SupplyRequestLine(
@@ -465,6 +471,12 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
 
   @override
   Widget build(BuildContext context) {
+    // The item picker is seeded from the supplier's own catalogue rather than a
+    // bundled list, so it stays empty until the API has products to offer.
+    final catalogue = _catalogueOf(
+      ref.watch(supplierWorkspaceProvider).valueOrNull?.products ??
+          const <SupplierProduct>[],
+    );
     return AlertDialog(
       title: const Text('New supply request'),
       content: SizedBox(
@@ -486,20 +498,24 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue:
-                      _catalogue.containsKey(_product.text.trim())
+                      catalogue.containsKey(_product.text.trim())
                           ? _product.text.trim()
                           : null,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Item',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    helperText:
+                        catalogue.isEmpty
+                            ? 'Your catalogue is empty — add products first.'
+                            : null,
                   ),
                   items: [
-                    for (final name in _catalogue.keys)
+                    for (final name in catalogue.keys)
                       DropdownMenuItem(value: name, child: Text(name)),
                   ],
                   onChanged:
                       (value) => setState(() {
-                        final entry = value == null ? null : _catalogue[value];
+                        final entry = value == null ? null : catalogue[value];
                         _product.text = value ?? '';
                         if (entry != null) {
                           _category.text = entry.category;
