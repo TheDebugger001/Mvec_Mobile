@@ -2,7 +2,7 @@
 /// store owner is allowed to see and act on.
 ///
 /// Parsing is deliberately forgiving: the same record arrives from two shapes
-/// (the platform's `order` envelope and the demo dataset), and both use
+/// (the platform's `order` envelope), and both use
 /// slightly different key names for money and status.
 library;
 
@@ -81,7 +81,7 @@ enum VendorOrderStatus {
     VendorOrderStatus.cancelled,
   ];
 
-  /// Parses a backend or mock status slug (`"out_for_delivery"`, `"shipped"`).
+  /// Parses a backend status slug (`"out_for_delivery"`, `"shipped"`).
   static VendorOrderStatus parse(String? raw) {
     final v = raw?.trim().toLowerCase().replaceAll('-', '_');
     return switch (v) {

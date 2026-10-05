@@ -5,15 +5,17 @@ import '../models/supplier_operations.dart';
 /// Contract for the supplier's operations data: delivery milestones, the escrow
 /// settlement schedule, and inbound supply requests.
 ///
-/// [MockSupplierOperationsService] and [ApiSupplierOperationsService] are
-/// interchangeable; see `supplier_dependencies.dart` for the switch. As with the
-/// finance module, every route is token-scoped (`/me/*`) so the app never sends
-/// a supplier id.
+/// [ApiSupplierOperationsService] (live backend) and
+/// [EmptySupplierOperationsService] (zeroed state while the routes are unshipped)
+/// are interchangeable; see `supplier_dependencies.dart` for the wiring. As with
+/// the finance module, every route is token-scoped (`/me/*`) so the app never
+/// sends a supplier id.
 abstract class SupplierOperationsService {
+  /// True only when this service is answering from a bundled/local dataset.
   bool get isDemo;
 
-  /// Why the bundled dataset is being served instead of the API, when that is
-  /// the case. Null while the live API is answering.
+  /// Why the empty-state adapter is being served instead of the API, when that
+  /// is the case. Null while the live API is answering.
   String? get fallbackReason;
 
   /// Consignments on the road, newest first.
@@ -54,8 +56,8 @@ abstract class SupplierOperationsService {
 /// Talks to the platform's supplier operations API.
 ///
 /// These routes are not served by the backend yet, so
-/// [FallbackSupplierOperationsService] takes over from the bundled dataset
-/// rather than leaving the pages blank.
+/// [FallbackSupplierOperationsService] degrades to
+/// [EmptySupplierOperationsService] rather than leaving the pages blank.
 class ApiSupplierOperationsService implements SupplierOperationsService {
   ApiSupplierOperationsService(this._api);
   final ApiClient _api;

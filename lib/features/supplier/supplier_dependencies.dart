@@ -12,12 +12,13 @@ import 'services/supplier_finance_service.dart';
 import 'services/supplier_operations_service.dart';
 import 'services/supplier_team_service.dart';
 
-/// One compile-time switch keeps every Finance & Insights module on the same
-/// data source, mirroring `vendor_dependencies.dart`.
+/// One wiring point keeps every Finance & Insights module on the same data
+/// source, mirroring `vendor_dependencies.dart`.
 ///
 /// `FallbackSupplierFinanceService` wraps the live API so the pages stay usable
-/// before `/suppliers/me/finance/*` ships; with `DEMO_MODE=true` it goes
-/// straight to the bundled dataset.
+/// before `/suppliers/me/finance/*` ships; until it does, every read degrades to
+/// [EmptySupplierFinanceService] — zeroed balances and empty lists — and
+/// `fallbackReason` explains why on screen.
 final supplierFinanceModuleProvider = Provider<SupplierFinanceService>(
   (ref) => FallbackSupplierFinanceService(ref.watch(apiProvider)),
 );
@@ -63,12 +64,13 @@ final supplierReviewSummaryProvider =
 
 // ── operations: delivery, settlement and supply ─────────────────────────────
 
-/// One switch for the Delivery & Settlement and Supply Requests pages, following
-/// the same fallback contract as [supplierFinanceModuleProvider].
+/// One wiring point for the Delivery & Settlement and Supply Requests pages,
+/// following the same fallback contract as [supplierFinanceModuleProvider].
 ///
 /// `FallbackSupplierOperationsService` wraps the live API so the pages stay
 /// usable before `/suppliers/me/deliveries` and `/suppliers/me/supply-requests`
-/// ship; with `DEMO_MODE=true` it goes straight to the bundled dataset.
+/// ship; until they do, every read degrades to
+/// [EmptySupplierOperationsService] — empty lists and zeroed counters.
 final supplierOperationsModuleProvider = Provider<SupplierOperationsService>(
   (ref) => FallbackSupplierOperationsService(ref.watch(apiProvider)),
 );
@@ -114,8 +116,9 @@ final supplierSupplySummaryProvider =
 
 // ── team & staff ───────────────────────────────────────────────────────────
 
-/// One switch for the Team & Staff page. The backend does not serve
-/// `/suppliers/me/team` yet, so this lands on the bundled roster and says so.
+/// One wiring point for the Team & Staff page. The backend does not serve
+/// `/suppliers/me/team` yet, so reads degrade to [EmptySupplierTeamService] —
+/// an empty roster with every counter at zero — and the page says so.
 final supplierTeamModuleProvider = Provider<SupplierTeamService>(
   (ref) => FallbackSupplierTeamService(ref.watch(apiProvider)),
 );

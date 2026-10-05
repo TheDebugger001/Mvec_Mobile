@@ -3,14 +3,16 @@ import '../models/vendor_order.dart';
 
 /// Contract for the vendor's order data source.
 ///
-/// The UI talks to this interface only, so [MockVendorOrderService] (rich local
-/// data, `--dart-define=DEMO_MODE=true`) and [ApiVendorOrderService] (live
-/// backend) are interchangeable. See `vendor_dependencies.dart` for the switch.
+/// The UI talks to this interface only, so the live [ApiVendorOrderService] can
+/// be swapped for another transport (a cache, an offline store) without
+/// touching the screens; see `vendor_dependencies.dart` for the wiring.
 ///
 /// Every method throws on failure so the Riverpod layer can surface a message;
 /// the screens render the error state with a retry.
 abstract class VendorOrderService {
-  /// True when the data is local demo data, so the UI can show a demo banner.
+  /// True when this service is answering from a bundled/local dataset rather
+  /// than the API. The shipped implementation is always API-backed, so this is
+  /// always false; it is retained so the screens can branch without changing.
   bool get isDemo;
 
   /// Orders assigned to the signed-in vendor, newest first, with per-status

@@ -2,7 +2,7 @@
 /// (`id`, `name`, `slug`, `price`, `stockQuantity`, `media.mainImage`,
 /// `brand`, ...). Parsing is tolerant of both nested (`media.mainImage`,
 /// `category.name`) and flat legacy keys (`image_url`, `category_name`)
-/// so real API and demo payloads both work unchanged.
+/// so real API payloads work unchanged.
 class Product {
   const Product({
     required this.id,

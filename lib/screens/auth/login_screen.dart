@@ -130,7 +130,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 enabled: !loading,
                 onPressed: _submit,
               ),
-              if (!kReleaseMode) ...[
+              // Only offered in debug builds, and only when the developer has
+              // supplied the credentials — nothing is hardcoded to fall back on.
+              if (!kReleaseMode &&
+                  kAdminEmail.isNotEmpty &&
+                  kAdminPassword.isNotEmpty) ...[
                 const SizedBox(height: 14),
                 const Divider(),
                 const SizedBox(height: 6),

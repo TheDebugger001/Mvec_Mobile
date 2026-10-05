@@ -30,12 +30,12 @@ enum SupplierPayoutMethod {
     SupplierPayoutMethod.bankTransfer => 'Bank transfer',
   };
 
-  /// Masked destination shown next to the method. Seeded from the demo supplier
-  /// profile (`+250 788 245 610`) so the payout form has a believable default.
+  /// Masked destination shown next to the method as a placeholder, so the payout
+  /// form shows the expected shape without inventing an account to withdraw to.
   String get hint => switch (this) {
-    SupplierPayoutMethod.mtnMomo => 'MTN MoMo · +250 78••• 610',
-    SupplierPayoutMethod.airtelMoney => 'Airtel Money · +250 73••• 415',
-    SupplierPayoutMethod.bankTransfer => 'Equity Bank · ••••2088',
+    SupplierPayoutMethod.mtnMomo => 'MTN MoMo · +250 7•• ••• •••',
+    SupplierPayoutMethod.airtelMoney => 'Airtel Money · +250 7•• ••• •••',
+    SupplierPayoutMethod.bankTransfer => 'Bank account · •••• ••••',
   };
 
   /// Mobile money settles instantly, bank transfers take a day or two.
@@ -205,8 +205,8 @@ class SupplierFinanceSummary {
   /// Explains why gross sales exceed the withdrawable balance.
   num get totalHeld => escrowHeld + pendingPayouts;
 
-  /// Sanity invariant used by the demo dataset and asserted in tests: the net
-  /// figure must equal gross minus commission.
+  /// Sanity invariant asserted in tests: the net figure must equal gross minus
+  /// commission.
   bool get isConsistent => (netEarnings - (grossSales - commission)).abs() < 1;
 
   factory SupplierFinanceSummary.fromJson(

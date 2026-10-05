@@ -14,8 +14,8 @@ import '../providers/affiliate_providers.dart';
 /// search/theme/notifications/avatar, a grouped drawer and a mobile bottom
 /// bar carrying the four primary items + "More".
 ///
-/// When the backing service is in demo mode (backend unreachable), a slim
-/// banner under the topbar tells the tester the data is bundled.
+/// When the affiliate routes cannot be reached, a slim banner under the topbar
+/// says the module is showing empty figures rather than live data.
 class AffiliateShell extends ConsumerStatefulWidget {
   const AffiliateShell({super.key, required this.path, required this.child});
   final String path;
@@ -54,7 +54,8 @@ class _AffiliateShellState extends ConsumerState<AffiliateShell> {
       body: Column(
         children: [
           _buildTopbar(name),
-          if (ref.watch(affiliateDemoModeProvider)) _buildDemoBanner(isDark),
+          if (ref.watch(affiliateUnavailableProvider))
+            _buildUnavailableBanner(isDark),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 96),
@@ -67,8 +68,8 @@ class _AffiliateShellState extends ConsumerState<AffiliateShell> {
     );
   }
 
-  Widget _buildDemoBanner(bool isDark) {
-    final reason = ref.watch(affiliateDemoReasonProvider);
+  Widget _buildUnavailableBanner(bool isDark) {
+    final reason = ref.watch(affiliateUnavailableReasonProvider);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -79,7 +80,7 @@ class _AffiliateShellState extends ConsumerState<AffiliateShell> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              reason ?? 'Showing bundled demo data while the affiliate API is unreachable.',
+              reason ?? 'The affiliate API is unreachable — showing empty figures.',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,

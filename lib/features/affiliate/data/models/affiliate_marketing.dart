@@ -265,7 +265,7 @@ class AffiliateNotification {
 }
 
 /// Everything the affiliate dashboard shows in one payload, so the overview
-/// renders from a single request (and a single mock map in demo mode).
+/// renders from a single request.
 class AffiliateOverview {
   const AffiliateOverview({
     this.clicks = 0,

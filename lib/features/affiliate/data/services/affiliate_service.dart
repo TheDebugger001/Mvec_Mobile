@@ -5,11 +5,12 @@ import '../models/affiliate_profile.dart';
 /// Data source contract for the whole affiliate module.
 ///
 /// Two implementations exist — [ApiAffiliateService] (the real MVEC backend)
-/// and [MockAffiliateService] (local demo data) — and the presentation layer
-/// only ever sees this interface, so wiring the module to the live API is a
-/// one-line provider change with no widget edits.
+/// and [EmptyAffiliateService] (zeroed state while the routes are unshipped) —
+/// and the presentation layer only ever sees this interface, so wiring the module
+/// to a different transport is a one-line provider change with no widget edits.
 abstract class AffiliateService {
-  /// True when responses come from bundled demo data rather than the backend.
+  /// True only when responses come from a bundled/local dataset rather than the
+  /// backend.
   bool get isDemo;
 
   // ---------- Profile & verification ----------

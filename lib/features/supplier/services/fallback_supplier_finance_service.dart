@@ -1,20 +1,19 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/api_client.dart';
-import '../../../core/api_config.dart';
 import '../models/supplier_finance.dart';
 import '../models/supplier_insights.dart';
-import 'mock_supplier_finance_service.dart';
+import 'empty_supplier_finance_service.dart';
 import 'supplier_finance_service.dart';
 
-/// Runs every [SupplierFinanceService] call against the live API and falls back
-/// to the bundled demo dataset when the route does not exist yet.
+/// Runs every [SupplierFinanceService] call against the live API and degrades to
+/// [EmptySupplierFinanceService] when the route does not exist yet.
 ///
 /// The backend has no `/suppliers/me/finance/*` or `/suppliers/me/reviews`
 /// routes, so without this the whole Finance & Insights group would be five
-/// error screens. Falling back keeps the pages testable against a real backend
-/// while staying honest: [fallbackReason] says out loud that the numbers are
-/// bundled, and the Payments page surfaces it as a banner.
+/// error screens. Degrading instead keeps the pages usable against a real backend
+/// while staying honest: [fallbackReason] says out loud that the endpoint is
+/// missing, the figures read zero, and the Payments page surfaces it as a banner.
 ///
 /// Follows the affiliate module's precedent — the switch is sticky for the
 /// session, so a missing route does not re-probe on every navigation.
@@ -22,19 +21,20 @@ class FallbackSupplierFinanceService implements SupplierFinanceService {
   FallbackSupplierFinanceService(
     ApiClient api, {
     SupplierFinanceService? fallback,
-    bool? forceDemo,
+    bool? forceEmpty,
   }) : _api = ApiSupplierFinanceService(api),
-       _fallback = fallback ?? MockSupplierFinanceService(),
-       _forceDemo = forceDemo ?? kDemoMode {
-    if (_forceDemo) {
+       _fallback = fallback ?? EmptySupplierFinanceService(),
+       _forceEmpty = forceEmpty ?? false {
+    if (_forceEmpty) {
       _degraded = true;
-      lastFallbackReason = 'Demo mode — using the bundled supplier dataset.';
+      lastFallbackReason =
+          'Supplier finance is not available yet — showing empty figures.';
     }
   }
 
   final ApiSupplierFinanceService _api;
   final SupplierFinanceService _fallback;
-  final bool _forceDemo;
+  final bool _forceEmpty;
   bool _degraded = false;
 
   /// Human-readable reason for the last fallback.
@@ -85,7 +85,7 @@ class FallbackSupplierFinanceService implements SupplierFinanceService {
       _resolve((s) => s.reviews(), source: 'reviews');
 
   /// Tries the live API first; on a connectivity or "route not shipped" failure
-  /// it switches to the bundled dataset and reports why.
+  /// it switches to the empty-state adapter and reports why.
   Future<T> _resolve<T>(
     Future<T> Function(SupplierFinanceService service) call, {
     required String source,
@@ -97,8 +97,8 @@ class FallbackSupplierFinanceService implements SupplierFinanceService {
       if (_isUnreachable(error)) {
         _degraded = true;
         lastFallbackReason =
-            'MVEC does not serve supplier $source yet — showing the bundled '
-            'demo dataset instead.';
+            'MVEC does not serve supplier $source yet — showing empty figures '
+            'until it does.';
         return call(_fallback);
       }
       rethrow;

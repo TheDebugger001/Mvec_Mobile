@@ -2,10 +2,10 @@
 /// reporting behind Analytics and Reports, and the buyer feedback behind
 /// Reviews.
 ///
-/// The backend serves no supplier-scoped analytics or review route, so every
-/// aggregate here is derived from the supplier's own money ledger by
-/// `MockSupplierFinanceService` — the same honest approach
-/// `SupplierMetrics.fromCatalog` takes for the dashboard counters.
+/// The backend serves no supplier-scoped analytics or review route yet, so the
+/// aggregates here are derived from the supplier's own money ledger once it
+/// lands — the same honest approach `SupplierMetrics.fromCatalog` takes for the
+/// dashboard counters. Until then every aggregate reads zero.
 library;
 
 import '../../../models/user.dart';

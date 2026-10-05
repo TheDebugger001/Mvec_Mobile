@@ -1,42 +1,45 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/api_client.dart';
-import '../../../../core/api_config.dart';
 import '../models/affiliate_earnings.dart';
 import '../models/affiliate_marketing.dart';
 import '../models/affiliate_profile.dart';
 import 'affiliate_service.dart';
 import 'api_affiliate_service.dart';
-import 'mock_affiliate_service.dart';
+import 'empty_affiliate_service.dart';
 
-/// Data source that prefers the real backend and transparently falls back to
-/// bundled demo data when the API cannot be reached.
+/// Data source that prefers the real backend and transparently degrades to
+/// [EmptyAffiliateService] when the API cannot be reached.
 ///
-/// This is the default service for the affiliate module, so the same build
-/// works the day the affiliate endpoints ship and today, when there is no
-/// backend running — no environment flags, no manual wiring.
+/// This is the default service for the affiliate module, so the same build works
+/// the day the affiliate endpoints ship and today, when they are not there yet —
+/// no environment flags, no manual wiring. Until then the pages show empty lists
+/// and zeroed metrics instead of bundled figures.
 ///
 /// Degradation is sticky for the session: the first unreachable-endpoint
-/// failure switches to the mock store and stays there, so a single flaky
+/// failure switches to the empty adapter and stays there, so a single flaky
 /// request cannot split the UI between two sources.
 ///
-/// When [kDemoMode] is on (or [forceDemo] is passed), the API is never
-/// touched and demo data is used immediately, so the module works fully
-/// offline without waiting on connection timeouts.
+/// Passing [forceEmpty] skips the API entirely, which is how the module renders
+/// empty without waiting on connection timeouts (and what the tests use).
 class FallbackAffiliateService implements AffiliateService {
-  FallbackAffiliateService(ApiClient api, {AffiliateService? fallback, bool? forceDemo})
-      : _api = ApiAffiliateService(api),
-        _fallback = fallback ?? MockAffiliateService(),
-        _forceDemo = forceDemo ?? kDemoMode {
-    if (_forceDemo) {
+  FallbackAffiliateService(
+    ApiClient api, {
+    AffiliateService? fallback,
+    bool? forceEmpty,
+  }) : _api = ApiAffiliateService(api),
+       _fallback = fallback ?? EmptyAffiliateService(),
+       _forceEmpty = forceEmpty ?? false {
+    if (_forceEmpty) {
       _degraded = true;
-      lastFallbackReason = 'Demo mode — using bundled data.';
+      lastFallbackReason =
+          'The affiliate API is not available yet — showing empty figures.';
     }
   }
 
   final ApiAffiliateService _api;
   final AffiliateService _fallback;
-  final bool _forceDemo;
+  final bool _forceEmpty;
   bool _degraded = false;
 
   /// Human-readable reason for the last fallback, shown in a small banner.
@@ -49,7 +52,8 @@ class FallbackAffiliateService implements AffiliateService {
   String? get fallbackReason => lastFallbackReason;
 
   /// Runs [call] against the live API; on a connectivity / not-implemented
-  /// error, switches to the demo store and reports [sourceLabel] to the caller.
+  /// error, switches to the empty adapter and reports [sourceLabel] to the
+  /// caller.
   Future<T> _resolve<T>(Future<T> Function(AffiliateService s) call, {required String sourceLabel}) async {
     if (_degraded) return call(_fallback);
     try {
@@ -65,7 +69,7 @@ class FallbackAffiliateService implements AffiliateService {
   }
 
   /// Connection failures (`statusCode == null`) and "module not shipped"
-  /// responses (404 / 501) trigger demo mode. Genuine client/server errors on
+  /// responses (404 / 501) fall back to empty values. Genuine client/server errors on
   /// a live endpoint keep throwing so the UI can surface them.
   ///
   /// Note: [ApiClient] rejects with a `DioException` whose `.error` carries
@@ -91,8 +95,10 @@ class FallbackAffiliateService implements AffiliateService {
       final nested = e.error;
       code = nested is ApiException ? nested.statusCode : e.response?.statusCode;
     }
-    if (code == 404 || code == 501) return 'Affiliate API not available yet — showing demo data.';
-    return 'Cannot reach the API — showing demo data.';
+    if (code == 404 || code == 501) {
+      return 'Affiliate API not available yet — showing empty figures.';
+    }
+    return 'Cannot reach the affiliate API — showing empty figures.';
   }
 
   @override

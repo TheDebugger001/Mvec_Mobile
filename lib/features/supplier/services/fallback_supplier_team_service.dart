@@ -1,33 +1,34 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/api_client.dart';
-import '../../../core/api_config.dart';
 import '../models/supplier_team.dart';
-import 'mock_supplier_team_service.dart';
+import 'empty_supplier_team_service.dart';
 import 'supplier_team_service.dart';
 
-/// Runs every [SupplierTeamService] call against the live API and falls back to
-/// the bundled demo roster when the route does not exist yet.
+/// Runs every [SupplierTeamService] call against the live API and degrades to
+/// [EmptySupplierTeamService] when the route does not exist yet.
 ///
 /// Same sticky-session contract as `FallbackSupplierFinanceService`: the first
-/// unreachable response degrades the module for the rest of the session.
+/// unreachable response degrades the module for the rest of the session, so the
+/// Team page shows its empty roster instead of erroring on every rebuild.
 class FallbackSupplierTeamService implements SupplierTeamService {
   FallbackSupplierTeamService(
     ApiClient api, {
     SupplierTeamService? fallback,
-    bool? forceDemo,
+    bool? forceEmpty,
   }) : _api = ApiSupplierTeamService(api),
-       _fallback = fallback ?? MockSupplierTeamService(),
-       _forceDemo = forceDemo ?? kDemoMode {
-    if (_forceDemo) {
+       _fallback = fallback ?? EmptySupplierTeamService(),
+       _forceEmpty = forceEmpty ?? false {
+    if (_forceEmpty) {
       _degraded = true;
-      lastFallbackReason = 'Demo mode — using the bundled supplier roster.';
+      lastFallbackReason =
+          'Supplier staff accounts are not available yet — showing an empty roster.';
     }
   }
 
   final ApiSupplierTeamService _api;
   final SupplierTeamService _fallback;
-  final bool _forceDemo;
+  final bool _forceEmpty;
   bool _degraded = false;
   String? lastFallbackReason;
 
@@ -100,8 +101,8 @@ class FallbackSupplierTeamService implements SupplierTeamService {
       if (_isUnreachable(error)) {
         _degraded = true;
         lastFallbackReason =
-            'MVEC does not serve supplier $source yet — showing the bundled '
-            'demo roster instead.';
+            'MVEC does not serve supplier $source yet — showing an empty '
+            'roster until it does.';
         return call(_fallback);
       }
       rethrow;

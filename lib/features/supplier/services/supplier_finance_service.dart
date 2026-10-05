@@ -5,16 +5,17 @@ import '../models/supplier_insights.dart';
 /// Contract for the supplier's Finance & Insights data: balances, the money
 /// ledger, withdrawal requests, trend reporting and buyer reviews.
 ///
-/// [MockSupplierFinanceService] and [ApiSupplierFinanceService] are
-/// interchangeable; see `supplier_dependencies.dart` for the switch. Every
-/// supplier route is resolved from the bearer token (`/me/*`), so no supplier
-/// id is ever sent by the app — the same convention
-/// `ApiSupplierWorkspaceService` follows.
+/// [ApiSupplierFinanceService] (live backend) and [EmptySupplierFinanceService]
+/// (zeroed state while the routes are unshipped) are interchangeable; see
+/// `supplier_dependencies.dart` for the wiring. Every supplier route is resolved
+/// from the bearer token (`/me/*`), so no supplier id is ever sent by the app —
+/// the same convention `ApiSupplierWorkspaceService` follows.
 abstract class SupplierFinanceService {
+  /// True only when this service is answering from a bundled/local dataset.
   bool get isDemo;
 
-  /// Why the bundled dataset is being served instead of the API, when that is
-  /// the case. Null while the live API is answering.
+  /// Why the empty-state adapter is being served instead of the API, when that
+  /// is the case. Null while the live API is answering.
   String? get fallbackReason;
 
   /// The headline balances plus the commission rate and the daily series.
@@ -55,8 +56,8 @@ const double kMinSupplierPayoutAmount = 50000;
 ///
 /// The routes mirror the vendor finance module (`/stores/mine/finance/*`) under
 /// the supplier's own token-scoped prefix. They are not served by the backend
-/// yet, so [FallbackSupplierFinanceService] takes over from the bundled
-/// dataset instead of leaving the pages blank.
+/// yet, so [FallbackSupplierFinanceService] degrades to
+/// [EmptySupplierFinanceService] instead of leaving the pages blank.
 class ApiSupplierFinanceService implements SupplierFinanceService {
   ApiSupplierFinanceService(this._api);
   final ApiClient _api;

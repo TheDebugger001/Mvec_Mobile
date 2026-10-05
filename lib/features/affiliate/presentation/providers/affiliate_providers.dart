@@ -8,24 +8,25 @@ import '../../data/services/affiliate_service.dart';
 import '../../data/services/fallback_affiliate_service.dart';
 
 /// Single injected data source for the affiliate module. Defaults to
-/// [FallbackAffiliateService], which talks to the real backend and degrades
-/// to bundled demo data on the first connectivity failure. Swap this one
-/// line to force live-API or mock-only behaviour.
+/// [FallbackAffiliateService], which talks to the real backend and degrades to
+/// empty state on the first connectivity failure. Swap this one line to force a
+/// different transport.
 final affiliateServiceProvider = Provider<AffiliateService>((ref) {
   return FallbackAffiliateService(ref.watch(apiProvider));
 });
 
-/// Demo-mode flag for the top bar banner: true once the service has degraded
-/// to local data for this session.
-final affiliateDemoModeProvider = Provider<bool>((ref) {
-  final service = ref.watch(affiliateServiceProvider);
-  return service.isDemo;
-});
-
-final affiliateDemoReasonProvider = Provider<String?>((ref) {
+/// Why the module is showing empty figures instead of live data, or null while
+/// the API is answering.
+final affiliateUnavailableReasonProvider = Provider<String?>((ref) {
   final service = ref.watch(affiliateServiceProvider);
   return service is FallbackAffiliateService ? service.fallbackReason : null;
 });
+
+/// True once the backing service has degraded to empty state for this session,
+/// i.e. the affiliate routes could not be reached. Drives the notice banner.
+final affiliateUnavailableProvider = Provider<bool>(
+  (ref) => ref.watch(affiliateUnavailableReasonProvider) != null,
+);
 
 // ---------- Profile & verification ----------
 
