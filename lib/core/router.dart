@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'api_config.dart';
 import '../features/marketplace/presentation/Screens/main_navigation.dart';
+import '../widgets/common.dart';
 import '../features/affiliate/presentation/screens/affiliate_dashboard_screen.dart';
 import '../features/affiliate/presentation/screens/affiliate_profile_screen.dart';
 import '../features/affiliate/presentation/screens/affiliate_settings_screen.dart';
@@ -61,6 +62,14 @@ import '../screens/suppliers/supplier_products_screen.dart';
 import '../screens/suppliers/supplier_profile_screen.dart';
 import '../screens/suppliers/supplier_shell.dart';
 import '../screens/suppliers/supplier_unavailable_screen.dart';
+import '../features/supplier/screens/supplier_analytics_screen.dart';
+import '../features/supplier/screens/supplier_delivery_screen.dart';
+import '../features/supplier/screens/supplier_payments_screen.dart';
+import '../features/supplier/screens/supplier_reports_screen.dart';
+import '../features/supplier/screens/supplier_reviews_screen.dart';
+import '../features/supplier/screens/supplier_supply_requests_screen.dart';
+import '../features/supplier/screens/supplier_team_screen.dart';
+import '../features/supplier/screens/supplier_transactions_screen.dart';
 import '../screens/system/system_screen.dart';
 import '../screens/transactions/transactions_screen.dart';
 import '../screens/trust/trust_screen.dart';
@@ -88,63 +97,11 @@ class _UnavailablePage {
   final String detail;
 }
 
-/// The remaining entries of the frontend's `supplierNavGroups`. The web app
-/// fills these with hard-coded seed rows, so the mobile app routes them to a
-/// clear "not connected yet" state rather than inventing payouts, staff
-/// records or delivery milestones.
+/// The remaining entries of the frontend's `supplierNavGroups` that the API
+/// does not serve. Everything the supplier module answers from its own bundled
+/// dataset has its own route above; what is left here is messaging and the
+/// in-portal support desk.
 const _unavailableSupplierPages = <_UnavailablePage>[
-  _UnavailablePage(
-    '/supplier/supply-requests',
-    'Supply requests',
-    'cart',
-    'Inbound supply requests are not exposed for supplier accounts yet. The '
-        'API only serves your wholesale catalogue, profile and orders.',
-  ),
-  _UnavailablePage(
-    '/supplier/delivery',
-    'Delivery & settlement',
-    'box',
-    'Delivery milestones and settlement releases are not served to suppliers '
-        'yet. The order list tracks the supply status that the API returns.',
-  ),
-  _UnavailablePage(
-    '/supplier/payments',
-    'Payments',
-    'wallet',
-    'Supplier payouts are not exposed by the MVEC API for supplier accounts '
-        'yet, so no amounts are shown here.',
-  ),
-  _UnavailablePage(
-    '/supplier/transactions',
-    'Transactions',
-    'wallet',
-    'A supplier-scoped transaction ledger is not available yet.',
-  ),
-  _UnavailablePage(
-    '/supplier/analytics',
-    'Analytics',
-    'chart',
-    'Trend reporting is not served for suppliers yet. Your catalogue and order '
-        'totals are available on the dashboard.',
-  ),
-  _UnavailablePage(
-    '/supplier/reports',
-    'Reports',
-    'chart',
-    'Scheduled and historical supplier reports are not available yet.',
-  ),
-  _UnavailablePage(
-    '/supplier/reviews',
-    'Reviews',
-    'heart',
-    'Buyer reviews for your business are not served by the API yet.',
-  ),
-  _UnavailablePage(
-    '/supplier/team',
-    'Team & staff',
-    'users',
-    'Supplier staff accounts are not managed through the API yet.',
-  ),
   _UnavailablePage(
     '/supplier/messages',
     'Messages',
@@ -170,6 +127,37 @@ const _publicAuthPaths = <String>[
   '/reset-password',
 ];
 
+/// Rendered at `/` while the stored session is still being read off disk.
+///
+/// `/` has no page of its own — it exists only to choose a landing route once
+/// the session is known. It still has to build something, otherwise every cold
+/// start spends the length of the token read showing an empty frame.
+class _SessionGate extends StatelessWidget {
+  const _SessionGate();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: LoadingState()));
+}
+
+/// Routes a guest may reach without an account.
+///
+/// This is a storefront: browsing the catalogue is the point of the app, so a
+/// cold start must not cost someone an account before they can see any of it.
+/// Everything that is *about* a person — carts in flight, orders, wallets,
+/// consoles — stays behind the auth wall, and only the way in to it is public.
+const _guestPaths = <String>['/home'];
+
+/// Whether [loc] is browsable without a session.
+///
+/// `'/'` is included because GoRouter runs this redirect for the location
+/// itself *before* the `/` route's own redirect gets to pick a landing page,
+/// so `/` has to pass or every cold start is bounced to the login wall. It is
+/// matched exactly rather than by prefix: `'/'.startsWith('/')` is true, which
+/// would wave the entire app through.
+bool _isGuestPath(String loc) =>
+    loc == '/' || _guestPaths.any((p) => loc == p || loc.startsWith('$p/'));
+
 final routerProvider = Provider<GoRouter>((ref) {
   final gate = ValueNotifier(0);
   ref.onDispose(gate.dispose);
@@ -181,7 +169,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   });
 
   return GoRouter(
-    initialLocation: '/login',
+    // `/` rather than `/login`: the landing page is decided by the session, not
+    // hardcoded. See the `/` redirect below.
+    initialLocation: '/',
     refreshListenable: gate,
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
@@ -222,15 +212,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc == '/verify-code' && !pendingReset) return '/forgot-password';
         return null;
       }
+      // The storefront itself, so browsing never requires an account.
+      if (_isGuestPath(loc)) return null;
       return '/login';
     },
     routes: [
       GoRoute(
         path: '/',
+        builder: (_, __) => const _SessionGate(),
         redirect: (_, __) {
           final auth = ref.read(authControllerProvider);
+          // Hold here while a stored session is being read, so a returning user
+          // is not flashed the storefront on the way to their dashboard.
+          if (auth.restoring) return null;
           if (auth.isLoggedIn) return roleHome(auth.session!.user);
-          return '/login';
+          // Cold start with no session: open the marketplace, not a login wall.
+          return '/home';
         },
       ),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
@@ -286,6 +283,79 @@ final routerProvider = Provider<GoRouter>((ref) {
             (context, state) => const SupplierShell(
               path: '/supplier/orders',
               child: SupplierOrdersScreen(),
+            ),
+      ),
+      // Finance & Insights. The backend does not serve `/suppliers/me/finance`
+      // yet, so `FallbackSupplierFinanceService` answers from the bundled
+      // dataset and labels the numbers as such — see
+      // `features/supplier/supplier_dependencies.dart`.
+      GoRoute(
+        path: '/supplier/payments',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/payments',
+              child: SupplierPaymentsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/transactions',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/transactions',
+              child: SupplierTransactionsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/analytics',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/analytics',
+              child: SupplierAnalyticsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/reports',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/reports',
+              child: SupplierReportsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/reviews',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/reviews',
+              child: SupplierReviewsScreen(),
+            ),
+      ),
+      // Operations. The backend does not serve `/suppliers/me/deliveries`,
+      // `/suppliers/me/supply-requests` or `/suppliers/me/team` yet, so
+      // `FallbackSupplierOperationsService` and `FallbackSupplierTeamService`
+      // answer from the bundled dataset and label the pages as such — see
+      // `features/supplier/supplier_dependencies.dart`.
+      GoRoute(
+        path: '/supplier/supply-requests',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/supply-requests',
+              child: SupplierSupplyRequestsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/delivery',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/delivery',
+              child: SupplierDeliveryScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/team',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/team',
+              child: SupplierTeamScreen(),
             ),
       ),
       GoRoute(

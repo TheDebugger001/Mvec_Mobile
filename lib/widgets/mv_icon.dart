@@ -237,6 +237,14 @@ class _IconPainter extends CustomPainter {
         rect(9, 9, 11, 11, r: 2);
         path([const Offset(5, 15), const Offset(4, 15), const Offset(4, 4), const Offset(15, 4), const Offset(15, 5)]);
         break;
+      case 'image':
+        rect(3, 4.5, 18, 15, r: 2.5);
+        circle(const Offset(8.5, 9.5), 1.6);
+        path([const Offset(3.5, 17), const Offset(9.5, 11.5), const Offset(14, 16), const Offset(17, 13.5), const Offset(20.5, 17)]);
+        break;
+      case 'folder':
+        path([const Offset(3, 19.5), const Offset(3, 5.5), const Offset(9.5, 5.5), const Offset(11.5, 8.5), const Offset(21, 8.5), const Offset(21, 19.5)], close: true);
+        break;
       default:
         rect(4, 4, 16, 16, r: 3);
     }

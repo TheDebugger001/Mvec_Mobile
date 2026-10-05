@@ -10,8 +10,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mvec_mobile/core/api_client.dart';
+import 'package:mvec_mobile/core/router.dart';
 import 'package:mvec_mobile/core/theme.dart';
 import 'package:mvec_mobile/core/utils/app_theme.dart';
+import 'package:mvec_mobile/features/marketplace/data/interest/interest_profile.dart';
+import 'package:mvec_mobile/features/marketplace/data/interest/interest_store.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/home_screen.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/main_navigation.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/providers/commerce_provider.dart';
@@ -21,7 +24,9 @@ import 'package:mvec_mobile/models/supplier.dart';
 import 'package:mvec_mobile/models/user.dart';
 import 'package:mvec_mobile/providers/auth_provider.dart';
 import 'package:mvec_mobile/screens/auth/auth_validation.dart';
+import 'package:mvec_mobile/screens/auth/login_screen.dart';
 import 'package:mvec_mobile/screens/suppliers/supplier_shell.dart';
+import 'package:mvec_mobile/widgets/common.dart';
 
 Product _demoProduct() => Product(
   id: 'p1',
@@ -62,14 +67,19 @@ Future<void> _pumpDashboard(WidgetTester tester, String role) async {
 /// Auth controller stub so a test can boot the app as a signed-in role
 /// without touching secure storage or the network.
 class _StubAuthController extends AuthController {
-  _StubAuthController(this.user);
+  _StubAuthController(this.user, {this.restoring = false});
 
   final UserRecord? user;
+
+  /// When true the controller stays in the session-read state, the way the real
+  /// one is until the stored token has been pulled off disk.
+  final bool restoring;
 
   @override
   AuthState build() => AuthState(
     session:
         user == null ? null : AuthSession(token: 'test-token', user: user!),
+    restoring: restoring,
   );
 }
 
@@ -81,8 +91,33 @@ UserRecord _user(String role) => UserRecord(
 );
 
 /// Boots the signed-out app (login screen).
+/// Boots the app with no session at all, i.e. a first-time visitor. The
+/// storefront is the landing page, so this settles on the marketplace.
+///
+/// The real controller sits in `restoring` until secure storage answers, which
+/// never happens in a widget test, so the session state is stubbed instead.
+Future<void> _pumpGuest(WidgetTester tester) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authControllerProvider.overrideWith(() => _StubAuthController(null)),
+      ],
+      child: const MvecApp(),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Like [_pumpGuest] but parked on the login page.
+///
+/// A signed-out launch lands on the marketplace now, so tests that are about
+/// the auth screens have to walk there on purpose.
 Future<void> _pumpSignedOut(WidgetTester tester) async {
-  await tester.pumpWidget(const ProviderScope(child: MvecApp()));
+  await _pumpGuest(tester);
+  final container = ProviderScope.containerOf(
+    tester.element(find.byType(MaterialApp)),
+  );
+  container.read(routerProvider).go('/login');
   await tester.pumpAndSettle();
 }
 
@@ -713,6 +748,18 @@ void main() {
       expect(find.text('Orders & history'), findsNothing);
       expect(find.byType(MainNavigationScreen), findsOneWidget);
     });
+
+    testWidgets('a signed-in shopper is offered Sign out, not Sign in', (
+      tester,
+    ) async {
+      await _pumpMarketplace(tester);
+
+      await tester.tap(find.byTooltip('Menu'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign out'), findsOneWidget);
+      expect(find.text('Sign in'), findsNothing);
+    });
   });
 
   group('marketplace cart and wishlist', () {
@@ -963,6 +1010,259 @@ void main() {
 
       expect(find.byType(SupplierShell), findsNothing);
       expect(find.byType(MainNavigationScreen), findsOneWidget);
+    });
+  });
+
+  // MVEC is a storefront, so browsing the catalogue must not cost someone an
+  // account before they have seen a single product. A first-time visitor lands
+  // on the marketplace and only meets the login wall when they reach a page
+  // that is actually about them.
+  group('guest entry', () {
+    testWidgets('a cold start with no session opens the marketplace', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      expect(find.byType(MainNavigationScreen), findsOneWidget);
+      expect(find.byType(LoginScreen), findsNothing);
+    });
+
+    testWidgets('a guest reaching a protected page is sent to login', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MainNavigationScreen)),
+      );
+      container.read(routerProvider).go('/supplier');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(MainNavigationScreen), findsNothing);
+    });
+
+    testWidgets('the account sheet offers a guest the way in, not a way out', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      await tester.tap(find.byTooltip('Account'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Guest'), findsOneWidget);
+      expect(find.text('Sign in'), findsOneWidget);
+      expect(find.text('Sign out'), findsNothing);
+    });
+
+    testWidgets('tapping Sign in as a guest opens the login page', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      await tester.tap(find.byTooltip('Account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign in'));
+      await tester.pumpAndSettle();
+
+      // The same page the app used to open cold, reached deliberately this time.
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.text('Welcome back'), findsOneWidget);
+    });
+
+    testWidgets('a guest can keep browsing after that detour', (tester) async {
+      await _pumpGuest(tester);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MainNavigationScreen)),
+      );
+      container.read(routerProvider).go('/supplier');
+      await tester.pumpAndSettle();
+      // Leaving the login page without an account returns to the storefront
+      // rather than trapping the visitor on the auth wall.
+      container.read(routerProvider).go('/home');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MainNavigationScreen), findsOneWidget);
+    });
+
+    testWidgets('a cold start waits for the session behind a splash', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(null, restoring: true),
+            ),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pump();
+
+      // Nothing has been decided yet, so neither the marketplace nor the login
+      // wall may be on screen — just something in place of an empty frame.
+      expect(find.byType(LoadingState), findsOneWidget);
+      expect(find.byType(MainNavigationScreen), findsNothing);
+      expect(find.byType(LoginScreen), findsNothing);
+    });
+  });
+
+  // Personalisation is an account feature: a guest must never see another
+  // person's taste, and must never have their own browsing recorded.
+  group('personalised storefront', () {
+    /// An account that has bought from Electronics (category 1).
+    InterestProfile electronicsBuyer() => InterestProfile.empty.record(
+      categoryId: 1,
+      signal: InterestSignal.purchased,
+      productId: null,
+    );
+
+    testWidgets('a guest is offered no recommendations on the home feed', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      expect(find.text('Picked for you'), findsNothing);
+    });
+
+    testWidgets('a guest is told to sign in rather than shown alerts', (
+      tester,
+    ) async {
+      await _pumpGuest(tester);
+
+      await tester.tap(find.byTooltip('Notifications'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign in to get new-product alerts'), findsOneWidget);
+      expect(find.text('New in categories you buy from'), findsNothing);
+    });
+
+    testWidgets('an account with no history yet is told to browse first', (
+      tester,
+    ) async {
+      await _pumpSignedIn(tester, 'buyer');
+
+      await tester.tap(find.byTooltip('Notifications'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No alerts yet'), findsOneWidget);
+      expect(find.text('Picked for you'), findsNothing);
+    });
+
+    testWidgets('a buyer sees their own categories first on the home feed', (
+      tester,
+    ) async {
+      // A tall surface so the whole feed is laid out: the lazy list would
+      // otherwise not have built the rows past the hero and category chips.
+      tester.view.physicalSize = const Size(1400, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(_user('buyer')),
+            ),
+            myInterestProvider.overrideWithValue(electronicsBuyer()),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Picked for you'), findsOneWidget);
+      // The personalised row sits ahead of the general catalogue row.
+      final picked = tester.getTopLeft(find.text('Picked for you')).dy;
+      final popular = tester.getTopLeft(find.text('Popular Products')).dy;
+      expect(picked, lessThan(popular));
+    });
+
+    testWidgets('the strongest matching category leads, not just any match', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1400, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      // Bought Sports (5), but only ever browsed Fashion (2).
+      final profile = InterestProfile.empty
+          .record(
+            categoryId: 5,
+            signal: InterestSignal.purchased,
+            productId: null,
+          )
+          .record(
+            categoryId: 2,
+            signal: InterestSignal.viewed,
+            productId: null,
+          );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(_user('buyer')),
+            ),
+            myInterestProvider.overrideWithValue(profile),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Section headers share one style, so their order in the tree is the
+      // order they appear in the feed. Collected rather than scraped by
+      // position, because product cards repeat the same words.
+      final sectionStyle = AppTextStyles.sectionTitle(
+        tester.element(find.byType(HomeScreen)),
+      );
+      final sections =
+          tester
+              .widgetList<Text>(find.byType(Text))
+              .where((text) => text.style == sectionStyle)
+              .map((text) => text.data)
+              .toList();
+
+      expect(
+        sections,
+        containsAll(<String>['Picked for you', 'Sports', 'Fashion']),
+      );
+      // Bought Sports leads, then browsed Fashion, then the rest queues up.
+      expect(sections.indexOf('Sports'), lessThan(sections.indexOf('Fashion')));
+      expect(
+        sections.indexOf('Picked for you'),
+        lessThan(sections.indexOf('Sports')),
+      );
+    });
+
+    testWidgets('alerts name the product and the reason they were sent', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _StubAuthController(_user('buyer')),
+            ),
+            myInterestProvider.overrideWithValue(electronicsBuyer()),
+          ],
+          child: const MvecApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Notifications'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New in categories you buy from'), findsOneWidget);
+      // The bundled catalogue's only new arrival in Electronics.
+      expect(find.text('Smart Watch Series 5'), findsOneWidget);
+      expect(find.textContaining('a category you buy from'), findsWidgets);
     });
   });
 

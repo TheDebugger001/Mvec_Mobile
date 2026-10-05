@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme.dart';
@@ -18,6 +19,7 @@ import 'orders_screen.dart';
 import 'product_navigation.dart';
 import 'search_screen.dart';
 import 'shop_screen.dart';
+import 'shopper_notifications_screen.dart';
 import 'vendors_screen.dart';
 
 /// Root marketplace navigation container.
@@ -207,15 +209,26 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               ),
             ),
             const Divider(height: 1),
-            _MoreDrawerAction(
-              icon: Icons.logout,
-              label: 'Sign out',
-              destructive: true,
-              onTap: () async {
-                Navigator.of(context).pop();
-                await ref.read(authControllerProvider.notifier).logout();
-              },
-            ),
+            // Same rule as the account sheet: a guest is offered the way in.
+            if (ref.watch(currentUserProvider) == null)
+              _MoreDrawerAction(
+                icon: Icons.login,
+                label: 'Sign in',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/login');
+                },
+              )
+            else
+              _MoreDrawerAction(
+                icon: Icons.logout,
+                label: 'Sign out',
+                destructive: true,
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await ref.read(authControllerProvider.notifier).logout();
+                },
+              ),
             const SizedBox(height: 8),
           ],
         ),
@@ -274,15 +287,27 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   _toggleTheme();
                 },
               ),
-              _SheetAction(
-                icon: Icons.logout,
-                label: 'Sign out',
-                destructive: true,
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  await ref.read(authControllerProvider.notifier).logout();
-                },
-              ),
+              // A guest gets the way in rather than a way out; signing out is
+              // meaningless until there is a session to end.
+              if (user == null)
+                _SheetAction(
+                  icon: Icons.login,
+                  label: 'Sign in',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    context.go('/login');
+                  },
+                )
+              else
+                _SheetAction(
+                  icon: Icons.logout,
+                  label: 'Sign out',
+                  destructive: true,
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await ref.read(authControllerProvider.notifier).logout();
+                  },
+                ),
             ],
           ),
     );
@@ -398,7 +423,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   }
 
   void _openNotifications() =>
-      _pushPage(const _NotificationsPage(), title: 'Notifications');
+      _pushPage(const ShopperNotificationsScreen(), title: 'Notifications');
 
   // ---------------------------------------------------------------------------
   // Floating bottom navigation bar: a rounded white pill that hovers clear of
@@ -838,39 +863,6 @@ class _ThemeToggleButton extends StatelessWidget {
               color: context.mv.accentDeep,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Placeholder inbox: the storefront has no notification feed yet, but the
-/// top-bar bell needs a destination so the action is never dead.
-class _NotificationsPage extends StatelessWidget {
-  const _NotificationsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.notifications_none_rounded,
-              size: 56,
-              color: context.mv.accentDeep,
-            ),
-            const SizedBox(height: 12),
-            Text('No new notifications', style: AppTextStyles.title(context)),
-            const SizedBox(height: 4),
-            Text(
-              'Order updates and vendor offers will show up here.',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodySecondary(context),
-            ),
-          ],
         ),
       ),
     );
