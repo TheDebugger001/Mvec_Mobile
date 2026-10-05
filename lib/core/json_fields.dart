@@ -62,10 +62,6 @@ bool boolField(Map<String, dynamic> json, List<String> names) {
 String cellText(Map<String, dynamic> json, List<String> names) =>
     stringField(json, names) ?? '—';
 
-/// [intField] with a zero for absent values.
-int cellInt(Map<String, dynamic> json, List<String> names) =>
-    intField(json, names) ?? 0;
-
 /// The snake_case spelling of [name], for passing alongside the camelCase one.
 ///
 /// `refundRate` -> `['refundRate', 'refund_rate']`
@@ -73,9 +69,6 @@ List<String> spellings(String name) => <String>[
   name,
   _snake(name),
 ];
-
-List<String> spellingsOf(String name, List<String> extra) =>
-    <String>[...spellings(name), ...extra];
 
 String _snake(String name) => name.replaceAllMapped(
   RegExp('[A-Z]'),
