@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/theme.dart';
+import '../core/utils/app_theme.dart';
 import '../models/cart_item.dart';
 import '../models/address.dart';
 import '../models/order.dart';
@@ -33,10 +35,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Address? _selectedAddress;
   String _selectedPaymentMethod = 'Mobile Money';
 
-  final List<String> _paymentMethods = [
-    'Mobile Money',
-    'Credit / Debit Card',
-  ];
+  final List<String> _paymentMethods = ['Mobile Money', 'Credit / Debit Card'];
 
   bool _isSubmitting = false;
   final _fullNameController = TextEditingController();
@@ -65,7 +64,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
           'Checkout',
@@ -73,8 +71,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -111,30 +107,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: ElevatedButton(
                 onPressed: _isSubmitting ? null : _submitOrder,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 0,
                 ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
+                child:
+                    _isSubmitting
+                        ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text(
+                          'Confirm & Place Order',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      )
-                    : const Text(
-                        'Confirm & Place Order',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
               ),
             ),
             const SizedBox(height: 20),
@@ -148,9 +143,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w700,
+        color: context.mv.text,
       ),
     );
   }
@@ -164,17 +160,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.mv.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: context.mv.border),
             ),
-            child: const Text(
+            child: Text(
               'No delivery address added yet. Add one to continue.',
               textAlign: TextAlign.center,
+              style: TextStyle(color: context.mv.textMuted),
             ),
           ),
         ..._addresses.map((address) {
           final isSelected = _selectedAddress?.id == address.id;
+          final mv = context.mv;
           return GestureDetector(
             onTap: () {
               setState(() {
@@ -185,12 +183,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: mv.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey.shade300,
+                  color: isSelected ? AppColors.primary : mv.border,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
@@ -200,9 +196,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     isSelected
                         ? Icons.radio_button_checked
                         : Icons.radio_button_off,
-                    color: isSelected
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey,
+                    color: isSelected ? AppColors.primary : mv.textMuted,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -211,20 +205,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       children: [
                         Text(
                           address.fullName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 15,
+                            color: mv.text,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           address.phone,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          style: TextStyle(color: mv.textMuted, fontSize: 13),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           '${address.addressLine}, ${address.city}',
-                          style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                          style: TextStyle(color: mv.textMuted, fontSize: 13),
                         ),
                       ],
                     ),
@@ -261,51 +256,56 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final address = await showDialog<Address>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Add delivery address'),
-        content: Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _addressField(_fullNameController, 'Full name'),
-                _addressField(_phoneController, 'Phone number', keyboardType: TextInputType.phone),
-                _addressField(_addressController, 'Street address'),
-                _addressField(_cityController, 'City'),
-                _addressField(_regionController, 'Region'),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (!formKey.currentState!.validate()) {
-                return;
-              }
-              FocusScope.of(dialogContext).unfocus();
-              Navigator.pop(
-                dialogContext,
-                Address(
-                  id: DateTime.now().microsecondsSinceEpoch.toString(),
-                  fullName: _fullNameController.text.trim(),
-                  phone: _phoneController.text.trim(),
-                  addressLine: _addressController.text.trim(),
-                  city: _cityController.text.trim(),
-                  region: _regionController.text.trim(),
-                  isDefault: _addresses.isEmpty,
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Add delivery address'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _addressField(_fullNameController, 'Full name'),
+                    _addressField(
+                      _phoneController,
+                      'Phone number',
+                      keyboardType: TextInputType.phone,
+                    ),
+                    _addressField(_addressController, 'Street address'),
+                    _addressField(_cityController, 'City'),
+                    _addressField(_regionController, 'Region'),
+                  ],
                 ),
-              );
-            },
-            child: const Text('Save address'),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (!formKey.currentState!.validate()) {
+                    return;
+                  }
+                  FocusScope.of(dialogContext).unfocus();
+                  Navigator.pop(
+                    dialogContext,
+                    Address(
+                      id: DateTime.now().microsecondsSinceEpoch.toString(),
+                      fullName: _fullNameController.text.trim(),
+                      phone: _phoneController.text.trim(),
+                      addressLine: _addressController.text.trim(),
+                      city: _cityController.text.trim(),
+                      region: _regionController.text.trim(),
+                      isDefault: _addresses.isEmpty,
+                    ),
+                  );
+                },
+                child: const Text('Save address'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (address != null && mounted) {
@@ -326,86 +326,89 @@ class _CheckoutPageState extends State<CheckoutPage> {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-        validator: (value) => value == null || value.trim().isEmpty
-            ? 'Enter $label'
-            : null,
+        decoration: InputDecoration(labelText: label),
+        validator:
+            (value) =>
+                value == null || value.trim().isEmpty ? 'Enter $label' : null,
       ),
     );
   }
 
   // ==================== ORDER REVIEW ====================
   Widget _buildOrderReview() {
+    final mv = context.mv;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: mv.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: mv.border),
       ),
       child: Column(
-        children: widget.cartItems.map((item) {
-          return Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: item.product.images.isNotEmpty
-                      ? Image.network(
-                          item.product.images.first,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 60,
-                            height: 60,
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.image),
+        children:
+            widget.cartItems.map((item) {
+              return Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child:
+                          item.product.images.isNotEmpty
+                              ? Image.network(
+                                item.product.images.first,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (_, _, _) => Container(
+                                      width: 60,
+                                      height: 60,
+                                      color: mv.soft,
+                                      child: const Icon(Icons.image),
+                                    ),
+                              )
+                              : Container(
+                                width: 60,
+                                height: 60,
+                                color: mv.soft,
+                                child: const Icon(Icons.image),
+                              ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.product.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: mv.text,
+                            ),
                           ),
-                        )
-                      : Container(
-                          width: 60,
-                          height: 60,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.image),
-                        ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.product.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Qty: ${item.quantity}',
+                            style: TextStyle(color: mv.textMuted, fontSize: 13),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Qty: ${item.quantity}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                    Text(
+                      '\$${item.totalPrice.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: mv.text,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                Text(
-                  '\$${item.totalPrice.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
+              );
+            }).toList(),
       ),
     );
   }
@@ -413,55 +416,53 @@ class _CheckoutPageState extends State<CheckoutPage> {
   // ==================== PAYMENT METHODS ====================
   Widget _buildPaymentMethods() {
     return Column(
-      children: _paymentMethods.map((method) {
-        final isSelected = _selectedPaymentMethod == method;
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedPaymentMethod = method;
-              _paymentInputController.clear();
-            });
-          },
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey.shade300,
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      isSelected
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off,
-                      color: isSelected
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        method,
-                        style: const TextStyle(fontSize: 15),
+      children:
+          _paymentMethods.map((method) {
+            final isSelected = _selectedPaymentMethod == method;
+            final mv = context.mv;
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedPaymentMethod = method;
+                  _paymentInputController.clear();
+                });
+              },
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: mv.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : mv.border,
+                        width: isSelected ? 1.5 : 1,
                       ),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: isSelected ? AppColors.primary : mv.textMuted,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            method,
+                            style: TextStyle(fontSize: 15, color: mv.text),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected) _buildPaymentInput(),
+                ],
               ),
-              if (isSelected) _buildPaymentInput(),
-            ],
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 
@@ -471,18 +472,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
         controller: _paymentInputController,
-        keyboardType: isMobileMoney
-            ? TextInputType.phone
-            : TextInputType.number,
+        keyboardType:
+            isMobileMoney ? TextInputType.phone : TextInputType.number,
         decoration: InputDecoration(
-          labelText: isMobileMoney ? 'Mobile money phone number' : 'Card number',
+          labelText:
+              isMobileMoney ? 'Mobile money phone number' : 'Card number',
           hintText: isMobileMoney ? '+2507 -------' : '1234 5678 9012 3456',
           prefixIcon: Icon(
             isMobileMoney ? Icons.phone_outlined : Icons.credit_card_outlined,
           ),
-          filled: true,
-          fillColor: Colors.white,
-          border: const OutlineInputBorder(),
         ),
       ),
     );
@@ -490,12 +488,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // ==================== ORDER SUMMARY ====================
   Widget _buildOrderSummary() {
+    final mv = context.mv;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: mv.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: mv.border),
       ),
       child: Column(
         children: [
@@ -525,7 +524,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           style: TextStyle(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.w700 : FontWeight.w500,
-            color: isTotal ? Colors.black : Colors.grey[700],
+            color: isTotal ? context.mv.text : context.mv.textMuted,
           ),
         ),
         Text(
@@ -533,7 +532,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           style: TextStyle(
             fontSize: isTotal ? 17 : 14,
             fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
-            color: isTotal ? Theme.of(context).primaryColor : Colors.black,
+            color: isTotal ? AppColors.primary : context.mv.text,
           ),
         ),
       ],
@@ -574,28 +573,38 @@ class _CheckoutPageState extends State<CheckoutPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 28),
-              SizedBox(width: 10),
-              Text('Order Placed!'),
-            ],
-          ),
-          content: const Text(
-            'Your order has been placed successfully. You will receive a confirmation soon.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // close dialog
-                widget.onOrderPlaced(_buildOrder());
-              },
-              child: const Text('OK'),
+        builder:
+            (context) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    color: MvColors.successText,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Order Placed!',
+                    style: TextStyle(color: context.mv.text),
+                  ),
+                ],
+              ),
+              content: const Text(
+                'Your order has been placed successfully. You will receive a confirmation soon.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // close dialog
+                    widget.onOrderPlaced(_buildOrder());
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
             ),
-          ],
-        ),
       );
     }
   }

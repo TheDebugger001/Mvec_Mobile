@@ -41,6 +41,13 @@ presentable without a backend. The supplier workspace includes product details
 and image URLs, pricing, stock adjustments, order fulfillment, notifications,
 and account preferences. Demo edits last for the current app session.
 
+A supplier attaches a product photo by picking it **off the device** — gallery
+or files — rather than pasting a link. The chosen file is copied into the app's
+documents directory and referenced by path, which is why the photo lives as long
+as the app is installed. It is *not* uploaded: there is no `POST /uploads/images`
+route in `Mvec_backend` yet (the web app calls one that was never mounted), so
+`media` stays out of the wholesale payload until that endpoint exists.
+
 When demo mode is off, the supplier service uses these backend contracts:
 `GET /supplier/products`, `GET /supplier/orders`,
 `GET /supplier/notifications`, `GET /supplier/profile`, plus create/update

@@ -25,6 +25,7 @@ class SupplierProduct {
     this.minimumOrderQuantity = 1,
     this.bulkDiscount = 0,
     this.gallery = const <String>[],
+    this.localImagePath = '',
   });
 
   final String id;
@@ -55,6 +56,13 @@ class SupplierProduct {
   final double bulkDiscount;
 
   final List<String> gallery;
+
+  /// A picture the supplier picked off *this* device, as an absolute file path.
+  ///
+  /// Deliberately not part of the API contract: there is no upload endpoint to
+  /// send the bytes to, so this is a local-only reference that the demo
+  /// workspace keeps in memory. The backend only ever knows [imageUrl].
+  final String localImagePath;
 
   factory SupplierProduct.fromJson(Map<String, dynamic> json) {
     final media = json['media'] is Map
@@ -109,6 +117,11 @@ class SupplierProduct {
   /// `status: "ACTIVE"` demoted to `OUT_OF_STOCK` when stock is 0). On update
   /// `sanitizeWholesalePayload` falls back to the stored product, so omitting
   /// them preserves existing data instead of blanking it.
+  ///
+  /// A device-local photo never reaches here. [localImagePath] points at a file
+  /// on this phone, which would be meaningless to the backend and to any other
+  /// vendor's client, so the media object stays out of the payload until there
+  /// is an upload endpoint to turn those bytes into a URL.
   Map<String, dynamic> toJson() => {
     'name': name,
     // The backend's WholesaleProduct has no `description` field; the long text
@@ -135,6 +148,7 @@ class SupplierProduct {
     int? minimumOrderQuantity,
     double? bulkDiscount,
     List<String>? gallery,
+    String? localImagePath,
   }) => SupplierProduct(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -150,6 +164,7 @@ class SupplierProduct {
     minimumOrderQuantity: minimumOrderQuantity ?? this.minimumOrderQuantity,
     bulkDiscount: bulkDiscount ?? this.bulkDiscount,
     gallery: gallery ?? this.gallery,
+    localImagePath: localImagePath ?? this.localImagePath,
   );
 
   /// The backend flips status to `OUT_OF_STOCK` whenever `stockQuantity <= 0`,
@@ -238,6 +253,9 @@ class SupplierNotice {
     required this.message,
     required this.createdAt,
     required this.read,
+    this.type,
+    this.actionPath,
+    this.actionLabel,
   });
 
   final String id;
@@ -245,6 +263,32 @@ class SupplierNotice {
   final String message;
   final DateTime createdAt;
   final bool read;
+
+  /// The notice's kind, e.g. `ORDER`, `PAYOUT`, `DELIVERY`. Used to work out
+  /// where the row should lead when the API does not name a destination.
+  final String? type;
+
+  /// In-app route the row leads to, e.g. `/supplier/orders`.
+  ///
+  /// Taken from the payload when the API sends one, otherwise derived by
+  /// [supplierNoticeDestination] from [type]. Only ever a `/supplier` path —
+  /// see that function for why an arbitrary path is not followed.
+  final String? actionPath;
+
+  /// Verb on the row's button, e.g. `Review order`. Derived when absent.
+  final String? actionLabel;
+
+  /// Where tapping this notice should take the supplier.
+  ///
+  /// Prefers what the API asked for, then falls back to the kind of notice so a
+  /// feed without destinations is still useful. Anything outside the supplier
+  /// portal is refused: the path arrives from the server, and following it
+  /// blindly would let a bad payload bounce someone into the admin area.
+  String? get destination => supplierNoticeDestination(
+    apiPath: actionPath,
+    type: type,
+    title: title,
+  );
 
   factory SupplierNotice.fromJson(Map<String, dynamic> json) {
     final status = _str(json['status']).toUpperCase();
@@ -258,8 +302,91 @@ class SupplierNotice {
       createdAt:
           DateTime.tryParse(_str(json['createdAt'])) ?? DateTime.now(),
       read: json['read'] == true || status == 'READ',
+      type: json['type'] == null ? null : '${json['type']}',
+      actionPath: json['actionPath'] == null ? null : '${json['actionPath']}',
+      actionLabel: json['actionLabel'] == null ? null : '${json['actionLabel']}',
     );
   }
+}
+
+/// Maps a notice to the page that can act on it.
+///
+/// Order matters: an explicit `apiPath` wins, but only inside the supplier
+/// portal. Otherwise the notice's own type decides, and the title is the last
+/// resort for feeds that send no type at all. Returns null when nothing matches,
+/// which the row renders as "mark read only" rather than a dead button.
+String? supplierNoticeDestination({
+  String? apiPath,
+  String? type,
+  String? title,
+}) {
+  final requested = apiPath?.trim();
+  if (requested != null && requested.isNotEmpty) {
+    // The portal root is allowed as well as its pages.
+    final inPortal =
+        requested == '/supplier' || requested.startsWith('/supplier/');
+    return inPortal ? requested : null;
+  }
+
+  final kind = (type ?? '').trim().toUpperCase();
+  switch (kind) {
+    case 'ORDER' || 'ORDER_REQUEST' || 'NEW_ORDER' || 'VENDOR_ORDER':
+      return '/supplier/orders';
+    case 'STOCK' || 'LOW_STOCK' || 'INVENTORY':
+      return '/supplier/inventory';
+    case 'PRODUCT' || 'CATALOGUE' || 'CATALOG' || 'LISTING':
+      return '/supplier/products';
+    case 'PAYOUT' || 'PAYMENT' || 'WITHDRAWAL' || 'TRANSACTION' || 'ESCROW':
+      return '/supplier/payments';
+    case 'DELIVERY' || 'DISPATCH' || 'SHIPMENT' || 'DISPUTE':
+      return '/supplier/delivery';
+    case 'SUPPLY_REQUEST' || 'SUPPLY' || 'REQUEST':
+      return '/supplier/supply-requests';
+    case 'TEAM' || 'STAFF' || 'INVITE':
+      return '/supplier/team';
+    case 'REVIEW' || 'RATING':
+      return '/supplier/reviews';
+    case 'ACCOUNT' || 'SETTINGS' || 'PROFILE' || 'SECURITY':
+      return '/supplier/settings';
+  }
+
+  // Feeds that send only a headline: match on what it is talking about.
+  final subject = '${type ?? ''} $title'.toLowerCase();
+  if (subject.contains('payout') ||
+      subject.contains('payment') ||
+      subject.contains('escrow')) {
+    return '/supplier/payments';
+  }
+  if (subject.contains('stock') || subject.contains('inventory')) {
+    return '/supplier/inventory';
+  }
+  if (subject.contains('deliver') || subject.contains('ship')) {
+    return '/supplier/delivery';
+  }
+  if (subject.contains('order')) return '/supplier/orders';
+  if (subject.contains('supply')) return '/supplier/supply-requests';
+  if (subject.contains('team') || subject.contains('staff')) {
+    return '/supplier/team';
+  }
+  return null;
+}
+
+/// Button verb for a destination, so the row says what will happen.
+String supplierNoticeActionLabel(String? destination, String? apiLabel) {
+  final custom = apiLabel?.trim();
+  if (custom != null && custom.isNotEmpty) return custom;
+  return switch (destination) {
+    '/supplier/orders' => 'Review orders',
+    '/supplier/inventory' => 'Check stock',
+    '/supplier/products' => 'Open catalogue',
+    '/supplier/payments' => 'View payouts',
+    '/supplier/delivery' => 'Track delivery',
+    '/supplier/supply-requests' => 'View requests',
+    '/supplier/team' => 'Manage team',
+    '/supplier/reviews' => 'Read reviews',
+    '/supplier/settings' => 'Open settings',
+    _ => 'Open',
+  };
 }
 
 /// The supplier's own business record.
@@ -504,6 +631,11 @@ abstract interface class SupplierWorkspaceService {
   Future<void> saveProfile(SupplierProfile profile, {required bool isNewProfile});
 }
 
+/// In-memory stand-in for the supplier portal, used in demo mode.
+///
+/// Because nothing is persisted, `SupplierProduct.localImagePath` survives for
+/// the session exactly as the catalogue entry was saved — a photo picked on
+/// the device shows up in every supplier surface for as long as the app runs.
 class DemoSupplierWorkspaceService implements SupplierWorkspaceService {
   final List<SupplierProduct> _products = [
     const SupplierProduct(
@@ -608,6 +740,8 @@ class DemoSupplierWorkspaceService implements SupplierWorkspaceService {
           'Kigali Market Kitchen requested 8 bags of Arabica Coffee Beans.',
       createdAt: DateTime(2026, 9, 28, 9),
       read: false,
+      type: 'ORDER',
+      actionLabel: 'Review order',
     ),
     SupplierNotice(
       id: 'sn-2',
@@ -615,6 +749,8 @@ class DemoSupplierWorkspaceService implements SupplierWorkspaceService {
       message: 'Fresh Avocados are down to 12 units.',
       createdAt: DateTime(2026, 9, 27, 14),
       read: false,
+      type: 'STOCK',
+      actionLabel: 'Restock',
     ),
     SupplierNotice(
       id: 'sn-3',
@@ -622,6 +758,8 @@ class DemoSupplierWorkspaceService implements SupplierWorkspaceService {
       message: 'Your RWF 50,000 payout for MV-4760 is complete.',
       createdAt: DateTime(2026, 9, 23, 11),
       read: true,
+      type: 'PAYOUT',
+      actionLabel: 'View payout',
     ),
   ];
 
@@ -714,6 +852,10 @@ class DemoSupplierWorkspaceService implements SupplierWorkspaceService {
       message: notice.message,
       createdAt: notice.createdAt,
       read: true,
+      // Kept so the row still leads to the right page once it is read.
+      type: notice.type,
+      actionPath: notice.actionPath,
+      actionLabel: notice.actionLabel,
     );
   }
 

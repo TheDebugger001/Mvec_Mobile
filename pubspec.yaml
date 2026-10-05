@@ -45,6 +45,9 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   intl: ^0.19.0
   google_fonts: ^6.2.1
+  image_picker: ^1.2.3           # Picking a product photo from the phone gallery
+  file_selector: ^1.1.0          # Picking a product photo from device files
+  path_provider: ^2.1.6          # Where picked photos are copied so they survive a restart
 
 dev_dependencies:
   flutter_test:

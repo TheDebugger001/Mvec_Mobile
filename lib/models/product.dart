@@ -10,6 +10,11 @@ class Product {
   final List<String> sizes;
   final Vendor vendor;
 
+  /// Carried through from the catalogue product so the cart and wishlist can
+  /// still say which category something belongs to. Null for anything built
+  /// without one.
+  final int? categoryId;
+
   Product({
     required this.id,
     required this.name,
@@ -21,6 +26,7 @@ class Product {
     required this.colors,
     required this.sizes,
     required this.vendor,
+    this.categoryId,
   });
 }
 

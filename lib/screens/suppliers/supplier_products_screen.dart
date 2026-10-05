@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +7,8 @@ import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../features/supplier/data/supplier_workspace.dart';
 import '../../widgets/common.dart';
+import '../../widgets/product_image.dart';
+import '../../widgets/product_image_field.dart';
 import '../../widgets/smart_table.dart';
 
 /// Inventory management for a supplier: list, filter, add, edit and remove
@@ -114,6 +118,11 @@ class SupplierProductsScreen extends ConsumerWidget {
       context,
       title: 'PRODUCT DETAILS',
       children: [
+        // The full-size picture comes first: on the catalogue it is a 46px
+        // thumbnail, and this is where the supplier actually checks what they
+        // uploaded.
+        ProductImagePreview(url: p.imageUrl, localPath: p.localImagePath),
+        const SizedBox(height: 14),
         Row(
           children: [
             _thumb(p),
@@ -207,21 +216,7 @@ class SupplierProductsScreen extends ConsumerWidget {
   }
 }
 
-Widget _thumb(SupplierProduct p) {
-  final image = p.imageUrl;
-  return Container(
-    width: 46,
-    height: 46,
-    decoration: BoxDecoration(
-      color: MvColors.metricIconBg,
-      borderRadius: BorderRadius.circular(9),
-      image: image.isEmpty ? null : DecorationImage(image: NetworkImage(image), fit: BoxFit.cover),
-    ),
-    child: image.isEmpty
-        ? const Icon(Icons.inventory_2_outlined, size: 20, color: MvColors.primaryDeep)
-        : null,
-  );
-}
+Widget _thumb(SupplierProduct p) => ProductImage(url: p.imageUrl, localPath: p.localImagePath);
 
 /// Stock availability pill driven by [SupplierProduct.stockStatus].
 class StockPill extends StatelessWidget {
@@ -281,10 +276,23 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
   late final TextEditingController _description =
       TextEditingController(text: widget.product?.description ?? '');
 
+  /// The photo the supplier picked off the device, as an absolute file path.
+  /// Empty means "no local photo", which is not the same as "no image": the
+  /// product may still have a backend [SupplierProduct.imageUrl].
+  late String _localImagePath = widget.product?.localImagePath ?? '';
+
+  /// Owns the photo files this edit touches, so the ones it replaces are only
+  /// deleted once the save outcome is known.
+  late final ProductImageDraft _imageDraft = ProductImageDraft(_localImagePath);
+
   bool _busy = false;
 
   @override
   void dispose() {
+    // Dismissing the sheet without saving is the one path that changes nothing,
+    // so only the picks abandoned along the way are cleaned up — the photo the
+    // product still points at has to survive.
+    unawaited(_imageDraft.resolve(saved: false));
     for (final c in [
       _name,
       _category,
@@ -349,11 +357,17 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
       retailPrice: existing?.retailPrice,
       imageUrl: existing?.imageUrl ?? '',
       gallery: existing?.gallery ?? const <String>[],
+      // A device-local path: it means nothing to the backend, so it is kept out
+      // of the payload and only travels with the local demo workspace.
+      localImagePath: _localImagePath,
       status: existing?.status ?? 'ACTIVE',
     );
 
     try {
       await ref.read(supplierWorkspaceProvider.notifier).saveProduct(product);
+      // The product now points at the new photo, so the copy it replaced is
+      // genuinely dead weight.
+      await _imageDraft.resolve(saved: true);
       if (mounted) {
         Navigator.pop(context);
         showMvSnack(context, isEdit ? 'Product updated' : 'Product added', success: true);
@@ -394,6 +408,12 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
+            ProductImageField(
+              draft: _imageDraft,
+              url: widget.product?.imageUrl,
+              onChanged: (path) => _localImagePath = path ?? '',
+            ),
+            const SizedBox(height: 18),
             TextField(
               controller: _name,
               decoration: const InputDecoration(labelText: 'Product name *'),

@@ -51,6 +51,9 @@
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+	<!-- Shown when the app asks for a product photo off the device. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MVEC needs access to your photo library so you can attach a product photo to a wholesale listing.</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
