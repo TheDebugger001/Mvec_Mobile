@@ -6,12 +6,8 @@ import '../models/supplier_operations.dart';
 import 'mock_supplier_operations_service.dart';
 import 'supplier_operations_service.dart';
 
-/// Runs every [SupplierOperationsService] call against the live API and falls
-/// back to the bundled demo dataset when the route does not exist yet.
-///
-/// Mirrors `FallbackSupplierFinanceService`: the first unreachable response
-/// degrades the module for the rest of the session, so the pages do not probe a
-/// missing endpoint on every rebuild.
+/// Prefer the live supplier API and surface a real error instead of shipping demo
+/// content to the app.
 class FallbackSupplierOperationsService implements SupplierOperationsService {
   FallbackSupplierOperationsService(
     ApiClient api, {
@@ -94,9 +90,8 @@ class FallbackSupplierOperationsService implements SupplierOperationsService {
       if (_isUnreachable(error)) {
         _degraded = true;
         lastFallbackReason =
-            'MVEC does not serve supplier $source yet — showing the bundled '
-            'demo dataset instead.';
-        return call(_fallback);
+            'MVEC does not serve supplier $source yet — the app cannot show demo data.';
+        throw error;
       }
       rethrow;
     }

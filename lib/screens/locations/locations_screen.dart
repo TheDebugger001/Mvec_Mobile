@@ -56,11 +56,5 @@ class LocationsScreen extends ConsumerWidget {
 
   int? _count(Object? v) => v is int ? v : (v is num ? v.toInt() : (v is String ? int.tryParse(v) : null));
 
-  List<Map<String, dynamic>> _mockZones() => const [
-        {'province': 'Kigali City', 'districts': 3, 'sectors': 35, 'fee': 1000, 'coverage': 'FULL'},
-        {'province': 'Northern Province', 'districts': 5, 'sectors': 17, 'fee': 2000, 'coverage': 'PARTIAL'},
-        {'province': 'Southern Province', 'districts': 8, 'sectors': 14, 'fee': 2000, 'coverage': 'FULL'},
-        {'province': 'Eastern Province', 'districts': 7, 'sectors': 24, 'fee': 1500, 'coverage': 'FULL'},
-        {'province': 'Western Province', 'districts': 7, 'sectors': 14, 'fee': 2500, 'coverage': 'PARTIAL'},
-      ];
+  List<Map<String, dynamic>> _mockZones() => const [];
 }

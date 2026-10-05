@@ -23,18 +23,9 @@ String get kApiBaseUrl {
   return 'http://localhost:4000/api';
 }
 
-/// Demo mode — lets the app be presented with no backend running.
-///
-/// When enabled, `AuthController.login` accepts any password locally and skips
-/// the network round-trip, so the auth gate opens onto the mock marketplace
-/// and the admin console (whose pages fall back to empty/placeholder states).
-///
-/// Opt in per-run with `--dart-define=DEMO_MODE=true`. Default is off, so
-/// release builds always talk to the real backend.
-const bool kDemoMode = bool.fromEnvironment(
-  'DEMO_MODE',
-  defaultValue: false,
-);
+/// Demo mode is disabled in production builds. The app must always use the
+/// live backend rather than shipping bundled mock data.
+const bool kDemoMode = false;
 
 const String kAdminEmail = String.fromEnvironment(
   'ADMIN_EMAIL',

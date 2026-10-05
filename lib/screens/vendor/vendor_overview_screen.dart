@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
-import '../../core/api_config.dart';
 import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../models/vendor.dart';
@@ -13,8 +12,6 @@ import '../../providers/vendor_providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/mv_icon.dart';
 import '../../widgets/smart_table.dart';
-import '../../features/vendor/vendor_dependencies.dart';
-import '../../features/vendor/widgets/vendor_dashboard_widgets.dart';
 import 'vendor_status_banner.dart';
 
 /// Vendor dashboard home.
@@ -36,8 +33,6 @@ class _VendorOverviewScreenState extends ConsumerState<VendorOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (kDemoMode) return _demoOverview();
-
     final user = ref.watch(currentUserProvider);
     final storeAsync = ref.watch(myStoreProvider);
     final statsAsync = ref.watch(vendorStatsProvider);
@@ -75,118 +70,6 @@ class _VendorOverviewScreenState extends ConsumerState<VendorOverviewScreen> {
         _metrics(statsAsync),
         const SizedBox(height: 18),
         _historySection(),
-      ],
-    );
-  }
-
-  Widget _demoOverview() {
-    final user = ref.watch(currentUserProvider);
-    final financeAsync = ref.watch(vendorFinanceSummaryProvider);
-    final ordersAsync = ref.watch(vendorOrdersPageProvider(null));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        PageHead(
-          eyebrow: 'VENDOR PORTAL',
-          title:
-              '${greeting(DateTime.now())}, ${user?.companyName ?? 'Vendor'}',
-          subtitle: 'Demo dashboard · your local data is ready to explore.',
-          actions: [
-            FilledButton.icon(
-              onPressed: () => context.go('/vendor/orders'),
-              icon: const Icon(Icons.receipt_long, size: 17),
-              label: const Text('Orders'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => context.go('/vendor/sales'),
-              icon: const Icon(Icons.account_balance_wallet_outlined, size: 17),
-              label: const Text('Sales'),
-            ),
-          ],
-        ),
-        switch (financeAsync) {
-          AsyncLoading() => const SizedBox(height: 150, child: LoadingState()),
-          AsyncError(:final error) => ErrorState(
-            message: friendlyError(error),
-            onRetry: () => ref.invalidate(vendorFinanceSummaryProvider),
-          ),
-          AsyncData(:final value) => LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth > 720 ? 4 : 2;
-              final width =
-                  (constraints.maxWidth - (columns - 1) * 10) / columns;
-              return Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  SizedBox(
-                    width: width,
-                    child: VendorFinanceMetric(
-                      label: 'Revenue',
-                      amount: value.grossRevenue,
-                      icon: 'chart',
-                    ),
-                  ),
-                  SizedBox(
-                    width: width,
-                    child: VendorFinanceMetric(
-                      label: 'Net earnings',
-                      amount: value.netEarnings,
-                      icon: 'wallet',
-                    ),
-                  ),
-                  SizedBox(
-                    width: width,
-                    child: VendorFinanceMetric(
-                      label: 'Escrow',
-                      amount: value.escrowHeld,
-                      icon: 'shield',
-                    ),
-                  ),
-                  SizedBox(
-                    width: width,
-                    child: VendorFinanceMetric(
-                      label: 'Available',
-                      amount: value.availablePayout,
-                      icon: 'arrow',
-                      emphasis: true,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          _ => const SizedBox(height: 150, child: LoadingState()),
-        },
-        const SizedBox(height: 16),
-        DataCard(
-          title: 'Recent orders',
-          subtitle: 'Orders and status updates from your local demo dataset.',
-          trailing: TextButton(
-            onPressed: () => context.go('/vendor/orders'),
-            child: const Text('View all'),
-          ),
-          child: switch (ordersAsync) {
-            AsyncLoading() => const SizedBox(
-              height: 120,
-              child: LoadingState(),
-            ),
-            AsyncError(:final error) => ErrorState(
-              message: friendlyError(error),
-              onRetry: () => ref.invalidate(vendorOrdersPageProvider(null)),
-            ),
-            AsyncData(:final value) => Column(
-              children: [
-                for (final order in value.orders.take(3))
-                  VendorOrderCard(
-                    order: order,
-                    onTap: () => context.go('/vendor/orders'),
-                  ),
-              ],
-            ),
-            _ => const SizedBox(height: 120, child: LoadingState()),
-          },
-        ),
       ],
     );
   }

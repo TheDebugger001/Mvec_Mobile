@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api_client.dart';
-import '../core/api_config.dart';
 import '../core/utils.dart';
 import '../models/user.dart';
 
@@ -68,16 +67,6 @@ class AuthController extends Notifier<AuthState> {
 
   final _api = ApiClient.instance;
 
-  /// Locally-built super-admin session used when [kDemoMode] is on, so the app
-  /// can be demonstrated without a backend.
-  static final _demoUser = UserRecord(
-    id: 'demo-super-admin',
-    fullname: 'Demo Super Admin',
-    email: kAdminEmail,
-    role: 'super_admin',
-    status: 'active',
-  );
-
   Future<void> _restore() async {
     String? token;
     try {
@@ -90,14 +79,6 @@ class AuthController extends Notifier<AuthState> {
     }
     if (token == null) {
       state = const AuthState();
-      return;
-    }
-    if (kDemoMode) {
-      // The demo token is not a real JWT — skip the `/auth/me` round-trip.
-      state = AuthState(
-        session: AuthSession(token: token, user: _demoUser),
-        restoring: false,
-      );
       return;
     }
     try {
@@ -115,48 +96,6 @@ class AuthController extends Notifier<AuthState> {
 
   /// Logs in with an email or a phone number plus a password.
   Future<bool> login(String emailOrPhone, String password) async {
-    if (kDemoMode) {
-      // Demo mode: any non-empty credentials open a role-specific local account.
-      // Demo identities route to the admin, vendor or buyer experience locally.
-      final identity = emailOrPhone.trim();
-      if (identity.isEmpty || password.isEmpty) {
-        state = state.copyWith(
-          loading: false,
-          error: 'Enter an email and a password.',
-        );
-        return false;
-      }
-      final normalizedIdentity = identity.toLowerCase();
-      final role =
-          normalizedIdentity.contains('admin')
-              ? 'super_admin'
-              : normalizedIdentity.contains('supplier')
-              ? 'supplier'
-              : normalizedIdentity.contains('vendor')
-              ? 'vendor'
-              : normalizedIdentity.contains('affiliate')
-              ? 'affiliate'
-              : 'buyer';
-      state = AuthState(
-        session: AuthSession(
-          token: 'demo-token',
-          user:
-              role == 'super_admin'
-                  ? _demoUser
-                  : UserRecord(
-                    id: 'demo-$role',
-                    fullname:
-                        'Demo ${role[0].toUpperCase()}${role.substring(1)}',
-                    email: identity,
-                    role: role,
-                    companyName:
-                        role == 'supplier' ? 'Rwanda Fresh Produce Co.' : null,
-                    status: 'active',
-                  ),
-        ),
-      );
-      return true;
-    }
     state = state.copyWith(loading: true, clearError: true);
     try {
       final isEmail = emailOrPhone.contains('@');
@@ -188,28 +127,6 @@ class AuthController extends Notifier<AuthState> {
     String? companyName,
     required String password,
   }) async {
-    if (kDemoMode) {
-      // Demo mode: create the session locally, no backend call.
-      state = AuthState(
-        session: AuthSession(
-          token: 'demo-token',
-          user: UserRecord(
-            id: 'demo-$role',
-            fullname: fullName,
-            email: email?.trim().isNotEmpty == true ? email!.trim() : null,
-            phone: telephone.trim(),
-            role: role,
-            gender: gender,
-            companyName:
-                companyName?.trim().isNotEmpty == true
-                    ? companyName!.trim()
-                    : null,
-            status: 'active',
-          ),
-        ),
-      );
-      return true;
-    }
     state = state.copyWith(loading: true, clearError: true);
     try {
       final res = await _api.post(

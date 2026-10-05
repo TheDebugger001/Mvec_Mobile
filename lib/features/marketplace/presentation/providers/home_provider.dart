@@ -4,7 +4,7 @@ import '../../data/models/category_model.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/vendor_model.dart';
 import '../../data/services/home_service.dart';
-import '../../data/services/mock_home_service.dart';
+import '../../data/services/api_home_service.dart';
 
 /// Promotional banner shown inside the home feed carousel.
 class BannerItem {
@@ -109,14 +109,12 @@ class HomeFeed {
   }
 }
 
-/// State manager for the marketpce home feed.
+/// State manager for the marketplace home feed.
 ///
-/// Depends on an injected [HomeService] (defaults to [MockHomeService]) so the
-/// UI is decoupled from the data source and can switch to the real backend
-/// API later without any widget changes.
+/// The app is backend-first: the provider resolves the live API response and
+/// never ships with bundled mock marketplace content.
 class HomeProvider extends ChangeNotifier {
-  HomeProvider({HomeService? service})
-      : _service = service ?? MockHomeService();
+  HomeProvider({HomeService? service}) : _service = service ?? ApiHomeService();
 
   final HomeService _service;
 

@@ -1,98 +1,31 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/api_client.dart';
-import '../../../../core/api_config.dart';
 import '../models/affiliate_earnings.dart';
 import '../models/affiliate_marketing.dart';
 import '../models/affiliate_profile.dart';
 import 'affiliate_service.dart';
 import 'api_affiliate_service.dart';
-import 'mock_affiliate_service.dart';
 
-/// Data source that prefers the real backend and transparently falls back to
-/// bundled demo data when the API cannot be reached.
-///
-/// This is the default service for the affiliate module, so the same build
-/// works the day the affiliate endpoints ship and today, when there is no
-/// backend running — no environment flags, no manual wiring.
-///
-/// Degradation is sticky for the session: the first unreachable-endpoint
-/// failure switches to the mock store and stays there, so a single flaky
-/// request cannot split the UI between two sources.
-///
-/// When [kDemoMode] is on (or [forceDemo] is passed), the API is never
-/// touched and demo data is used immediately, so the module works fully
-/// offline without waiting on connection timeouts.
+/// Backend-first affiliate service. Any unavailable route is surfaced as an
+/// error instead of falling back to bundled demo data.
 class FallbackAffiliateService implements AffiliateService {
   FallbackAffiliateService(ApiClient api, {AffiliateService? fallback, bool? forceDemo})
       : _api = ApiAffiliateService(api),
-        _fallback = fallback ?? MockAffiliateService(),
-        _forceDemo = forceDemo ?? kDemoMode {
-    if (_forceDemo) {
-      _degraded = true;
-      lastFallbackReason = 'Demo mode — using bundled data.';
-    }
-  }
+        _fallback = fallback,
+        _forceDemo = forceDemo ?? false;
 
   final ApiAffiliateService _api;
-  final AffiliateService _fallback;
+  final AffiliateService? _fallback;
   final bool _forceDemo;
-  bool _degraded = false;
-
-  /// Human-readable reason for the last fallback, shown in a small banner.
-  String? lastFallbackReason;
 
   @override
-  bool get isDemo => _degraded && _fallback.isDemo;
+  bool get isDemo => false;
 
-  /// The most recent unreachable-endpoint problem, if any.
-  String? get fallbackReason => lastFallbackReason;
+  String? get fallbackReason => null;
 
-  /// Runs [call] against the live API; on a connectivity / not-implemented
-  /// error, switches to the demo store and reports [sourceLabel] to the caller.
   Future<T> _resolve<T>(Future<T> Function(AffiliateService s) call, {required String sourceLabel}) async {
-    if (_degraded) return call(_fallback);
-    try {
-      return await call(_api);
-    } catch (e) {
-      if (_isUnreachable(e)) {
-        _degraded = true;
-        lastFallbackReason = _reason(e);
-        return call(_fallback);
-      }
-      rethrow;
-    }
-  }
-
-  /// Connection failures (`statusCode == null`) and "module not shipped"
-  /// responses (404 / 501) trigger demo mode. Genuine client/server errors on
-  /// a live endpoint keep throwing so the UI can surface them.
-  ///
-  /// Note: [ApiClient] rejects with a `DioException` whose `.error` carries
-  /// the `ApiException`, so both shapes are unwrapped here.
-  bool _isUnreachable(Object e) {
-    if (e is ApiException) {
-      return e.statusCode == null || e.statusCode == 404 || e.statusCode == 501;
-    }
-    if (e is DioException) {
-      final nested = e.error;
-      if (nested is ApiException) return _isUnreachable(nested);
-      final code = e.response?.statusCode;
-      return code == null || code == 404 || code == 501;
-    }
-    return false;
-  }
-
-  String _reason(Object e) {
-    int? code;
-    if (e is ApiException) {
-      code = e.statusCode;
-    } else if (e is DioException) {
-      final nested = e.error;
-      code = nested is ApiException ? nested.statusCode : e.response?.statusCode;
-    }
-    if (code == 404 || code == 501) return 'Affiliate API not available yet — showing demo data.';
-    return 'Cannot reach the API — showing demo data.';
+    return call(_api);
   }
 
   @override

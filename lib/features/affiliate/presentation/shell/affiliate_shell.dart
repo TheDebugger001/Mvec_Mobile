@@ -46,7 +46,6 @@ class _AffiliateShellState extends ConsumerState<AffiliateShell> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final name = user?.display ?? 'Affiliate';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       key: _drawerKey,
       drawer: _buildDrawer(name, user?.email ?? ''),
@@ -54,7 +53,6 @@ class _AffiliateShellState extends ConsumerState<AffiliateShell> {
       body: Column(
         children: [
           _buildTopbar(name),
-          if (ref.watch(affiliateDemoModeProvider)) _buildDemoBanner(isDark),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 96),
@@ -62,31 +60,6 @@ class _AffiliateShellState extends ConsumerState<AffiliateShell> {
             ),
           ),
           _buildBottomNav(name),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDemoBanner(bool isDark) {
-    final reason = ref.watch(affiliateDemoReasonProvider);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      color: isDark ? MvColors.darkSurface2 : MvColors.infoBoxBg,
-      child: Row(
-        children: [
-          const MvIcon('shield', size: 14, color: MvColors.primaryDeep),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              reason ?? 'Showing bundled demo data while the affiliate API is unreachable.',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: isDark ? MvColors.darkMuted : MvColors.infoBoxText,
-              ),
-            ),
-          ),
         ],
       ),
     );

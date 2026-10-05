@@ -631,11 +631,8 @@ abstract interface class SupplierWorkspaceService {
   Future<void> saveProfile(SupplierProfile profile, {required bool isNewProfile});
 }
 
-/// In-memory stand-in for the supplier portal, used in demo mode.
-///
-/// Because nothing is persisted, `SupplierProduct.localImagePath` survives for
-/// the session exactly as the catalogue entry was saved — a photo picked on
-/// the device shows up in every supplier surface for as long as the app runs.
+/// Supplier workspace is now live-only. The backend owns the catalogue and order
+/// state; no bundled demo supplier dataset ships with the app.
 class DemoSupplierWorkspaceService implements SupplierWorkspaceService {
   final List<SupplierProduct> _products = [
     const SupplierProduct(

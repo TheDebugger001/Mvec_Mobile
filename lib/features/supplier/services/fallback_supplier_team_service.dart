@@ -6,11 +6,8 @@ import '../models/supplier_team.dart';
 import 'mock_supplier_team_service.dart';
 import 'supplier_team_service.dart';
 
-/// Runs every [SupplierTeamService] call against the live API and falls back to
-/// the bundled demo roster when the route does not exist yet.
-///
-/// Same sticky-session contract as `FallbackSupplierFinanceService`: the first
-/// unreachable response degrades the module for the rest of the session.
+/// Prefer the live supplier API and surface a real error instead of shipping demo
+/// content to the app.
 class FallbackSupplierTeamService implements SupplierTeamService {
   FallbackSupplierTeamService(
     ApiClient api, {
@@ -100,9 +97,8 @@ class FallbackSupplierTeamService implements SupplierTeamService {
       if (_isUnreachable(error)) {
         _degraded = true;
         lastFallbackReason =
-            'MVEC does not serve supplier $source yet — showing the bundled '
-            'demo roster instead.';
-        return call(_fallback);
+            'MVEC does not serve supplier $source yet — the app cannot show demo data.';
+        throw error;
       }
       rethrow;
     }

@@ -1,20 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/smart_table.dart';
-
-const _mockTrust = <Map<String, dynamic>>[
-  {'party': 'Rwanda Fresh', 'type': 'Vendor', 'score': 91, 'completion': 98, 'refundRate': 2, 'disputeRate': 1, 'rating': 4.8, 'trend': 'POSITIVE'},
-  {'party': 'KigaliTech Hub', 'type': 'Vendor', 'score': 86, 'completion': 94, 'refundRate': 5, 'disputeRate': 3, 'rating': 4.5, 'trend': 'POSITIVE'},
-  {'party': 'Artisan Link', 'type': 'Vendor', 'score': 84, 'completion': 96, 'refundRate': 6, 'disputeRate': 2, 'rating': 4.6, 'trend': 'POSITIVE'},
-  {'party': 'Gasabo Traders', 'type': 'Vendor', 'score': 71, 'completion': 88, 'refundRate': 11, 'disputeRate': 7, 'rating': 3.9, 'trend': 'NEGATIVE'},
-  {'party': 'Mountain Coffee', 'type': 'Vendor', 'score': 88, 'completion': 97, 'refundRate': 3, 'disputeRate': 2, 'rating': 4.7, 'trend': 'POSITIVE'},
-  {'party': 'Nyanza Textiles', 'type': 'Vendor', 'score': 68, 'completion': 85, 'refundRate': 14, 'disputeRate': 9, 'rating': 3.7, 'trend': 'NEGATIVE'},
-  {'party': 'Jean Bosco', 'type': 'Buyer', 'score': 79, 'completion': 92, 'refundRate': 8, 'disputeRate': 4, 'rating': 4.2, 'trend': 'POSITIVE'},
-  {'party': 'Aline U.', 'type': 'Buyer', 'score': 63, 'completion': 78, 'refundRate': 19, 'disputeRate': 12, 'rating': 3.5, 'trend': 'NEGATIVE'},
-];
 
 class TrustScreen extends ConsumerWidget {
   const TrustScreen({super.key});
@@ -70,23 +58,7 @@ class TrustScreen extends ConsumerWidget {
             MvColumn('Rating', 'Rating'),
             MvColumn('Trend', 'Trend'),
           ],
-          rows: [
-            for (final t in _mockTrust)
-              {
-                'Party': t['party'],
-                'Type': t['type'],
-                'Score': '${t['score']}',
-                'Completion': '${t['completion']}%',
-                'Refund rate': '${t['refundRate']}%',
-                'Dispute rate': '${t['disputeRate']}%',
-                'Rating': '★ ${t['rating']}',
-                'Trend': StatusChip(
-                  t['trend'],
-                  overrideColor: t['trend'].toString().toUpperCase() == 'POSITIVE' ? MvColors.successText : MvColors.errorText,
-                ),
-                '_t': t,
-              },
-          ],
+          rows: const [],
           actionsLabel: 'Details',
           pageSize: 8,
           rowActions: (row) => TableActionBtn(

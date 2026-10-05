@@ -111,7 +111,6 @@ class HomeScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
-                if (provider.isDemo) const _DemoNotice(),
                 _MarketplaceHero(
                   products: popularProducts,
                   onShopNow: onBrowseAll,
@@ -382,36 +381,6 @@ class _DealsBanner extends StatelessWidget {
             Icons.local_offer_outlined,
             size: 58,
             color: AppColors.primaryDeep.withValues(alpha: 0.8),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Small notice shown when the feed is served from the mock service.
-class _DemoNotice extends StatelessWidget {
-  const _DemoNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    final warning = AppColors.warning;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: warning.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: warning, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'You are previewing demo data. Live products will appear when '
-              'the marketplace API is connected.',
-              style: TextStyle(color: warning, fontSize: 12, height: 1.3),
-            ),
           ),
         ],
       ),

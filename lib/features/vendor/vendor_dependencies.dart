@@ -1,15 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
-import '../../core/api_config.dart';
 import 'models/vendor_finance.dart';
 import 'models/vendor_notification.dart';
 import 'models/vendor_order.dart';
 import 'models/vendor_settings.dart';
-import 'services/mock_vendor_finance_service.dart';
-import 'services/mock_vendor_notification_service.dart';
-import 'services/mock_vendor_order_service.dart';
-import 'services/mock_vendor_settings_service.dart';
 import 'services/vendor_finance_service.dart';
 import 'services/vendor_notification_service.dart';
 import 'services/vendor_order_service.dart';
@@ -17,31 +12,19 @@ import 'services/vendor_settings_service.dart';
 
 /// One compile-time switch keeps every vendor module on the same data source.
 final vendorOrderModuleProvider = Provider<VendorOrderService>(
-  (ref) =>
-      kDemoMode
-          ? MockVendorOrderService()
-          : ApiVendorOrderService(ref.watch(apiProvider)),
+  (ref) => ApiVendorOrderService(ref.watch(apiProvider)),
 );
 
 final vendorFinanceModuleProvider = Provider<VendorFinanceService>(
-  (ref) =>
-      kDemoMode
-          ? MockVendorFinanceService()
-          : ApiVendorFinanceService(ref.watch(apiProvider)),
+  (ref) => ApiVendorFinanceService(ref.watch(apiProvider)),
 );
 
 final vendorNotificationModuleProvider = Provider<VendorNotificationService>(
-  (ref) =>
-      kDemoMode
-          ? MockVendorNotificationService()
-          : ApiVendorNotificationService(ref.watch(apiProvider)),
+  (ref) => ApiVendorNotificationService(ref.watch(apiProvider)),
 );
 
 final vendorSettingsModuleProvider = Provider<VendorSettingsService>(
-  (ref) =>
-      kDemoMode
-          ? MockVendorSettingsService()
-          : ApiVendorSettingsService(ref.watch(apiProvider)),
+  (ref) => ApiVendorSettingsService(ref.watch(apiProvider)),
 );
 
 final vendorOrdersPageProvider = FutureProvider.autoDispose.family<

@@ -62,289 +62,6 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
     'messages': 'Messages',
   };
 
-  static const _seeds = <String, List<Map<String, dynamic>>>{
-    'categories': [
-      {'name': 'Electronics', 'productCount': 24, 'status': 'Active'},
-      {'name': 'Home & Kitchen', 'productCount': 18, 'status': 'Active'},
-      {'name': 'Fashion', 'productCount': 11, 'status': 'Active'},
-    ],
-    'inventory': [
-      {
-        'name': 'Wireless Headphones',
-        'sku': 'WH-204',
-        'stockQuantity': 4,
-        'lowStockThreshold': 10,
-        'status': 'Low stock',
-      },
-      {
-        'name': 'Smart Watch Active',
-        'sku': 'SW-118',
-        'stockQuantity': 28,
-        'lowStockThreshold': 5,
-        'status': 'In stock',
-      },
-      {
-        'name': 'USB-C Charger',
-        'sku': 'UC-055',
-        'stockQuantity': 2,
-        'lowStockThreshold': 8,
-        'status': 'Low stock',
-      },
-    ],
-    'purchases': [
-      {
-        'order': 'PO-2026-014',
-        'supplier': 'KigaliTech Hub',
-        'items': 3,
-        'total': 'RWF 840,000',
-        'status': 'IN_TRANSIT',
-      },
-      {
-        'order': 'PO-2026-011',
-        'supplier': 'Rwanda Electronics',
-        'items': 5,
-        'total': 'RWF 1,240,000',
-        'status': 'RECEIVED',
-      },
-    ],
-    'customers': [
-      {
-        'customer': 'Aline Uwase',
-        'orders': 12,
-        'totalSpent': 'RWF 2,450,000',
-        'lastPurchase': '26 Aug 2026',
-      },
-      {
-        'customer': 'Jean Paul',
-        'orders': 7,
-        'totalSpent': 'RWF 1,180,000',
-        'lastPurchase': '26 Aug 2026',
-      },
-      {
-        'customer': 'Mugisha Eric',
-        'orders': 5,
-        'totalSpent': 'RWF 780,000',
-        'lastPurchase': '27 Aug 2026',
-      },
-    ],
-    'delivery': [
-      {
-        'id': 'demo-order-1042',
-        'order': 'MV-260826-1042',
-        'delivery': 'Courier assigned',
-        'settlement': 'Held in escrow',
-        'status': 'PROCESSING',
-      },
-      {
-        'id': 'demo-order-0998',
-        'order': 'MV-260825-0998',
-        'delivery': 'Delivered',
-        'settlement': 'Released',
-        'status': 'DELIVERED',
-      },
-    ],
-    'refunds': [
-      {
-        'case': 'DSP-1048',
-        'order': 'MV-260825-0998',
-        'reason': 'Item arrived damaged',
-        'amount': 'RWF 48,000',
-        'status': 'UNDER_REVIEW',
-      },
-    ],
-    'suppliers': [
-      {
-        'name': 'KigaliTech Hub',
-        'userId': 'demo-user-1',
-        'verified': 'Verified',
-        'rating': '4.8',
-        'phone': '+250 788 123 456',
-        'category': 'Electronics',
-      },
-      {
-        'name': 'Rwanda Electronics',
-        'userId': 'demo-user-2',
-        'verified': 'Verified',
-        'rating': '4.6',
-        'phone': '+250 788 234 567',
-        'category': 'Electronics',
-      },
-    ],
-    'stores': [
-      {
-        'store': 'Kigali Tech Store',
-        'category': 'Electronics',
-        'products': 148,
-        'rating': '4.9',
-        'status': 'Active',
-      },
-    ],
-    'promotions': [
-      {
-        'promotion': 'Back to School',
-        'code': 'SCHOOL15',
-        'discount': '15%',
-        'status': 'Active',
-        'ends': '10 Sep 2026',
-      },
-      {
-        'promotion': 'Weekend Tech Sale',
-        'code': 'TECH10',
-        'discount': '10%',
-        'status': 'Scheduled',
-        'ends': '05 Sep 2026',
-      },
-    ],
-    'reviews': [
-      {
-        'product': 'Wireless Headphones',
-        'customer': 'Aline Uwase',
-        'rating': '5 stars',
-        'review': 'Great sound and battery',
-        'response': '',
-      },
-      {
-        'product': 'Smart Watch Active',
-        'customer': 'Jean Paul',
-        'rating': '4 stars',
-        'review': 'Good value',
-        'response': '',
-      },
-    ],
-    'shipping': [
-      {
-        'zone': 'Kigali',
-        'fee': 'RWF 2,000',
-        'eta': 'Same day',
-        'method': 'Standard / Pickup',
-        'status': 'Active',
-      },
-      {
-        'zone': 'Outside Kigali',
-        'fee': 'RWF 5,000',
-        'eta': '1-3 days',
-        'method': 'Standard',
-        'status': 'Active',
-      },
-    ],
-    'team': [
-      {
-        'member': 'Eric M.',
-        'role': 'Owner',
-        'permissions': 'All permissions',
-        'status': 'Active',
-      },
-      {
-        'member': 'Sarah K.',
-        'role': 'Store Manager',
-        'permissions': 'Products, Orders, Analytics',
-        'status': 'Active',
-      },
-      {
-        'member': 'David N.',
-        'role': 'Inventory Manager',
-        'permissions': 'Inventory, Products',
-        'status': 'Active',
-      },
-      {
-        'member': 'Alice R.',
-        'role': 'Sales Staff',
-        'permissions': 'Orders, Customers',
-        'status': 'Active',
-      },
-    ],
-    'advertisements': [
-      {
-        'campaign': 'Back to School Tech',
-        'budget': 'RWF 250,000',
-        'clicks': 840,
-        'impressions': 18400,
-        'ctr': '4.6%',
-        'status': 'Active',
-      },
-      {
-        'campaign': 'Weekend Audio',
-        'budget': 'RWF 120,000',
-        'clicks': 312,
-        'impressions': 9700,
-        'ctr': '3.2%',
-        'status': 'Paused',
-      },
-    ],
-    'reports': [
-      {
-        'report': 'Sales report',
-        'range': '01 Aug - 27 Aug',
-        'availability': 'Live in Analytics',
-      },
-      {
-        'report': 'Product performance',
-        'range': '01 Aug - 27 Aug',
-        'availability': 'Live in Products',
-      },
-      {
-        'report': 'Inventory report',
-        'range': 'Today',
-        'availability': 'Live in Inventory',
-      },
-    ],
-    'settings': [
-      {
-        'setting': 'Business information',
-        'value': 'Rwanda · Kigali',
-        'status': 'Complete',
-      },
-      {
-        'setting': 'Notifications',
-        'value': 'Orders · Stock · Payouts',
-        'status': 'Enabled',
-      },
-      {
-        'setting': 'Security',
-        'value': 'Password + sessions',
-        'status': 'Protected',
-      },
-    ],
-    'analytics': [
-      {
-        'product': 'Wireless Headphones',
-        'status': 'ACTIVE',
-        'stockQuantity': 4,
-        'price': 'RWF 48,000',
-      },
-      {
-        'product': 'Smart Watch Active',
-        'status': 'ACTIVE',
-        'stockQuantity': 28,
-        'price': 'RWF 85,000',
-      },
-    ],
-    'messages': [
-      {
-        'participant': 'Aline Uwase · Buyer',
-        'lastMessage': 'Can you confirm delivery timing?',
-        'updatedAt': 'Today · 10:24',
-      },
-      {
-        'participant': 'KigaliTech Hub · Supplier',
-        'lastMessage': 'The next shipment arrives Friday.',
-        'updatedAt': 'Yesterday',
-      },
-    ],
-  };
-
-  static const _localModules = <String>{
-    'stores',
-    'customers',
-    'promotions',
-    'reviews',
-    'shipping',
-    'team',
-    'reports',
-    'settings',
-    'advertisements',
-  };
-
   List<Map<String, dynamic>> _rows = [];
   bool _loading = true;
   String? _error;
@@ -386,21 +103,11 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
     });
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (kDemoMode || _localModules.contains(_module)) {
-        final saved = prefs.getString('mvec_vendor_mobile_$_module');
-        final data =
-            saved == null
-                ? _seeds[_module] ?? const []
-                : jsonDecode(saved) as List;
-        _rows =
-            data.map((row) => Map<String, dynamic>.from(row as Map)).toList();
-        _affiliateEnabled =
-            prefs.getBool('mvec_vendor_affiliate_enabled') ?? true;
-      } else {
-        _rows = await _fetchLive();
-      }
+      _affiliateEnabled = prefs.getBool('mvec_vendor_affiliate_enabled') ?? true;
+      _rows = await _fetchLive();
     } catch (error) {
       _error = friendlyError(error);
+      _rows = const [];
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -808,20 +515,10 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
 
   Future<void> _confirmDelivery(String id) async {
     try {
-      if (kDemoMode) {
-        await _save([
-          for (final row in _rows)
-            if ('${row['id'] ?? row['_id'] ?? row['order']}' == id)
-              {...row, 'status': 'DELIVERED', 'settlement': 'Released'}
-            else
-              row,
-        ]);
-      } else {
-        await ApiClient.instance.patch(
-          '/orders/$id/deliver',
-          body: {'deliveryOtp': _deliveryOtp[id]},
-        );
-      }
+      await ApiClient.instance.patch(
+        '/orders/$id/deliver',
+        body: {'deliveryOtp': _deliveryOtp[id]},
+      );
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(
@@ -838,10 +535,6 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
   }
 
   Future<void> _startConversation(Map<String, dynamic> supplier) async {
-    if (kDemoMode) {
-      context.go('/vendor/messages');
-      return;
-    }
     final user =
         supplier['userId'] ??
         (supplier['user'] is Map ? supplier['user']['_id'] : supplier['user']);
@@ -901,7 +594,7 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
   }
 
   Future<void> _edit({Map<String, dynamic>? existing}) async {
-    final fields = (_seeds[_module]?.first.keys ?? const <String>[]).toList();
+    final fields = const <String>[];
     final controllers = {
       for (final field in fields)
         field: TextEditingController(text: '${existing?[field] ?? ''}'),
