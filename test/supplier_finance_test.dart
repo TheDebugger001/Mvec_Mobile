@@ -1,6 +1,10 @@
-// Covers the supplier "Finance & Insights" module: the demo dataset's internal
-// consistency, the payout validation that guards a withdrawal, and the screens
-// rendering from the bundled data so the pages can be exercised in a test.
+// Covers the supplier "Finance & Insights" module: that the shipped
+// services derive their figures rather than shipping a bundled dataset, that a
+// payout is validated against the balance the summary shows, and that the
+// screens render from whatever the service returns.
+//
+// The fixture service lives in test/helpers so it cannot ship; the API and empty
+// adapters are exercised over a fake transport.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,169 +19,238 @@ import 'package:mvec_mobile/features/supplier/screens/supplier_analytics_screen.
 import 'package:mvec_mobile/features/supplier/screens/supplier_payments_screen.dart';
 import 'package:mvec_mobile/features/supplier/screens/supplier_reviews_screen.dart';
 import 'package:mvec_mobile/features/supplier/screens/supplier_transactions_screen.dart';
-import 'package:mvec_mobile/features/supplier/services/mock_supplier_finance_service.dart';
+import 'package:mvec_mobile/features/supplier/services/empty_supplier_finance_service.dart';
 import 'package:mvec_mobile/features/supplier/services/supplier_finance_service.dart';
 import 'package:mvec_mobile/features/supplier/supplier_dependencies.dart';
 
+import 'helpers/fake_api.dart';
+import 'helpers/fake_supplier_finance.dart';
+
 void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
+  tearDown(restoreApiTransport);
 
-  test('the demo finance module is the bundled dataset', () {
-    final service = MockSupplierFinanceService(delay: Duration.zero);
-    expect(service.isDemo, isTrue);
-    expect(service.fallbackReason, isNull);
-  });
+  group('the empty adapter', () {
+    test('reports zeroed balances and empty collections, never an error', () async {
+      final service = EmptySupplierFinanceService();
 
-  test('the summary reconciles with the ledger it is derived from', () async {
-    final service = MockSupplierFinanceService(delay: Duration.zero);
-    final summary = await service.summary();
-    final ledger = await service.ledger(limit: 500);
+      final summary = await service.summary();
+      expect(summary.grossSales, 0);
+      expect(summary.netEarnings, 0);
+      expect(summary.isConsistent, isTrue);
+      expect(await service.ledger(), isEmpty);
+      expect(await service.payouts(), isEmpty);
+      expect(await service.reviews(), isEmpty);
+      expect((await service.analytics(SupplierReportRange.last30Days)).orderCount, 0);
+    });
 
-    // net = gross − commission, on every metric card.
-    expect(summary.isConsistent, isTrue);
+    test('isDemo stays false and writes are refused', () async {
+      final service = EmptySupplierFinanceService();
 
-    num sumOf(SupplierLedgerKind kind) => ledger
-        .where((e) => e.kind == kind)
-        .fold<num>(0, (sum, e) => sum + e.amount);
-
-    // Gross sales and commission come straight off the ledger rows.
-    expect(
-      summary.grossSales,
-      closeTo(
-        sumOf(SupplierLedgerKind.sale) - sumOf(SupplierLedgerKind.refund),
-        1,
-      ),
-    );
-    expect(summary.commission, closeTo(sumOf(SupplierLedgerKind.commission), 1));
-
-    // Escrow held is the holds that were never released.
-    expect(
-      summary.escrowHeld,
-      closeTo(
-        sumOf(SupplierLedgerKind.escrowHold) -
-            sumOf(SupplierLedgerKind.escrowRelease),
-        1,
-      ),
-    );
-
-    // The demo supplier must be able to withdraw something on first open.
-    expect(summary.availablePayout, greaterThan(kMinSupplierPayoutAmount));
-    expect(summary.pendingPayouts, greaterThan(0));
-    expect(summary.series, isNotEmpty);
-  });
-
-  test('every demo withdrawal has a matching ledger row', () async {
-    final service = MockSupplierFinanceService(delay: Duration.zero);
-    final payouts = await service.payouts();
-    final ledger = await service.ledger(limit: 500);
-    final payoutIds = ledger
-        .where((e) => e.kind == SupplierLedgerKind.payout)
-        .map((e) => e.id)
-        .toSet();
-
-    expect(payouts, isNotEmpty);
-    for (final payout in payouts) {
-      expect(payoutIds, contains('sup-led-${payout.id}'));
-    }
-  });
-
-  test(
-    'a payout request is validated against the available balance',
-    () async {
-      final service = MockSupplierFinanceService(delay: Duration.zero);
-      final before = await service.summary();
-
-      // Below the platform minimum.
-      await expectLater(
-        service.requestPayout(
-          amount: 1000,
+      expect(service.isDemo, isFalse);
+      expect(
+        () => service.requestPayout(
+          amount: 100000,
           method: SupplierPayoutMethod.mtnMomo,
           destination: '+250788000001',
         ),
         throwsA(isA<Exception>()),
       );
-
-      // No destination on file.
-      await expectLater(
-        service.requestPayout(
-          amount: 500000,
-          method: SupplierPayoutMethod.mtnMomo,
-          destination: '   ',
-        ),
-        throwsA(isA<Exception>()),
-      );
-
-      // More than the supplier has cleared.
-      await expectLater(
-        service.requestPayout(
-          amount: before.availablePayout + 1,
-          method: SupplierPayoutMethod.bankTransfer,
-          destination: 'Equity ••••2088',
-        ),
-        throwsA(isA<Exception>()),
-      );
-
-      final request = await service.requestPayout(
-        amount: 500000,
-        method: SupplierPayoutMethod.mtnMomo,
-        destination: '+250 788 000 001',
-        note: 'Weekly settlement',
-      );
-      expect(request.isPending, isTrue);
-
-      final after = await service.summary();
-      expect(after.availablePayout, before.availablePayout - 500000);
-      expect(after.pendingPayouts, before.pendingPayouts + 500000);
-
-      // The withdrawal shows up on both the ledger and the payout list, newest
-      // first, so the pages stay in step with each other.
-      final ledger = await service.ledger(limit: 5);
-      expect(ledger.first.kind, SupplierLedgerKind.payout);
-      expect(ledger.first.balanceAfter, before.availablePayout - 500000);
-      expect((await service.payouts()).first.id, request.id);
-    },
-  );
-
-  test('analytics reports a distinct total for every range', () async {
-    final service = MockSupplierFinanceService(delay: Duration.zero);
-
-    final month = await service.analytics(SupplierReportRange.last30Days);
-    final quarter = await service.analytics(SupplierReportRange.last3Months);
-    final year = await service.analytics(SupplierReportRange.lastYear);
-
-    expect(month.orderCount, greaterThan(0));
-    expect(quarter.orderCount, greaterThan(month.orderCount));
-    expect(year.orderCount, greaterThan(quarter.orderCount));
-
-    // A wider window can never bill less money.
-    expect(quarter.grossSales, greaterThan(month.grossSales));
-    expect(year.grossSales, greaterThan(quarter.grossSales));
-
-    expect(month.unitsSold, greaterThan(0));
-    expect(month.averageOrderValue, greaterThan(0));
-    expect(month.series, isNotEmpty);
-    expect(month.categories, isNotEmpty);
-    expect(month.topProducts, isNotEmpty);
-    // The category shares must add up to the whole, not overflow it.
-    final share = month.categories.fold<num>(0, (sum, c) => sum + c.share);
-    expect(share, closeTo(1, 0.02));
+    });
   });
 
-  test('the review summary is derived from the reviews themselves', () async {
-    final service = MockSupplierFinanceService(delay: Duration.zero);
-    final reviews = await service.reviews();
-    final summary = SupplierReviewSummary.fromReviews(reviews);
+  group('ApiSupplierFinanceService', () {
+    test('requests the token-scoped routes and maps the summary', () async {
+      final api = fakeApi([
+        FakeRoute('GET', '/suppliers/me/finance/summary', body: {
+          'summary': {
+            'grossSales': 1000000,
+            'commission': 50000,
+            'netEarnings': 950000,
+            'availablePayout': 400000,
+          },
+        }),
+      ]);
 
-    expect(reviews, isNotEmpty);
-    expect(summary.total, reviews.length);
-    expect(summary.distribution.fold<int>(0, (a, b) => a + b), reviews.length);
-    expect(summary.average, greaterThan(4));
-    expect(summary.average, lessThanOrEqualTo(5));
-    expect(summary.percentFor(5), closeTo(summary.distribution[0] / reviews.length * 100, .01));
+      final summary = await ApiSupplierFinanceService(api.client).summary();
+
+      expect(api.recorded.single.path, '/suppliers/me/finance/summary');
+      expect(summary.isConsistent, isTrue);
+      expect(summary.availablePayout, 400000);
+    });
+
+    test('no supplier id is ever sent — the token identifies the caller', () async {
+      final api = fakeApi([
+        FakeRoute('GET', '/suppliers/me/finance/ledger', body: {'entries': <dynamic>[]}),
+      ]);
+
+      await ApiSupplierFinanceService(api.client).ledger();
+
+      final sent = api.recorded.single;
+      expect(sent.path, '/suppliers/me/finance/ledger');
+      // The caller is identified by the bearer token, so the route carries no
+      // supplier id in the path.
+      expect(sent.path, matches(RegExp(r'^/suppliers/me/')));
+      expect(sent.query.keys, isNot(contains('supplierId')));
+    });
+
+    test('a ledger kind filter is sent as a query parameter', () async {
+      final api = fakeApi([
+        FakeRoute('GET', '/suppliers/me/finance/ledger', body: {'entries': <dynamic>[]}),
+      ]);
+
+      await ApiSupplierFinanceService(api.client).ledger(
+        kind: SupplierLedgerKind.payout,
+      );
+
+      expect(api.recorded.single.query['kind'], 'PAYOUT');
+    });
+
+    test('the analytics range is sent as a query parameter', () async {
+      final api = fakeApi([
+        FakeRoute('GET', '/suppliers/me/finance/analytics', body: {
+          'analytics': {'orderCount': 12, 'grossSales': 500000},
+        }),
+      ]);
+
+      final snapshot = await ApiSupplierFinanceService(api.client).analytics(
+        SupplierReportRange.last3Months,
+      );
+
+      expect(api.recorded.single.query['range'], '3m');
+      expect(snapshot.orderCount, 12);
+    });
+  });
+
+  group('the finance figures reconcile with the ledger they come from', () {
+    test('net equals gross minus commission on every card', () async {
+      final service = seededFinance();
+      final summary = await service.summary();
+
+      expect(summary.isConsistent, isTrue);
+    });
+
+    test('the supplier can withdraw something on first open', () async {
+      final service = seededFinance();
+      final summary = await service.summary();
+
+      expect(summary.availablePayout, greaterThan(kMinSupplierPayoutAmount));
+      expect(summary.series, isNotEmpty);
+    });
+
+    test('every withdrawal appears on the ledger and the payout list', () async {
+      final service = seededFinance();
+      final request = await service.requestPayout(
+        amount: 100000,
+        method: SupplierPayoutMethod.mtnMomo,
+        destination: '+250788000001',
+      );
+
+      final ledger = await service.ledger();
+      expect(
+        ledger.any((e) => e.kind == SupplierLedgerKind.payout && e.amount == request.amount),
+        isTrue,
+      );
+      expect((await service.payouts()).first.id, request.id);
+    });
+
+    test(
+      'a payout request is validated against the available balance',
+      () async {
+        final service = seededFinance();
+        final before = await service.summary();
+
+        // Below the platform minimum.
+        await expectLater(
+          service.requestPayout(
+            amount: 1000,
+            method: SupplierPayoutMethod.mtnMomo,
+            destination: '+250788000001',
+          ),
+          throwsA(isA<Exception>()),
+        );
+
+        // No destination on file.
+        await expectLater(
+          service.requestPayout(
+            amount: 500000,
+            method: SupplierPayoutMethod.mtnMomo,
+            destination: '   ',
+          ),
+          throwsA(isA<Exception>()),
+        );
+
+        // More than the supplier has cleared.
+        await expectLater(
+          service.requestPayout(
+            amount: before.availablePayout + 1,
+            method: SupplierPayoutMethod.bankTransfer,
+            destination: 'Equity bank account',
+          ),
+          throwsA(isA<Exception>()),
+        );
+
+        final request = await service.requestPayout(
+          amount: 50000,
+          method: SupplierPayoutMethod.mtnMomo,
+          destination: '+250 788 000 001',
+          note: 'Weekly settlement',
+        );
+        expect(request.isPending, isTrue);
+
+        final after = await service.summary();
+        expect(after.availablePayout, before.availablePayout - 50000);
+        expect(after.pendingPayouts, before.pendingPayouts + 50000);
+
+        // The withdrawal shows up on both the ledger and the payout list, newest
+        // first, so the pages stay in step with each other.
+        final ledger = await service.ledger(limit: 5);
+        expect(ledger.first.kind, SupplierLedgerKind.payout);
+        expect((await service.payouts()).first.id, request.id);
+      },
+    );
+
+    test('analytics reports a distinct total for every range', () async {
+      final service = seededFinance();
+
+      final month = await service.analytics(SupplierReportRange.last30Days);
+      final quarter = await service.analytics(SupplierReportRange.last3Months);
+      final year = await service.analytics(SupplierReportRange.lastYear);
+
+      expect(month.orderCount, greaterThan(0));
+      expect(quarter.orderCount, greaterThan(month.orderCount));
+      expect(year.orderCount, greaterThan(quarter.orderCount));
+
+      // A wider window can never bill less money.
+      expect(quarter.grossSales, greaterThan(month.grossSales));
+      expect(year.grossSales, greaterThan(quarter.grossSales));
+
+      expect(month.unitsSold, greaterThan(0));
+      expect(month.averageOrderValue, greaterThan(0));
+      expect(month.series, isNotEmpty);
+      expect(month.categories, isNotEmpty);
+      expect(month.topProducts, isNotEmpty);
+      // The category shares must add up to the whole, not overflow it.
+      final share = month.categories.fold<num>(0, (sum, c) => sum + c.share);
+      expect(share, closeTo(1, 0.02));
+    });
+
+    test('the review summary is derived from the reviews themselves', () async {
+      final service = seededFinance();
+      final reviews = await service.reviews();
+      final summary = SupplierReviewSummary.fromReviews(reviews);
+
+      expect(reviews, isNotEmpty);
+      expect(summary.total, reviews.length);
+      expect(summary.distribution.fold<int>(0, (a, b) => a + b), reviews.length);
+      expect(summary.average, greaterThan(4));
+      expect(summary.average, lessThanOrEqualTo(5));
+      expect(summary.percentFor(5), closeTo(summary.distribution[0] / reviews.length * 100, .01));
+    });
   });
 
   group('supplier finance screens', () {
-    Widget wrap(Widget child, MockSupplierFinanceService service) =>
+    Widget wrap(Widget child, FakeSupplierFinanceService service) =>
         ProviderScope(
           overrides: [
             supplierFinanceModuleProvider.overrideWith((ref) => service),
@@ -196,11 +269,11 @@ void main() {
     /// `pump` would hang until the test times out.
     ProviderContainer containerOf(
       WidgetTester tester,
-      MockSupplierFinanceService service,
+      FakeSupplierFinanceService service,
     ) => ProviderScope.containerOf(tester.element(find.byType(Scaffold).first));
 
     testWidgets('payments page shows the withdrawable balance', (tester) async {
-      final service = MockSupplierFinanceService(delay: Duration.zero);
+      final service = seededFinance();
       await tester.pumpWidget(wrap(const SupplierPaymentsScreen(), service));
       await tester.pumpAndSettle();
 
@@ -213,7 +286,7 @@ void main() {
     testWidgets('the payout form rejects an amount above the balance', (
       tester,
     ) async {
-      final service = MockSupplierFinanceService(delay: Duration.zero);
+      final service = seededFinance();
       await tester.pumpWidget(wrap(const SupplierPaymentsScreen(), service));
       await tester.pumpAndSettle();
 
@@ -235,7 +308,7 @@ void main() {
     testWidgets('a valid request posts and lands in the payout list', (
       tester,
     ) async {
-      final service = MockSupplierFinanceService(delay: Duration.zero);
+      final service = seededFinance();
       await tester.pumpWidget(wrap(const SupplierPaymentsScreen(), service));
       await tester.pumpAndSettle();
 
@@ -269,7 +342,7 @@ void main() {
     });
 
     testWidgets('transactions page filters the ledger by kind', (tester) async {
-      final service = MockSupplierFinanceService(delay: Duration.zero);
+      final service = seededFinance();
       await tester.pumpWidget(wrap(const SupplierTransactionsScreen(), service));
       await tester.pumpAndSettle();
 
@@ -285,7 +358,7 @@ void main() {
     });
 
     testWidgets('analytics page switches period', (tester) async {
-      final service = MockSupplierFinanceService(delay: Duration.zero);
+      final service = seededFinance();
       await tester.pumpWidget(wrap(const SupplierAnalyticsScreen(), service));
       await tester.pumpAndSettle();
 
@@ -318,7 +391,7 @@ void main() {
     testWidgets('reviews page renders the rating and every review', (
       tester,
     ) async {
-      final service = MockSupplierFinanceService(delay: Duration.zero);
+      final service = seededFinance();
       await tester.pumpWidget(wrap(const SupplierReviewsScreen(), service));
       await tester.pumpAndSettle();
 
