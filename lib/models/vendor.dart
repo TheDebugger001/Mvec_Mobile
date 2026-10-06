@@ -135,45 +135,46 @@ class StoreProfile {
   Map<String, dynamic>? raw;
 
   factory StoreProfile.fromJson(Map<String, dynamic> j) {
-    final addr = j['address'] is Map ? Map<String, dynamic>.from(j['address']) : const <String, dynamic>{};
-    final socials = j['socials'] is Map ? Map<String, dynamic>.from(j['socials']) : const <String, dynamic>{};
-    final contact = j['contact'] is Map ? Map<String, dynamic>.from(j['contact']) : const <String, dynamic>{};
-    final owner = j['owner'] is Map ? Map<String, dynamic>.from(j['owner']) : const <String, dynamic>{};
-    final docs = j['documents'];
+    final vendor = j['vendor'] is Map ? Map<String, dynamic>.from(j['vendor']) : j;
+    final addr = vendor['address'] is Map ? Map<String, dynamic>.from(vendor['address']) : const <String, dynamic>{};
+    final socials = vendor['socials'] is Map ? Map<String, dynamic>.from(vendor['socials']) : const <String, dynamic>{};
+    final contact = vendor['contact'] is Map ? Map<String, dynamic>.from(vendor['contact']) : const <String, dynamic>{};
+    final owner = vendor['owner'] is Map ? Map<String, dynamic>.from(vendor['owner']) : const <String, dynamic>{};
+    final docs = vendor['documents'];
     return StoreProfile(
-      id: j['_id'] ?? j['id'],
-      name: j['storeName'] ?? j['businessName'] ?? j['name'] ?? j['companyName'],
-      slug: j['slug'],
-      logo: j['logo'] ?? j['logoUrl'] ?? j['image'],
-      description: j['description'] ?? j['about'] ?? j['bio'],
-      email: j['email'] ?? contact['email'] ?? owner['email'],
-      phone: j['phone'] ?? j['telephone'] ?? j['contactNumber'] ?? contact['phone'] ?? owner['phone'],
-      facebook: j['facebook'] ?? j['facebookUrl'] ?? socials['facebook'],
-      instagram: j['instagram'] ?? j['instagramUrl'] ?? socials['instagram'],
-      twitter: j['twitter'] ?? j['twitterUrl'] ?? socials['twitter'] ?? j['x'],
-      website: j['website'] ?? j['webUrl'] ?? socials['website'],
-      street: j['street'] ?? j['addressLine'] ?? addr['street'] ?? addr['address'],
-      city: j['city'] ?? j['town'] ?? addr['city'],
-      state: j['state'] ?? j['province'] ?? addr['state'] ?? addr['province'],
-      country: j['country'] ?? addr['country'],
-      postalCode: j['postalCode'] ?? j['zip'] ?? j['zipCode'] ?? addr['postalCode'] ?? addr['zip'],
-      deliveryNote: j['deliveryNote'] ?? j['deliveryInstructions'] ?? (j['delivery'] is Map ? (j['delivery'] as Map)['note']?.toString() : null),
-      deliveryFee: (j['deliveryFee'] ?? (j['delivery'] is Map ? (j['delivery'] as Map)['fee'] : null)) as num?,
-      deliveryTime: j['deliveryTime'] ?? (j['delivery'] is Map ? (j['delivery'] as Map)['time']?.toString() : null),
-      verificationStatus: _up(j['verificationStatus'] ?? j['verification'] ?? j['verified']),
-      status: _up(j['status'] ?? j['accountStatus'] ?? j['operationalStatus']),
-      rating: (j['rating'] ?? j['averageRating'] ?? j['storeRating'])?.toDouble(),
-      ratingCount: _int(j['ratingCount'] ?? j['totalRatings'] ?? j['reviewsCount']),
-      productCount: _int(j['productCount'] ?? j['productsCount'] ?? j['totalProducts']),
-      submittedAt: parseDate(j['submittedAt'] ?? j['verificationSubmittedAt'] ?? j['createdAt']),
-      rejectionReason: j['rejectionReason'] ?? j['verificationNote'] ?? j['rejectionNote'],
+      id: vendor['_id'] ?? vendor['id'] ?? j['_id'] ?? j['id'],
+      name: vendor['businessName'] ?? vendor['storeName'] ?? vendor['name'] ?? vendor['companyName'],
+      slug: vendor['slug'],
+      logo: vendor['logoUrl'] ?? vendor['logo'] ?? vendor['image'] ?? vendor['bannerUrl'],
+      description: vendor['description'] ?? vendor['about'] ?? vendor['bio'],
+      email: vendor['email'] ?? contact['email'] ?? owner['email'],
+      phone: vendor['phone'] ?? vendor['telephone'] ?? vendor['contactNumber'] ?? contact['phone'] ?? owner['phone'],
+      facebook: vendor['facebook'] ?? vendor['facebookUrl'] ?? socials['facebook'],
+      instagram: vendor['instagram'] ?? vendor['instagramUrl'] ?? socials['instagram'],
+      twitter: vendor['twitter'] ?? vendor['twitterUrl'] ?? socials['twitter'] ?? vendor['x'],
+      website: vendor['website'] ?? vendor['webUrl'] ?? socials['website'],
+      street: vendor['street'] ?? vendor['addressLine'] ?? addr['street'] ?? addr['address'],
+      city: vendor['city'] ?? vendor['town'] ?? addr['city'],
+      state: vendor['state'] ?? vendor['province'] ?? addr['state'] ?? addr['province'],
+      country: vendor['country'] ?? addr['country'],
+      postalCode: vendor['postalCode'] ?? vendor['zip'] ?? vendor['zipCode'] ?? addr['postalCode'] ?? addr['zip'],
+      deliveryNote: vendor['deliveryNote'] ?? vendor['deliveryInstructions'] ?? (vendor['delivery'] is Map ? (vendor['delivery'] as Map)['note']?.toString() : null),
+      deliveryFee: (vendor['deliveryFee'] ?? (vendor['delivery'] is Map ? (vendor['delivery'] as Map)['fee'] : null)) as num?,
+      deliveryTime: vendor['deliveryTime'] ?? (vendor['delivery'] is Map ? (vendor['delivery'] as Map)['time']?.toString() : null),
+      verificationStatus: _up(vendor['verificationStatus'] ?? vendor['verification'] ?? vendor['verified']),
+      status: _up(vendor['status'] ?? vendor['accountStatus'] ?? vendor['operationalStatus']),
+      rating: (vendor['rating'] ?? vendor['averageRating'] ?? vendor['storeRating'])?.toDouble(),
+      ratingCount: _int(vendor['ratingCount'] ?? vendor['totalRatings'] ?? vendor['reviewsCount']),
+      productCount: _int(vendor['productCount'] ?? vendor['productsCount'] ?? vendor['totalProducts']),
+      submittedAt: parseDate(vendor['submittedAt'] ?? vendor['verificationSubmittedAt'] ?? vendor['createdAt']),
+      rejectionReason: vendor['rejectionReason'] ?? vendor['verificationNote'] ?? vendor['rejectionNote'],
       documents: docs is List
           ? docs
               .whereType<Map>()
               .map((e) => VerificationDocument.fromJson(Map<String, dynamic>.from(e)))
               .toList()
           : null,
-      raw: j,
+      raw: vendor,
     );
   }
 
@@ -220,28 +221,20 @@ class StoreProfile {
     ];
   }
 
-  /// The request body for `PUT /stores`.
+  /// The request body for the vendor profile endpoints.
   ///
-  /// Only non-empty fields are sent so a partial edit never blanks a value the
-  /// vendor did not touch.
+  /// The backend only accepts the vendor profile fields it owns
+  /// (`businessName`, `email`, `phone`, `logoUrl`, `bannerUrl`, `location` and a
+  /// few text fields). Keep the payload limited to those keys so a partial edit
+  /// does not silently null out fields the seller left untouched.
   Map<String, dynamic> toBody() => {
-        'storeName': _v(name),
-        'description': _v(description),
-        'logo': _v(logo),
-        'email': _v(email),
-        'phone': _v(phone),
-        'facebook': _v(facebook),
-        'instagram': _v(instagram),
-        'twitter': _v(twitter),
-        'website': _v(website),
-        'street': _v(street),
-        'city': _v(city),
-        'state': _v(state),
-        'country': _v(country),
-        'postalCode': _v(postalCode),
-        'deliveryNote': _v(deliveryNote),
-        'deliveryFee': deliveryFee,
-        'deliveryTime': _v(deliveryTime),
+        if ((name ?? '').trim().isNotEmpty) 'businessName': name!.trim(),
+        if ((description ?? '').trim().isNotEmpty) 'description': description!.trim(),
+        if ((logo ?? '').trim().isNotEmpty) 'logoUrl': logo!.trim(),
+        if ((email ?? '').trim().isNotEmpty) 'email': email!.trim(),
+        if ((phone ?? '').trim().isNotEmpty) 'phone': phone!.trim(),
+        if ((website ?? '').trim().isNotEmpty) 'website': website!.trim(),
+        if ((city ?? '').trim().isNotEmpty) 'location': city!.trim(),
       }..removeWhere((_, v) => v == null);
 
   static Object? _v(String? s) {

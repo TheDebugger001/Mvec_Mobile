@@ -553,6 +553,30 @@ class MockAffiliateService implements AffiliateService {
     });
   }
 
+  @override
+  Future<AffiliateDashboard> fetchDashboard() async {
+    await _latency();
+    return AffiliateDashboard.fromJson({
+      'wallet': _wallet,
+      'links': _links,
+      'totalClicks': _sum('clickCount'),
+      'totalConversions': _sum('conversionCount'),
+      'payouts': _payouts,
+    });
+  }
+
+  @override
+  Future<void> trackClick(String code) async {
+    await _latency();
+    for (final l in _links) {
+      if (l['affiliateCode'] == code || l['code'] == code) {
+        l['clickCount'] = ((l['clickCount'] as num?) ?? 0) + 1;
+        l['lastClickedAt'] = _now.toIso8601String();
+        return;
+      }
+    }
+  }
+
   // ------------------------------------------------------------------
   // Links
   // ------------------------------------------------------------------
@@ -718,6 +742,25 @@ class MockAffiliateService implements AffiliateService {
     await _latency();
     final rows = status == null ? _commissions : _commissions.where((c) => c['status'] == status).toList();
     return rows.map(AffiliateCommission.fromJson).toList();
+  }
+
+  @override
+  Future<List<AffiliateConversion>> fetchConversions() async {
+    await _latency();
+    return [
+      for (final c in _commissions)
+        if ((c['status'] ?? '').toString().toUpperCase() != 'REVERSED')
+          AffiliateConversion.fromJson({
+            'id': c['_id'],
+            'referralCode': c['linkCode'] ?? c['affiliateCode'],
+            'product': c['product'],
+            'order': c['orderNumber'],
+            'conversionValue': c['orderTotal'],
+            'commissionEarned': c['amount'],
+            'status': 'COMPLETED',
+            'convertedAt': c['createdAt'],
+          }),
+    ];
   }
 
   // ------------------------------------------------------------------

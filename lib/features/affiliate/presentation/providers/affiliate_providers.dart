@@ -28,6 +28,10 @@ final affiliateOverviewProvider = FutureProvider.autoDispose<AffiliateOverview>(
   return ref.watch(affiliateServiceProvider).fetchOverview();
 });
 
+final affiliateDashboardProvider = FutureProvider.autoDispose<AffiliateDashboard>((ref) async {
+  return ref.watch(affiliateServiceProvider).fetchDashboard();
+});
+
 // ---------- Links ----------
 
 final affiliateLinksProvider = FutureProvider.autoDispose<List<AffiliateLink>>((ref) async {
@@ -58,6 +62,10 @@ final affiliateWalletProvider = FutureProvider.autoDispose<AffiliateWallet>((ref
 
 final affiliateCommissionsProvider = FutureProvider.autoDispose<List<AffiliateCommission>>((ref) async {
   return ref.watch(affiliateServiceProvider).fetchCommissions();
+});
+
+final affiliateConversionsProvider = FutureProvider.autoDispose<List<AffiliateConversion>>((ref) async {
+  return ref.watch(affiliateServiceProvider).fetchConversions();
 });
 
 // ---------- Payouts ----------

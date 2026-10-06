@@ -4,27 +4,56 @@
 bool isEmail(String value) =>
     RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim());
 
-bool isPhone(String value) {
-  final digits = value.replaceAll(RegExp(r'[^\d]'), '');
-  return digits.length >= 9 && digits.length <= 15;
-}
+bool isPhone(String value) => phoneProblem(value) == null;
 
-String? validateEmailOrPhone(String? value) {
-  final v = (value ?? '').trim();
-  if (v.isEmpty) return 'Enter your email or telephone.';
-  if (v.contains('@')) {
-    if (!isEmail(v)) return 'Enter a valid email address.';
-  } else if (!isPhone(v)) {
-    return 'Enter a valid telephone number.';
+/// Explains exactly what to correct about a telephone number.
+///
+/// The old wording ("Enter a valid telephone number.") gave no clue whether
+/// digits were missing, extra, or simply not a Rwandan number, so a
+/// half-typed number looked like a rejected login. Returns `null` when the
+/// number is acceptable. Mirrors the backend's `describePhoneIssue`.
+String? phoneProblem(String value) {
+  final v = value.trim();
+  final digits = v.replaceAll(RegExp(r'[^\d]'), '');
+
+  if (digits.isEmpty) {
+    return 'Enter a Rwandan telephone number, e.g. 0788123456 or +250788123456.';
+  }
+
+  final hasCountryCode = digits.startsWith('250');
+  final expected = hasCountryCode ? 12 : 10;
+
+  if (digits.length < expected) {
+    return 'Your telephone number is incomplete: ${digits.length} of $expected digits entered. '
+        'Enter all $expected digits, e.g. 0788123456.';
+  }
+  if (digits.length > expected) {
+    return 'Your telephone number is too long: ${digits.length} digits entered, but a Rwandan '
+        'number has $expected. Example: 0788123456.';
+  }
+
+  final local = hasCountryCode ? '0${digits.substring(3)}' : digits;
+  if (!RegExp(r'^07[2389]\d{7}$').hasMatch(local)) {
+    return 'That is not a valid Rwandan number. It must start with 07 (e.g. 0788123456) '
+        'or +2507 (e.g. +250788123456).';
   }
   return null;
 }
 
+String? validateEmailOrPhone(String? value) {
+  final v = (value ?? '').trim();
+  if (v.isEmpty) return 'Enter your email or telephone number.';
+  if (v.contains('@')) {
+    if (!isEmail(v)) return 'Enter a valid email address, e.g. you@example.com.';
+    return null;
+  }
+  return phoneProblem(v);
+}
+
 String? validatePhone(String? value) {
   final v = (value ?? '').trim();
-  if (v.isEmpty) return 'Enter your telephone number.';
-  if (!isPhone(v)) return 'Enter a valid telephone number.';
-  return null;
+  if (v.isEmpty) return 'Enter your telephone number, e.g. 0788123456.';
+  return phoneProblem(v);
 }
 
 String? validateEmail(String? value) {

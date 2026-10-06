@@ -282,9 +282,22 @@ class ReviewRecord {
 }
 
 class SupportCase {
-  SupportCase({this.id, this.subject, this.order, this.requester, this.message, this.status, this.priority, this.createdAt});
+  SupportCase({
+    this.id,
+    this.ticketNumber,
+    this.subject,
+    this.category,
+    this.order,
+    this.requester,
+    this.message,
+    this.status,
+    this.priority,
+    this.createdAt,
+  });
   String? id;
+  String? ticketNumber;
   String? subject;
+  String? category;
   String? order;
   String? requester;
   String? message;
@@ -294,10 +307,12 @@ class SupportCase {
 
   factory SupportCase.fromJson(Map<String, dynamic> j) {
     final o = j['order'] ?? j['orderId'];
-    final u = j['user'] ?? j['requester'] ?? j['createdBy'];
+    final u = j['openedBy'] ?? j['user'] ?? j['requester'] ?? j['createdBy'];
     return SupportCase(
       id: j['_id'] ?? j['id'] ?? j['caseId'],
+      ticketNumber: j['ticketNumber'],
       subject: j['subject'] ?? j['title'],
+      category: j['category'],
       order: o is Map ? (o['orderNumber'] ?? o['_id'])?.toString() : o?.toString(),
       requester: u is Map ? (u['Fullname'] ?? u['email'])?.toString() : u?.toString(),
       message: j['message'] ?? j['description'],

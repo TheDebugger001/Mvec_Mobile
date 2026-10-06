@@ -20,73 +20,36 @@ abstract class VendorSettingsService {
 
 /// Live adapter for the vendor settings endpoints.
 class ApiVendorSettingsService implements VendorSettingsService {
-  ApiVendorSettingsService(this._api);
+  ApiVendorSettingsService();
 
-  final ApiClient _api;
+  Never _unsupported() => throw ApiException(
+    'The backend does not expose vendor settings, staff management, or '
+    'password-management APIs.',
+  );
 
   @override
   bool get isDemo => false;
 
   @override
-  Future<VendorStoreSettings> settings() async {
-    final response = await _api.get('/stores/mine/settings');
-    return VendorStoreSettings.fromJson(
-      singleJson(response, ['settings', 'store', 'data']),
-    );
-  }
+  Future<VendorStoreSettings> settings() async => _unsupported();
 
   @override
-  Future<VendorStoreSettings> save(VendorStoreSettings settings) async {
-    final response = await _api.put(
-      '/stores/mine/settings',
-      body: settings.toJson(),
-    );
-    return VendorStoreSettings.fromJson(
-      singleJson(response, ['settings', 'store', 'data']),
-    );
-  }
+  Future<VendorStoreSettings> save(VendorStoreSettings settings) async =>
+      _unsupported();
 
   @override
   Future<VendorStoreSettings> inviteStaff({
     required VendorStaffMember member,
     required String password,
-  }) async {
-    final response = await _api.post(
-      '/stores/mine/settings/staff',
-      body: {
-        'name': member.name,
-        'email': member.email,
-        'role': member.role.name,
-        'permissions': [
-          for (final permission in member.permissions) permission.slug,
-        ],
-        'password': password,
-      },
-    );
-    return VendorStoreSettings.fromJson(
-      singleJson(response, ['settings', 'store', 'data']),
-    );
-  }
+  }) async => _unsupported();
 
   @override
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
-  }) async {
-    await _api.post(
-      '/stores/mine/security/password',
-      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
-    );
-  }
+  }) async => _unsupported();
 
   @override
-  Future<VendorStoreSettings> setStaffActive(String id, bool active) async {
-    final response = await _api.patch(
-      '/stores/mine/settings/staff/$id',
-      body: {'active': active},
-    );
-    return VendorStoreSettings.fromJson(
-      singleJson(response, ['settings', 'store', 'data']),
-    );
-  }
+  Future<VendorStoreSettings> setStaffActive(String id, bool active) async =>
+      _unsupported();
 }

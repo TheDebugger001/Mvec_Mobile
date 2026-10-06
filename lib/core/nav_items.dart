@@ -177,7 +177,6 @@ class VendorNav {
       NavItem('Categories', '/vendor/categories', 'tag'),
       NavItem('Inventory', '/vendor/inventory', 'grid'),
       NavItem('Shipping', '/vendor/shipping', 'shop'),
-      NavItem('My Store', '/vendor/stores', 'shop'),
       NavItem('Store Profile', '/vendor/profile', 'user'),
     ]),
     NavGroup('Orders & customers', [

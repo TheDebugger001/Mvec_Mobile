@@ -235,6 +235,81 @@ class AffiliateStats {
   num get averageCommission => conversions == 0 ? 0 : commission / conversions;
 }
 
+/// One row of `GET /affiliates/conversions` — a completed referral that paid
+/// out commission.
+class AffiliateConversion {
+  const AffiliateConversion({
+    this.id,
+    this.referralCode,
+    this.productId,
+    this.product,
+    this.order,
+    this.conversionValue,
+    this.commissionEarned,
+    this.status,
+    this.convertedAt,
+  });
+
+  final String? id;
+  final String? referralCode;
+  final String? productId;
+  final String? product;
+  final String? order;
+  final num? conversionValue;
+  final num? commissionEarned;
+  final String? status;
+  final DateTime? convertedAt;
+
+  factory AffiliateConversion.fromJson(Map<String, dynamic> j) {
+    final product = j['product'] ?? j['targetProduct'];
+    final order = j['order'];
+    return AffiliateConversion(
+      id: j['_id'] ?? j['id'],
+      referralCode: (j['referralCode'] ?? j['affiliateCode'] ?? j['linkCode'])?.toString(),
+      productId: j['productId']?.toString() ?? (product is Map ? (product['_id'] ?? product['id'])?.toString() : null),
+      product: product is Map ? (product['name'] ?? product['title'])?.toString() : product?.toString(),
+      order: order is Map ? (order['orderNumber'] ?? order['_id'])?.toString() : order?.toString(),
+      conversionValue: numOrNull(j['conversionValue'] ?? j['orderTotal'] ?? j['value']),
+      commissionEarned: numOrNull(j['commissionEarned'] ?? j['commission'] ?? j['commissionAmount'] ?? j['amount']),
+      status: (j['status'] ?? 'COMPLETED').toString().toUpperCase(),
+      convertedAt: parseDate(j['convertedAt'] ?? j['createdAt']),
+    );
+  }
+
+  String get title => product ?? order ?? 'Referral conversion';
+}
+
+/// Aggregated payload of `GET /affiliates/me/dashboard`: wallet, links,
+/// payout history and the headline totals in one round trip.
+class AffiliateDashboard {
+  const AffiliateDashboard({
+    this.wallet = const AffiliateWallet(),
+    this.links = const [],
+    this.totalClicks = 0,
+    this.totalConversions = 0,
+    this.payouts = const [],
+  });
+
+  final AffiliateWallet wallet;
+  final List<AffiliateLink> links;
+  final int totalClicks;
+  final int totalConversions;
+  final List<AffiliatePayout> payouts;
+
+  factory AffiliateDashboard.fromJson(Map<String, dynamic> j) {
+    final wallet = j['wallet'];
+    return AffiliateDashboard(
+      wallet: wallet is Map
+          ? AffiliateWallet.fromJson(Map<String, dynamic>.from(wallet))
+          : const AffiliateWallet(),
+      links: listJsonOf(j['links'], AffiliateLink.fromJson),
+      totalClicks: (j['totalClicks'] as num?)?.toInt() ?? 0,
+      totalConversions: (j['totalConversions'] as num?)?.toInt() ?? 0,
+      payouts: listJsonOf(j['payouts'], AffiliatePayout.fromJson),
+    );
+  }
+}
+
 num? numOrNull(dynamic v) => v is num ? v : (v is String ? num.tryParse(v) : null);
 
 int? _int(dynamic v) {
@@ -253,7 +328,7 @@ List<T> listJsonOf<T>(dynamic json, T Function(Map<String, dynamic>) map) {
     return json.whereType<Map>().map((e) => map(Map<String, dynamic>.from(e))).toList();
   }
   if (json is Map) {
-    for (final key in const ['data', 'items', 'results', 'topLinks', 'links']) {
+    for (final key in const ['data', 'items', 'results', 'topLinks', 'links', 'products']) {
       final v = json[key];
       if (v is List) return v.whereType<Map>().map((e) => map(Map<String, dynamic>.from(e))).toList();
     }

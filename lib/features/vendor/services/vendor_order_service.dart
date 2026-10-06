@@ -58,17 +58,21 @@ class ApiVendorOrderService implements VendorOrderService {
 
   @override
   Future<VendorOrderPage> orders({VendorOrderStatus? status, String search = ''}) async {
-    final res = await _api.get('/stores/mine/orders', query: {
-      'page': 1,
-      'limit': 50,
-      if (status != null) 'status': status.slug,
-      if (search.trim().isNotEmpty) 'search': search.trim(),
-    });
+    final res = await _api.get('/orders/vendor/orders');
     final list = listJson(res, ['orders', 'data']).map(VendorOrder.fromJson).toList();
+    final filtered = list.where((order) {
+      if (status != null && order.status != status) return false;
+      if (search.trim().isEmpty) return true;
+      final term = search.trim().toLowerCase();
+      return order.number.toLowerCase().contains(term) ||
+          order.buyerName.toLowerCase().contains(term) ||
+          order.items.any((item) => item.name.toLowerCase().contains(term));
+    }).toList();
     return VendorOrderPage(
-      orders: list,
+      orders: filtered,
       counts: {
-        for (final s in VendorOrderStatus.values) s: list.where((o) => o.status == s).length,
+        for (final s in VendorOrderStatus.values)
+          s: list.where((o) => o.status == s).length,
         null: list.length,
       },
     );
@@ -76,7 +80,7 @@ class ApiVendorOrderService implements VendorOrderService {
 
   @override
   Future<VendorOrder> order(String id) async {
-    final res = await _api.get('/stores/mine/orders/$id');
+    final res = await _api.get('/orders/$id');
     return VendorOrder.fromJson(singleJson(res, ['order']));
   }
 
@@ -88,8 +92,16 @@ class ApiVendorOrderService implements VendorOrderService {
     String? courierName,
     String? deliveryOtp,
   }) async {
-    final res = await _api.patch('/stores/mine/orders/$id/status', body: {
-      'status': status.slug,
+    final res = await _api.patch('/orders/$id/status', body: {
+      'status': status == VendorOrderStatus.pending
+          ? 'PENDING'
+          : status == VendorOrderStatus.processing
+              ? 'PROCESSING'
+              : status == VendorOrderStatus.shipped
+                  ? 'SHIPPED'
+                  : status == VendorOrderStatus.delivered
+                      ? 'DELIVERED'
+                      : 'CANCELLED',
       if (trackingCode != null && trackingCode.trim().isNotEmpty) 'trackingCode': trackingCode.trim(),
       if (courierName != null && courierName.trim().isNotEmpty) 'courierName': courierName.trim(),
       if (deliveryOtp != null && deliveryOtp.trim().isNotEmpty) 'deliveryOtp': deliveryOtp.trim(),
@@ -99,9 +111,8 @@ class ApiVendorOrderService implements VendorOrderService {
 
   @override
   Future<VendorOrder> cancel(String id, {String? reason}) async {
-    final res = await _api.post('/stores/mine/orders/$id/cancel', body: {
-      if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
-    });
-    return VendorOrder.fromJson(singleJson(res, ['order']));
+    throw ApiException(
+      'The backend only allows buyers or administrators to cancel orders.',
+    );
   }
 }

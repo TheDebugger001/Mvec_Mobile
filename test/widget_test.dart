@@ -5,6 +5,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -175,6 +176,23 @@ Color? _scaffoldBackground(WidgetTester tester) =>
     tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor;
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const secureStorage = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(secureStorage, (call) async {
+        switch (call.method) {
+          case 'read':
+            return null;
+          case 'write':
+          case 'delete':
+            return true;
+          default:
+            return null;
+        }
+      });
+
   // Keep widget tests offline and deterministic: never fetch fonts at runtime.
   GoogleFonts.config.allowRuntimeFetching = false;
 
@@ -884,7 +902,7 @@ void main() {
   });
 
   group('providers', () {
-    test('commerce provider keeps cart and wishlist in sync', () {
+    test('commerce provider keeps cart and wishlist in sync', () async {
       final provider = CommerceProvider();
       final product = _demoProduct();
 
@@ -893,14 +911,14 @@ void main() {
       expect(provider.isWishlisted(product), isTrue);
       expect(provider.wishlistItems, hasLength(1));
 
-      provider.addToCart(product);
+      await provider.addToCart(product);
       expect(provider.isWishlisted(product), isFalse);
       expect(provider.cartItems, hasLength(1));
 
-      provider.addToCart(product);
+      await provider.addToCart(product);
       expect(provider.cartItems.single.quantity, 2);
 
-      provider.clearCart();
+      await provider.clearCart();
       expect(provider.cartItems, isEmpty);
     });
   });

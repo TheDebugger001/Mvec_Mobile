@@ -100,6 +100,7 @@ class MockVendorFinanceService implements VendorFinanceService {
   Future<PayoutRequest> requestPayout({
     required num amount,
     required PayoutMethod method,
+    required String accountName,
     required String destination,
     String? note,
   }) async {

@@ -18,7 +18,6 @@ class VendorWorkspaceScreen extends ConsumerStatefulWidget {
     '/vendor/categories',
     '/vendor/inventory',
     '/vendor/shipping',
-    '/vendor/stores',
     '/vendor/purchases',
     '/vendor/customers',
     '/vendor/delivery',
@@ -103,7 +102,8 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
     });
     try {
       final prefs = await SharedPreferences.getInstance();
-      _affiliateEnabled = prefs.getBool('mvec_vendor_affiliate_enabled') ?? true;
+      _affiliateEnabled =
+          prefs.getBool('mvec_vendor_affiliate_enabled') ?? true;
       _rows = await _fetchLive();
     } catch (error) {
       _error = friendlyError(error);
@@ -119,14 +119,8 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
         '/categories',
         query: {'tree': 'false'},
       ),
-      'inventory' => await ApiClient.instance.get(
-        '/stores/mine/products',
-        query: {'page': 1, 'limit': 100},
-      ),
-      'analytics' => await ApiClient.instance.get(
-        '/stores/mine/products',
-        query: {'page': 1, 'limit': 100},
-      ),
+      'inventory' => await ApiClient.instance.get('/products/vendor/me'),
+      'analytics' => await ApiClient.instance.get('/products/vendor/me'),
       'refunds' => await ApiClient.instance.get(
         '/disputes/mine',
         query: {'page': 1, 'limit': 100},

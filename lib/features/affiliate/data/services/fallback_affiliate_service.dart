@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 
 import '../../../../core/api_client.dart';
 import '../models/affiliate_earnings.dart';
@@ -41,6 +40,9 @@ class FallbackAffiliateService implements AffiliateService {
   Future<AffiliateOverview> fetchOverview() => _resolve((s) => s.fetchOverview(), sourceLabel: 'overview');
 
   @override
+  Future<AffiliateDashboard> fetchDashboard() => _resolve((s) => s.fetchDashboard(), sourceLabel: 'dashboard');
+
+  @override
   Future<List<AffiliateLink>> fetchLinks() => _resolve((s) => s.fetchLinks(), sourceLabel: 'links');
 
   @override
@@ -71,6 +73,12 @@ class FallbackAffiliateService implements AffiliateService {
 
   @override
   Future<List<AffiliateCommission>> fetchCommissions({String? status}) => _resolve((s) => s.fetchCommissions(status: status), sourceLabel: 'commissions');
+
+  @override
+  Future<List<AffiliateConversion>> fetchConversions() => _resolve((s) => s.fetchConversions(), sourceLabel: 'conversions');
+
+  @override
+  Future<void> trackClick(String code) => _resolve((s) => s.trackClick(code), sourceLabel: 'track');
 
   @override
   Future<List<AffiliatePayout>> fetchPayouts() => _resolve((s) => s.fetchPayouts(), sourceLabel: 'payouts');

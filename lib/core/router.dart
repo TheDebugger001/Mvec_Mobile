@@ -61,6 +61,7 @@ import '../screens/suppliers/supplier_overview_screen.dart';
 import '../screens/suppliers/supplier_products_screen.dart';
 import '../screens/suppliers/supplier_profile_screen.dart';
 import '../screens/suppliers/supplier_shell.dart';
+import '../screens/suppliers/supplier_support_screen.dart';
 import '../screens/suppliers/supplier_unavailable_screen.dart';
 import '../features/supplier/screens/supplier_analytics_screen.dart';
 import '../features/supplier/screens/supplier_delivery_screen.dart';
@@ -68,7 +69,6 @@ import '../features/supplier/screens/supplier_payments_screen.dart';
 import '../features/supplier/screens/supplier_reports_screen.dart';
 import '../features/supplier/screens/supplier_reviews_screen.dart';
 import '../features/supplier/screens/supplier_supply_requests_screen.dart';
-import '../features/supplier/screens/supplier_team_screen.dart';
 import '../features/supplier/screens/supplier_transactions_screen.dart';
 import '../screens/system/system_screen.dart';
 import '../screens/transactions/transactions_screen.dart';
@@ -97,24 +97,23 @@ class _UnavailablePage {
   final String detail;
 }
 
-/// The remaining entries of the frontend's `supplierNavGroups` that the API
-/// does not serve. Everything the supplier module answers from its own bundled
-/// dataset has its own route above; what is left here is messaging and the
-/// in-portal support desk.
+/// The remaining supplier destinations the backend does not serve. Team
+/// management is only available for vendor-owned stores through `/api/staff`;
+/// it is not a supplier team API.
 const _unavailableSupplierPages = <_UnavailablePage>[
+  _UnavailablePage(
+    '/supplier/team',
+    'Team / Staff',
+    'users',
+    'Supplier team management is not available yet. The backend staff API is '
+        'for vendor-owned stores only.',
+  ),
   _UnavailablePage(
     '/supplier/messages',
     'Messages',
     'users',
     'Supplier messaging is not available yet. Use MVEC support for anything '
         'urgent.',
-  ),
-  _UnavailablePage(
-    '/supplier/support',
-    'MVEC Support',
-    'bell',
-    'The in-portal support desk is not available yet. Contact the MVEC team '
-        'through your usual channel.',
   ),
 ];
 
@@ -329,11 +328,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: SupplierReviewsScreen(),
             ),
       ),
-      // Operations. The backend does not serve `/suppliers/me/deliveries`,
-      // `/suppliers/me/supply-requests` or `/suppliers/me/team` yet, so
-      // `FallbackSupplierOperationsService` and `FallbackSupplierTeamService`
-      // answer from the bundled dataset and label the pages as such — see
-      // `features/supplier/supplier_dependencies.dart`.
+      // Operations. The backend does not serve `/suppliers/me/deliveries` or
+      // `/suppliers/me/supply-requests` yet, so
+      // `FallbackSupplierOperationsService` labels those pages as unsupported.
       GoRoute(
         path: '/supplier/supply-requests',
         builder:
@@ -351,14 +348,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
       ),
       GoRoute(
-        path: '/supplier/team',
-        builder:
-            (context, state) => const SupplierShell(
-              path: '/supplier/team',
-              child: SupplierTeamScreen(),
-            ),
-      ),
-      GoRoute(
         path: '/supplier/settings',
         builder:
             (context, state) => const SupplierShell(
@@ -372,6 +361,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             (context, state) => const SupplierShell(
               path: '/supplier/notifications',
               child: SupplierNotificationsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/support',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/support',
+              child: SupplierSupportScreen(),
             ),
       ),
       // Legacy alias kept so older deep links keep working.
@@ -802,6 +799,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: VendorProfileScreen(),
             ),
       ),
+      GoRoute(path: '/vendor/stores', redirect: (_, __) => '/vendor/profile'),
       GoRoute(
         path: '/vendor/orders',
         builder:

@@ -95,7 +95,112 @@ class _AffiliateDashboardScreenState
         ),
         const SizedBox(height: 16),
         _topLinks(statsAsync),
+        const SizedBox(height: 16),
+        _latestPayouts(),
       ],
+    );
+  }
+
+  /// Payout history straight from `GET /affiliates/me/dashboard`, so the
+  /// landing page shows withdrawal state without a second round trip to
+  /// `/affiliates/payouts`.
+  Widget _latestPayouts() {
+    final async = ref.watch(affiliateDashboardProvider);
+    return async.when(
+      loading: () => const DataCard(title: 'Latest payouts', child: LoadingState()),
+      error:
+          (e, _) => DataCard(
+            title: 'Latest payouts',
+            child: ErrorState(
+              message: friendlyError(e),
+              onRetry: () => ref.invalidate(affiliateDashboardProvider),
+            ),
+          ),
+      data: (dashboard) {
+        final payouts = dashboard.payouts.take(5).toList();
+        return DataCard(
+          title: 'Latest payouts',
+          subtitle: 'Your most recent withdrawal requests and their status.',
+          trailing: TextButton(
+            onPressed: () => context.go('/affiliate/payouts'),
+            child: const Text('View all'),
+          ),
+          child:
+              payouts.isEmpty
+                  ? const EmptyState(message: 'No payout requests yet')
+                  : Column(
+                    children: [
+                      for (final p in payouts)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: MvColors.metricIconBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: MvIcon(
+                                    'wallet',
+                                    size: 15,
+                                    color: MvColors.primaryDeep,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      p.payoutNumber ?? p.id ?? 'Payout',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      [
+                                        if (p.paymentMethod != null) p.paymentMethod!,
+                                        if (p.createdAt != null) shortDateTime(p.createdAt!),
+                                      ].join(' · '),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(context).hintColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    money(p.amount ?? 0),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: MvColors.primaryDeep,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  StatusChip(p.status ?? 'PENDING'),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+        );
+      },
     );
   }
 

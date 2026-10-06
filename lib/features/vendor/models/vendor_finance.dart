@@ -305,7 +305,12 @@ class PayoutRequest {
         parseDate(j['requestedAt'] ?? j['createdAt'] ?? j['date']) ??
         DateTime.now(),
     status: '${j['status'] ?? 'PENDING'}'.toUpperCase(),
-    destination: j['destination'] == null ? null : '${j['destination']}',
+    destination:
+        j['destination'] ??
+                (j['payoutDetails'] is Map
+                    ? (j['payoutDetails'] as Map)['accountNumber']
+                    : null)
+            ?.toString(),
     note: j['note'] == null ? null : '${j['note']}',
     arrivedAt: parseDate(j['arrivedAt'] ?? j['paidAt']),
   );

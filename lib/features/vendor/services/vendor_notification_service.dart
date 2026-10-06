@@ -26,7 +26,7 @@ class ApiVendorNotificationService implements VendorNotificationService {
     NotificationCategory? category,
   }) async {
     final response = await _api.get(
-      '/stores/mine/notifications',
+      '/notifications/mine',
       query: {if (category != null) 'category': category.slug},
     );
     return listJson(response, [
@@ -37,10 +37,12 @@ class ApiVendorNotificationService implements VendorNotificationService {
 
   @override
   Future<VendorNotification> setRead(String id, bool read) async {
-    final response = await _api.patch(
-      '/stores/mine/notifications/$id/read',
-      body: {'read': read},
-    );
+    if (!read) {
+      throw ApiException(
+        'The backend does not support marking notifications unread.',
+      );
+    }
+    final response = await _api.patch('/notifications/$id/read');
     return VendorNotification.fromJson(
       singleJson(response, ['notification', 'data']),
     );

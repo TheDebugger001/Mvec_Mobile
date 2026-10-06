@@ -46,6 +46,14 @@ class ApiAffiliateService implements AffiliateService {
     return AffiliateOverview.fromJson(res is Map ? Map<String, dynamic>.from(res) : const {});
   }
 
+  /// `GET /affiliates/me/dashboard` → `{ success, data: { wallet, links,
+  /// totalClicks, totalConversions, payouts } }`.
+  @override
+  Future<AffiliateDashboard> fetchDashboard() async {
+    final res = await _api.get('/affiliates/me/dashboard');
+    return AffiliateDashboard.fromJson(singleJson(res, ['data', 'dashboard']));
+  }
+
   // ---------- Referral links ----------
 
   @override
@@ -124,6 +132,23 @@ class ApiAffiliateService implements AffiliateService {
       if (status != null) 'status': status,
     });
     return listJsonOf(res, AffiliateCommission.fromJson);
+  }
+
+  /// `GET /affiliates/conversions` → `{ success, data: [...] }`.
+  @override
+  Future<List<AffiliateConversion>> fetchConversions() async {
+    final res = await _api.get('/affiliates/conversions');
+    return listJsonOf(res, AffiliateConversion.fromJson);
+  }
+
+  // ---------- Tracking ----------
+
+  /// Public click beacon. A blocked/self-referral response is still a
+  /// successful round trip, so nothing is surfaced to the caller.
+  @override
+  Future<void> trackClick(String code) async {
+    if (code.isEmpty) return;
+    await _api.get('/affiliates/track/$code');
   }
 
   // ---------- Payouts ----------

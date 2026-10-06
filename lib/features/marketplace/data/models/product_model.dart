@@ -6,6 +6,7 @@
 class Product {
   const Product({
     required this.id,
+    this.apiId,
     required this.name,
     required this.slug,
     required this.description,
@@ -26,6 +27,7 @@ class Product {
   });
 
   final int id;
+  final String? apiId;
   final String name;
   final String slug;
   final String description;
@@ -75,6 +77,7 @@ class Product {
 
     return Product(
       id: _toInt(json['id']),
+      apiId: (json['_id'] ?? json['id'])?.toString(),
       name: _toString(json['name']),
       slug: _toString(json['slug']),
       description: _toString(json['description']),

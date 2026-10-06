@@ -77,6 +77,7 @@ void main() {
       final payout = await service.requestPayout(
         amount: 1200000,
         method: PayoutMethod.mtnMomo,
+        accountName: 'Vendor Owner',
         destination: '+250788000001',
       );
       expect(payout.isPending, isTrue);

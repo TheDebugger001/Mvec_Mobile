@@ -12,7 +12,7 @@ class ApiHomeService implements HomeService {
 
   @override
   Future<Map<String, dynamic>> getHomeFeed() async {
-    final res = await _api.get('/home');
+    final res = await _api.get('/search/home');
     if (res is Map<String, dynamic>) return res;
     if (res is Map) return Map<String, dynamic>.from(res);
     throw const FormatException('Home feed response was not an object');

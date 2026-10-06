@@ -131,9 +131,24 @@ class ProductCard extends StatelessWidget {
                             height: 28,
                           ),
                           onPressed: product.inStock
-                              ? () => context
-                                    .read<CommerceProvider>()
-                                    .addToCart(detailProduct)
+                              ? () async {
+                                  try {
+                                    await context
+                                        .read<CommerceProvider>()
+                                        .addToCart(detailProduct);
+                                  } catch (error) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Could not add item to cart: $error',
+                                              ),
+                                            ),
+                                          );
+                                    }
+                                  }
+                                }
                               : null,
                           icon: const Icon(Icons.add_shopping_cart, size: 18),
                         ),

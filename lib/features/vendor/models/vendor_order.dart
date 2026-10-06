@@ -252,8 +252,8 @@ class VendorOrder {
   bool get escrowReleased => status == VendorOrderStatus.delivered;
 
   factory VendorOrder.fromJson(Map<String, dynamic> j) {
-    final buyer = j['buyer'] is Map
-        ? Map<String, dynamic>.from(j['buyer'] as Map)
+    final buyer = (j['buyer'] ?? j['user']) is Map
+        ? Map<String, dynamic>.from((j['buyer'] ?? j['user']) as Map)
         : const <String, dynamic>{};
     final address = j['deliveryAddress'] is Map
         ? Map<String, dynamic>.from(j['deliveryAddress'] as Map)
@@ -289,7 +289,9 @@ class VendorOrder {
       subtotal: subtotal,
       commission: commission,
       shipping: _num(j['shipping'] ?? j['shippingFee'] ?? j['deliveryFee']) ?? 0,
-      status: VendorOrderStatus.parse('${j['status'] ?? ''}'),
+      status: VendorOrderStatus.parse(
+        '${j['status'] ?? j['orderStatus'] ?? ''}',
+      ),
       items: items,
       courierName: _str(j['courierName'] ?? courier['name']),
       trackingCode: _str(j['trackingCode'] ?? j['trackingNumber'] ?? courier['trackingNumber']),

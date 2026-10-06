@@ -27,6 +27,9 @@ class ApiClient {
         onRequest: (options, handler) async {
           final token = await readToken();
           if (token != null) options.headers['Authorization'] = 'Bearer $token';
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
           handler.next(options);
         },
         // Dio's `handler.reject` only accepts a `DioException`, so this
@@ -152,7 +155,7 @@ class Paged<T> {
     if (json is List) {
       raw = json;
     } else if (json is Map) {
-      final data = json['data'] ?? json['orders'] ?? json['entries'] ?? json['categories'] ?? json['cases'] ?? json['conversations'] ?? json['notifications'];
+      final data = json['data'] ?? json['orders'] ?? json['products'] ?? json['entries'] ?? json['categories'] ?? json['cases'] ?? json['conversations'] ?? json['notifications'];
       if (data is List) raw = data;
       final meta = json['meta'];
       if (meta is Map) {

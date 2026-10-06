@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../core/utils.dart';
@@ -63,6 +64,38 @@ class _Overview extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (!data.profile.isOnboarded) ...[
+          // First-run state: `GET /suppliers/me/profile` still 404s, so the
+          // supplier has no business profile yet. The backend already
+          // implements `POST /suppliers/onboard`; this is the entry point to
+          // the form that fills it in.
+          DataCard(
+            title: 'Finish setting up your supplier profile',
+            subtitle: 'Your supplier account is ready but has no business profile yet.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Add your business name, contact details and a short description so the '
+                  'MVEC team can review your account and publish your catalogue.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Theme.of(context).hintColor,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GradientButton(
+                  label: 'Set up business profile',
+                  icon: 'edit',
+                  expanded: true,
+                  onPressed: () => context.go('/supplier/settings'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         _metricGrid([
           MetricCard(
             label: 'Wholesale products',

@@ -91,7 +91,7 @@ class FallbackSupplierOperationsService implements SupplierOperationsService {
         _degraded = true;
         lastFallbackReason =
             'MVEC does not serve supplier $source yet — the app cannot show demo data.';
-        throw error;
+        rethrow;
       }
       rethrow;
     }
