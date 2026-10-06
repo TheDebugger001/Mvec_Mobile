@@ -27,6 +27,7 @@ class _SupplierAnalyticsScreenState
   @override
   Widget build(BuildContext context) {
     final analyticsAsync = ref.watch(supplierAnalyticsProvider(_range));
+    final module = ref.watch(supplierFinanceModuleProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -44,6 +45,10 @@ class _SupplierAnalyticsScreenState
             ),
           ],
         ),
+        if (module.fallbackReason != null) ...[
+          InfoBox(module.fallbackReason!, icon: 'bell'),
+          const SizedBox(height: 14),
+        ],
         switch (analyticsAsync) {
           AsyncLoading() => const SizedBox(height: 240, child: LoadingState()),
           AsyncError(:final error) => ErrorState(

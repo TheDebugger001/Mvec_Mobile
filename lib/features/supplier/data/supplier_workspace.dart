@@ -710,12 +710,24 @@ class ApiSupplierWorkspaceService implements SupplierWorkspaceService {
 
   /// `GET /suppliers/me/products` → `{ success, supplier, count, products }`.
   /// The backend returns the whole catalogue unpaginated.
+  ///
+  /// 404s until onboarding is complete — exactly like [profile] — and gets the
+  /// same treatment: a supplier who has not set up a business profile has no
+  /// catalogue, not a broken portal. Returning an empty list here keeps the
+  /// shared workspace provider healthy, so the Business Profile page can offer
+  /// onboarding instead of every supplier page sitting on the same error.
   @override
-  Future<List<SupplierProduct>> products() async =>
-      listJson(await _api.get('/suppliers/me/products'), [
+  Future<List<SupplierProduct>> products() async {
+    try {
+      return listJson(await _api.get('/suppliers/me/products'), [
         'products',
         'data',
       ]).map(SupplierProduct.fromJson).toList();
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return const <SupplierProduct>[];
+      rethrow;
+    }
+  }
 
   /// `GET /orders`, scoped to the signed-in supplier by the bearer token.
   @override
