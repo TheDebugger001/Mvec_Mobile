@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' hide Category;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,18 +42,18 @@ class BannerItem {
       id: _toInt(json['id']),
       title: _toString(json['title']),
       subtitle: _toString(json['subtitle']),
-      imageUrl: media is Map
-          ? _toString(media['mainImage'])
-          : _toString(json['image_url'] ?? json['image']),
+      imageUrl:
+          media is Map
+              ? _toString(media['mainImage'])
+              : _toString(json['image_url'] ?? json['image']),
       link: json['link']?.toString(),
     );
   }
 
   static String _toString(dynamic value) => value?.toString() ?? '';
 
-  static int _toInt(dynamic value) => value is num
-      ? value.toInt()
-      : int.tryParse(value?.toString() ?? '') ?? 0;
+  static int _toInt(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse(value?.toString() ?? '') ?? 0;
 }
 
 /// Aggregated data rendered by the home marketplace feed.
@@ -99,6 +101,7 @@ class HomeFeed {
         'featuredVendors',
         Vendor.fromJson,
         'featured_vendors',
+        'topVendors',
       ),
       featuredProducts: _section(
         json,
@@ -130,7 +133,7 @@ class HomeFeed {
   /// that is neither shape is returned untouched so it reads as empty rather
   /// than throwing.
   static Map<String, dynamic> _sourceOf(Map<String, dynamic> raw) {
-    for (final key in const ['data', 'result']) {
+    for (final key in const ['data', 'result', 'feed']) {
       final inner = raw[key];
       if (inner is Map) {
         final map = Map<String, dynamic>.from(inner);
@@ -165,9 +168,11 @@ class HomeFeed {
     String camel,
     T Function(Map<String, dynamic>) fromJson, [
     String? snake,
+    String? alternate,
   ]) {
     var value = json[camel];
     value ??= snake == null ? null : json[snake];
+    value ??= alternate == null ? null : json[alternate];
 
     // A single-item endpoint can answer with the row itself rather than a list.
     if (value is Map) value = _unwrap(Map<String, dynamic>.from(value));
@@ -178,7 +183,10 @@ class HomeFeed {
   static dynamic _unwrap(Map<String, dynamic> value) =>
       value['data'] ?? value['items'] ?? value['results'] ?? const <dynamic>[];
 
-  static List<T> _parse<T>(dynamic value, T Function(Map<String, dynamic>) fromJson) {
+  static List<T> _parse<T>(
+    dynamic value,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
     if (value is! List<dynamic>) return <T>[];
     return value
         .whereType<Map<dynamic, dynamic>>()
@@ -187,19 +195,22 @@ class HomeFeed {
   }
 }
 
-/// State manager for the marketpce home feed.
+/// State manager for the marketplace home feed.
 ///
 /// Depends on an injected [HomeService]. The default is [FallbackHomeService],
 /// which reads the live feed and degrades to an empty storefront when the
 /// endpoint is unreachable, so the UI stays decoupled from the data source.
 class HomeProvider extends ChangeNotifier {
   HomeProvider({HomeService? service})
-      : _service = service ?? FallbackHomeService(ApiClient.instance);
+    : _service = service ?? FallbackHomeService(ApiClient.instance);
 
   final HomeService _service;
+  late final Timer _refreshTimer;
 
   HomeFeed _feed = const HomeFeed();
   bool _isLoading = true;
+  bool _isFetching = false;
+  bool _hasLoaded = false;
   String? _error;
 
   HomeFeed get feed => _feed;
@@ -220,7 +231,9 @@ class HomeProvider extends ChangeNotifier {
 
   /// Loads the home feed from the injected service and notifies listeners.
   Future<void> loadHomeFeed() async {
-    _isLoading = true;
+    if (_isFetching) return;
+    _isFetching = true;
+    _isLoading = !_hasLoaded;
     _error = null;
     notifyListeners();
 
@@ -230,16 +243,25 @@ class HomeProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Could not load the home feed: $e';
     } finally {
+      _hasLoaded = true;
+      _isFetching = false;
       _isLoading = false;
       notifyListeners();
     }
   }
 
+  @override
+  void dispose() {
+    _refreshTimer.cancel();
+    super.dispose();
+  }
+
   /// Tracks a product as recently viewed (deduplicated, capped at 12).
   void addRecentlyViewed(Product product) {
-    final updated = List<Product>.of(_feed.recentlyViewed)
-      ..removeWhere((item) => item.id == product.id)
-      ..insert(0, product);
+    final updated =
+        List<Product>.of(_feed.recentlyViewed)
+          ..removeWhere((item) => item.id == product.id)
+          ..insert(0, product);
     if (updated.length > 12) {
       updated.removeRange(12, updated.length);
     }

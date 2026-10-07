@@ -1,43 +1,33 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/api_client.dart';
+import '../../../core/api_config.dart';
 import '../models/supplier_finance.dart';
 import '../models/supplier_insights.dart';
-import 'empty_supplier_finance_service.dart';
+import 'mock_supplier_finance_service.dart';
 import 'supplier_finance_service.dart';
 
-/// Runs every [SupplierFinanceService] call against the live API and degrades to
-/// [EmptySupplierFinanceService] when the route does not exist yet.
-///
-/// The backend has no `/suppliers/me/finance/*` or `/suppliers/me/reviews`
-/// routes, so without this the whole Finance & Insights group would be five
-/// error screens. Degrading instead keeps the pages usable against a real backend
-/// while staying honest: [fallbackReason] says out loud that the endpoint is
-/// missing, the figures read zero, and the Payments page surfaces it as a banner.
-///
-/// Follows the affiliate module's precedent — the switch is sticky for the
-/// session, so a missing route does not re-probe on every navigation.
+/// Prefer the live supplier API and treat missing backend routes as errors rather
+/// than shipping demo content back into the app.
 class FallbackSupplierFinanceService implements SupplierFinanceService {
   FallbackSupplierFinanceService(
     ApiClient api, {
     SupplierFinanceService? fallback,
-    bool? forceEmpty,
+    bool? forceDemo,
   }) : _api = ApiSupplierFinanceService(api),
-       _fallback = fallback ?? EmptySupplierFinanceService(),
-       _forceEmpty = forceEmpty ?? false {
-    if (_forceEmpty) {
+       _fallback = fallback ?? MockSupplierFinanceService(),
+       _forceDemo = forceDemo ?? kDemoMode {
+    if (_forceDemo) {
       _degraded = true;
-      lastFallbackReason =
-          'Supplier finance is not available yet — showing empty figures.';
+      lastFallbackReason = 'Demo mode — using the bundled supplier dataset.';
     }
   }
 
   final ApiSupplierFinanceService _api;
   final SupplierFinanceService _fallback;
-  final bool _forceEmpty;
+  final bool _forceDemo;
   bool _degraded = false;
 
-  /// Human-readable reason for the last fallback.
   String? lastFallbackReason;
 
   @override
@@ -84,45 +74,36 @@ class FallbackSupplierFinanceService implements SupplierFinanceService {
   Future<List<SupplierReview>> reviews() =>
       _resolve((s) => s.reviews(), source: 'reviews');
 
-  /// Tries the live API first; on a connectivity or "route not shipped" failure
-  /// it switches to the empty-state adapter and reports why.
   Future<T> _resolve<T>(
-    Future<T> Function(SupplierFinanceService service) call, {
+  Future<T> Function(SupplierFinanceService service) call, {
     required String source,
   }) async {
-    if (_degraded) return call(_fallback);
-    try {
-      return await call(_api);
-    } catch (error) {
-      if (_isUnreachable(error)) {
-        _degraded = true;
-        lastFallbackReason =
-            'MVEC does not serve supplier $source yet — showing empty figures '
-            'until it does.';
-        return call(_fallback);
-      }
+  if (_degraded) return call(_fallback);
+  try {
+    return await call(_api);
+  } catch (error) {
+    if (_isUnreachable(error)) {
+      _degraded = true;
+      lastFallbackReason =
+          'MVEC does not serve supplier $source yet — the app cannot show demo data.';
       rethrow;
     }
+    rethrow;
+  }
   }
 
-  /// Connection failures (`statusCode == null`) and "module not shipped"
-  /// responses (404 / 501) trigger the fallback. Genuine client/server errors
-  /// on a live endpoint keep throwing so the UI can surface them.
-  ///
-  /// `ApiClient` rejects with a `DioException` whose `.error` carries the
-  /// `ApiException`, so both shapes are unwrapped here.
   bool _isUnreachable(Object error) {
-    if (error is ApiException) {
-      return error.statusCode == null ||
-          error.statusCode == 404 ||
-          error.statusCode == 501;
-    }
-    if (error is DioException) {
-      final nested = error.error;
-      if (nested is ApiException) return _isUnreachable(nested);
-      final code = error.response?.statusCode;
-      return code == null || code == 404 || code == 501;
-    }
-    return false;
+  if (error is ApiException) {
+    return error.statusCode == null ||
+        error.statusCode == 404 ||
+        error.statusCode == 501;
+  }
+  if (error is DioException) {
+    final nested = error.error;
+    if (nested is ApiException) return _isUnreachable(nested);
+    final code = error.response?.statusCode;
+    return code == null || code == 404 || code == 501;
+  }
+  return false;
   }
 }

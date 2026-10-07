@@ -124,7 +124,7 @@ class MessageRecord {
     return MessageRecord(
       id: j['_id'] ?? j['id'],
       sender: j['sender'] is Map ? (j['sender']['Fullname'] ?? j['sender']['email'])?.toString() : sid,
-      body: j['body'] ?? j['text'] ?? j['message'],
+      body: j['body'] ?? j['content'] ?? j['text'] ?? j['message'],
       createdAt: parseDate(j['createdAt']),
       mine: myId != null && sid == myId,
     );

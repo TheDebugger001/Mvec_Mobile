@@ -168,6 +168,9 @@ class _AffiliateProfileScreenState extends ConsumerState<AffiliateProfileScreen>
   }
 
   Widget _buildAside(AffiliateProfile profile) {
+    // `GET /affiliates/verification` carries the reviewer's notes and the
+    // submitted documents, which the profile payload does not include.
+    final verificationAsync = ref.watch(affiliateVerificationProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -175,10 +178,54 @@ class _AffiliateProfileScreenState extends ConsumerState<AffiliateProfileScreen>
           title: 'Verification',
           subtitle: profile.verificationStatus ?? 'UNVERIFIED',
           trailing: StatusChip(profile.verificationStatus ?? 'UNVERIFIED', overrideColor: profile.isVerified ? MvColors.successText : null),
-          child: ProcessTimeline(
-            steps: AffiliateVerification(
-              status: profile.verificationStatus ?? 'UNVERIFIED',
-            ).steps,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ProcessTimeline(
+                steps: AffiliateVerification(
+                  status: profile.verificationStatus ?? 'UNVERIFIED',
+                ).steps,
+              ),
+              verificationAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (v) {
+                  final notes = (v.notes ?? '').trim();
+                  final docs = v.documents;
+                  if (notes.isEmpty && docs.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (v.reviewedAt != null)
+                          _kv('Reviewed', shortDateTime(v.reviewedAt!)),
+                        if (notes.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            notes,
+                            style: TextStyle(fontSize: 12, height: 1.45, color: Theme.of(context).hintColor),
+                          ),
+                        ],
+                        if (docs.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          for (final d in docs)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '• $d',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11.5, color: Theme.of(context).hintColor),
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),

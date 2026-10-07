@@ -5,28 +5,12 @@ import '../../data/models/affiliate_earnings.dart';
 import '../../data/models/affiliate_marketing.dart';
 import '../../data/models/affiliate_profile.dart';
 import '../../data/services/affiliate_service.dart';
-import '../../data/services/fallback_affiliate_service.dart';
+import '../../data/services/api_affiliate_service.dart';
 
-/// Single injected data source for the affiliate module. Defaults to
-/// [FallbackAffiliateService], which talks to the real backend and degrades to
-/// empty state on the first connectivity failure. Swap this one line to force a
-/// different transport.
+/// Single injected data source for the affiliate module.
 final affiliateServiceProvider = Provider<AffiliateService>((ref) {
-  return FallbackAffiliateService(ref.watch(apiProvider));
+  return ApiAffiliateService(ref.watch(apiProvider));
 });
-
-/// Why the module is showing empty figures instead of live data, or null while
-/// the API is answering.
-final affiliateUnavailableReasonProvider = Provider<String?>((ref) {
-  final service = ref.watch(affiliateServiceProvider);
-  return service is FallbackAffiliateService ? service.fallbackReason : null;
-});
-
-/// True once the backing service has degraded to empty state for this session,
-/// i.e. the affiliate routes could not be reached. Drives the notice banner.
-final affiliateUnavailableProvider = Provider<bool>(
-  (ref) => ref.watch(affiliateUnavailableReasonProvider) != null,
-);
 
 // ---------- Profile & verification ----------
 
@@ -42,6 +26,10 @@ final affiliateVerificationProvider = FutureProvider.autoDispose<AffiliateVerifi
 
 final affiliateOverviewProvider = FutureProvider.autoDispose<AffiliateOverview>((ref) async {
   return ref.watch(affiliateServiceProvider).fetchOverview();
+});
+
+final affiliateDashboardProvider = FutureProvider.autoDispose<AffiliateDashboard>((ref) async {
+  return ref.watch(affiliateServiceProvider).fetchDashboard();
 });
 
 // ---------- Links ----------
@@ -74,6 +62,10 @@ final affiliateWalletProvider = FutureProvider.autoDispose<AffiliateWallet>((ref
 
 final affiliateCommissionsProvider = FutureProvider.autoDispose<List<AffiliateCommission>>((ref) async {
   return ref.watch(affiliateServiceProvider).fetchCommissions();
+});
+
+final affiliateConversionsProvider = FutureProvider.autoDispose<List<AffiliateConversion>>((ref) async {
+  return ref.watch(affiliateServiceProvider).fetchConversions();
 });
 
 // ---------- Payouts ----------

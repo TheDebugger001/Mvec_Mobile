@@ -17,7 +17,14 @@ final _messagesProvider = FutureProvider.autoDispose.family<List<MessageRecord>,
 );
 
 class MessagesScreen extends ConsumerStatefulWidget {
-  const MessagesScreen({super.key});
+  const MessagesScreen({
+    super.key,
+    this.eyebrow = 'SUPER ADMIN',
+    this.subtitle = 'Platform support conversations.',
+  });
+
+  final String eyebrow;
+  final String subtitle;
 
   @override
   ConsumerState<MessagesScreen> createState() => _MessagesScreenState();
@@ -48,9 +55,9 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PageHead(
-          eyebrow: 'SUPER ADMIN',
+          eyebrow: widget.eyebrow,
           title: 'Messages',
-          subtitle: 'Platform support conversations.',
+          subtitle: widget.subtitle,
         ),
         LayoutBuilder(
           builder: (context, constraints) {

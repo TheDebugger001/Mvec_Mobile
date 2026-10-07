@@ -20,8 +20,10 @@ String get kApiBaseUrl {
   } catch (_) {
     // dotenv is not loaded (e.g. tests) — fall back to the default below.
   }
-  return 'http://157.173.119.15:3000/api';
+  return 'http://localhost:4000/api';
 }
+
+const bool kDemoMode = false;
 
 /// The admin credentials the login screen offers to prefill during development.
 ///

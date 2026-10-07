@@ -19,7 +19,15 @@ enum ProductImageSource { gallery, files }
 /// `mimeTypes` is what Android's system file browser filters on; `extensions`
 /// is what the iOS document picker maps onto UTIs. Supplying both means neither
 /// platform falls back to "any file".
-const _images = XTypeGroup(label: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'heic'], mimeTypes: ['image/*']);
+const _images = XTypeGroup(
+  label: 'Images',
+  extensions: ['jpg', 'jpeg', 'png', 'webp', 'heic'],
+  mimeTypes: ['image/*'],
+);
+
+/// Opens the device file picker for one or more image files.
+Future<List<XFile>> pickProductImageFiles() =>
+    openFiles(acceptedTypeGroups: const [_images]);
 
 /// Tracks the photo files one edit of a product touched, so the copies that
 /// ended up unused can be cleaned up at the right moment.
@@ -30,7 +38,9 @@ const _images = XTypeGroup(label: 'Images', extensions: ['jpg', 'jpeg', 'png', '
 /// photo that no longer exists. So the references are collected, not released,
 /// and the caller settles them once the outcome is known.
 class ProductImageDraft {
-  ProductImageDraft(this.initialPath) : _touched = [if (initialPath.isNotEmpty) initialPath];
+  ProductImageDraft(this.initialPath)
+    : current = initialPath,
+      _touched = [if (initialPath.isNotEmpty) initialPath];
 
   /// The photo the product had before this edit started.
   final String initialPath;
@@ -39,7 +49,7 @@ class ProductImageDraft {
   final List<String> _touched;
 
   /// The photo the form is leaving with; empty when the picture was removed.
-  String current = '';
+  String current;
 
   /// Records [path] as the newly chosen photo.
   void recorded(String path) {
@@ -54,7 +64,37 @@ class ProductImageDraft {
   /// nothing about the product changed and only the abandoned picks are removed.
   Future<void> resolve({required bool saved}) async {
     final keep = saved ? current : initialPath;
-    final stale = _touched.where((path) => path != keep).toList(growable: false);
+    final stale = _touched
+        .where((path) => path != keep)
+        .toList(growable: false);
+    _touched.clear();
+    for (final path in stale) {
+      await releaseLocalImage(path);
+    }
+  }
+}
+
+/// Tracks a product's additional local gallery photos until the form is saved.
+class ProductImageCollectionDraft {
+  ProductImageCollectionDraft(List<String> initialPaths)
+    : initialPaths = List.unmodifiable(initialPaths),
+      current = List.of(initialPaths),
+      _touched = List.of(initialPaths);
+
+  final List<String> initialPaths;
+  final List<String> _touched;
+  List<String> current;
+
+  void recorded(List<String> paths) {
+    current = List.of(paths);
+    for (final path in paths) {
+      if (path.isNotEmpty && !_touched.contains(path)) _touched.add(path);
+    }
+  }
+
+  Future<void> resolve({required bool saved}) async {
+    final keep = (saved ? current : initialPaths).toSet();
+    final stale = _touched.where((path) => !keep.contains(path)).toSet();
     _touched.clear();
     for (final path in stale) {
       await releaseLocalImage(path);
@@ -72,7 +112,12 @@ class ProductImageDraft {
 /// [url] is only used to preview a picture that arrived from the backend, so
 /// editing a product does not start blank when it already has one.
 class ProductImageField extends StatefulWidget {
-  const ProductImageField({super.key, required this.draft, this.url, this.onChanged});
+  const ProductImageField({
+    super.key,
+    required this.draft,
+    this.url,
+    this.onChanged,
+  });
 
   /// Collects the files this edit touches so the form can settle them once it
   /// knows whether the product was saved.
@@ -86,7 +131,7 @@ class ProductImageField extends StatefulWidget {
 }
 
 class _ProductImageFieldState extends State<ProductImageField> {
-  late String _localPath = widget.draft.current = widget.draft.initialPath;
+  late String _localPath = widget.draft.current;
   bool _busy = false;
 
   bool get _hasImage => _localPath.isNotEmpty || (widget.url ?? '').isNotEmpty;
@@ -121,7 +166,8 @@ class _ProductImageFieldState extends State<ProductImageField> {
     }
   }
 
-  Future<XFile?> _pickFromFiles() => openFile(acceptedTypeGroups: const [_images]);
+  Future<XFile?> _pickFromFiles() =>
+      openFile(acceptedTypeGroups: const [_images]);
 
   void _clear() {
     setState(() => _localPath = '');
@@ -137,15 +183,30 @@ class _ProductImageFieldState extends State<ProductImageField> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ProductImage(url: widget.url, localPath: _localPath, size: 64, radius: 12, fallbackIcon: 'image'),
+            ProductImage(
+              url: widget.url,
+              localPath: _localPath,
+              size: 64,
+              radius: 12,
+              fallbackIcon: 'image',
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Product image', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                  const Text(
+                    'Product image',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text('Pick a photo from your gallery or files.', style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    'Pick a photo from your gallery or files.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),

@@ -18,6 +18,7 @@ class AffiliateEarningsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final walletAsync = ref.watch(affiliateWalletProvider);
     final commissionsAsync = ref.watch(affiliateCommissionsProvider);
+    final conversionsAsync = ref.watch(affiliateConversionsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -96,6 +97,40 @@ class AffiliateEarningsScreen extends ConsumerWidget {
               filterLabel: 'Status',
               filterOptions: const ['AVAILABLE', 'PENDING', 'PAID'],
               onRowTap: (row) => _detail(context, row['_commission'] as AffiliateCommission),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        conversionsAsync.when(
+          loading: () => const LoadingState(),
+          error: (e, _) => ErrorState(message: friendlyError(e), onRetry: () => ref.invalidate(affiliateConversionsProvider)),
+          data: (conversions) => DataCard(
+            title: 'Conversions',
+            subtitle: 'Completed referrals attributed to your links.',
+            child: SmartTable(
+              emptyMessage: 'No conversions yet',
+              columns: const [
+                MvColumn('target', 'Product / order', flex: 3),
+                MvColumn('code', 'Referral code', flex: 2),
+                MvColumn('value', 'Order value', flex: 2),
+                MvColumn('commission', 'Commission', flex: 2),
+                MvColumn('status', 'Status', flex: 2),
+                MvColumn('date', 'Converted', flex: 2),
+              ],
+              rows: [
+                for (final c in conversions)
+                  {
+                    'target': c.title,
+                    'code': c.referralCode ?? '—',
+                    'value': money(c.conversionValue ?? 0),
+                    'commission': money(c.commissionEarned ?? 0),
+                    'status': c.status ?? 'COMPLETED',
+                    'date': shortDateTime(c.convertedAt),
+                  },
+              ],
+              filterKey: 'status',
+              filterLabel: 'Status',
+              filterOptions: const ['COMPLETED', 'PENDING', 'REVERSED'],
             ),
           ),
         ),

@@ -38,6 +38,9 @@ void main() {
               conversionsSeries: [0, 1, 1, 2, 1, 2, 2],
             ),
           ),
+          affiliateDashboardProvider.overrideWith(
+            (ref) async => const AffiliateDashboard(),
+          ),
         ],
         child: MaterialApp(
           theme: lightAppTheme,

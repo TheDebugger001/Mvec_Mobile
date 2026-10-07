@@ -18,7 +18,7 @@ class Category {
   factory Category.fromJson(Map<String, dynamic> json) {
     final media = json['media'];
     return Category(
-      id: _toInt(json['id']),
+      id: _toInt(json['id'] ?? json['_id']),
       name: _toString(json['name']),
       slug: _toString(json['slug']),
       imageUrl: media is Map
@@ -49,5 +49,15 @@ class Category {
 
   static int _toInt(dynamic value) => value is num
       ? value.toInt()
-      : int.tryParse(value?.toString() ?? '') ?? 0;
+      : _parseId(value) ?? 0;
+
+  static int? _parseId(dynamic value) {
+    final text = value?.toString() ?? '';
+    final decimal = int.tryParse(text);
+    if (decimal != null) return decimal;
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(text)) {
+      return int.tryParse(text.substring(0, 12), radix: 16);
+    }
+    return null;
+  }
 }

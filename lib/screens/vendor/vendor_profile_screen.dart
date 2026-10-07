@@ -87,33 +87,37 @@ class _VendorProfileScreenState extends ConsumerState<VendorProfileScreen> {
     _c('deliveryFee').text = store?.deliveryFee?.toString() ?? '';
   }
 
-  /// Form values as the `PUT /stores` payload. Blank inputs are dropped so an
-  /// untouched field is never written back as an empty string.
+  /// Form values as the actual backend vendor profile payload. The backend
+  /// expects `businessName`, `email`, `phone`, `logoUrl`, `description` and
+  /// `location`, not the older store-style keys that were left over from the
+  /// mock store implementation.
   Map<String, dynamic> _body() {
     String? v(String key) {
       final t = _c(key).text.trim();
       return t.isEmpty ? null : t;
     }
 
-    final fee = num.tryParse(_c('deliveryFee').text.trim());
+    final cityVal = v('city') ?? v('street') ?? 'Kigali';
     return {
+      if (v('storeName') != null) 'businessName': v('storeName'),
       if (v('storeName') != null) 'storeName': v('storeName'),
-      if (v('logo') != null) 'logo': v('logo'),
       if (v('description') != null) 'description': v('description'),
+      if (v('logo') != null) 'logoUrl': v('logo'),
+      if (v('logo') != null) 'logo': v('logo'),
       if (v('email') != null) 'email': v('email'),
+      if (v('email') != null) 'contactEmail': v('email'),
       if (v('phone') != null) 'phone': v('phone'),
-      if (v('facebook') != null) 'facebook': v('facebook'),
-      if (v('instagram') != null) 'instagram': v('instagram'),
-      if (v('twitter') != null) 'twitter': v('twitter'),
-      if (v('website') != null) 'website': v('website'),
-      if (v('street') != null) 'street': v('street'),
+      if (v('phone') != null) 'contactPhone': v('phone'),
+      'location': cityVal,
       if (v('city') != null) 'city': v('city'),
-      if (v('state') != null) 'state': v('state'),
-      if (v('country') != null) 'country': v('country'),
-      if (v('postalCode') != null) 'postalCode': v('postalCode'),
-      if (v('deliveryNote') != null) 'deliveryNote': v('deliveryNote'),
-      if (v('deliveryTime') != null) 'deliveryTime': v('deliveryTime'),
-      if (fee != null) 'deliveryFee': fee,
+      if (v('website') != null) 'website': v('website'),
+      'address': {
+        if (v('street') != null) 'street': v('street'),
+        'city': cityVal,
+        if (v('state') != null) 'state': v('state'),
+        if (v('country') != null) 'country': v('country'),
+        if (v('postalCode') != null) 'postalCode': v('postalCode'),
+      },
     };
   }
 

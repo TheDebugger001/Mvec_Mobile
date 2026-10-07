@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../screens/cart_page.dart';
 import '../../../../screens/checkout_page.dart';
 import '../../../../screens/product_detail_page.dart';
-import '../../../../screens/track_order_page.dart';
 import '../../../../screens/wishlist_page.dart';
 import '../../../../models/product.dart' as legacy;
 import '../../data/interest/interest_profile.dart';
@@ -14,7 +14,7 @@ import '../providers/commerce_provider.dart';
 import '../../data/models/product_model.dart' as marketplace;
 
 legacy.Product toLegacyProduct(marketplace.Product product) => legacy.Product(
-  id: product.id.toString(),
+  id: product.apiId ?? product.id.toString(),
   name: product.name,
   description: product.description,
   price: product.price,
@@ -68,7 +68,10 @@ void openProductDetails(BuildContext context, marketplace.Product product) {
             isWishlisted: commerce.isWishlisted(detailProduct),
             onToggleWishlist: commerce.toggleWishlist,
             onOpenWishlist: () => openWishlist(context, commerce),
-            onAddToCart: commerce.addToCart,
+            onAddToCart: (product) => _runCartAction(
+              context,
+              () => commerce.addToCart(product),
+            ),
             onOpenCart: () => openCart(context, commerce),
           ),
       settings: const RouteSettings(name: '/product-detail'),
@@ -83,10 +86,16 @@ void openWishlist(BuildContext context, CommerceProvider commerce) {
           (_) => WishlistPage(
             wishlistItems: commerce.wishlistItems,
             onRemoveFromWishlist: commerce.removeFromWishlist,
-            onMoveToCart: commerce.moveToCart,
+            onMoveToCart: (product) => _runCartAction(
+              context,
+              () => commerce.moveToCart(product),
+            ),
             onToggleWishlist: commerce.toggleWishlist,
             onOpenCart: () => openCart(context, commerce),
-            onAddToCart: commerce.addToCart,
+            onAddToCart: (product) => _runCartAction(
+              context,
+              () => commerce.addToCart(product),
+            ),
             cartItemCount:
                 () => commerce.cartItems.fold<int>(
                   0,
@@ -97,19 +106,39 @@ void openWishlist(BuildContext context, CommerceProvider commerce) {
   );
 }
 
-void openCart(BuildContext context, CommerceProvider commerce) {
+Future<void> openCart(BuildContext context, CommerceProvider commerce) async {
+  try {
+    await commerce.loadCart();
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load your cart: $error')),
+      );
+      return;
+    }
+  }
+  if (!context.mounted) return;
   Navigator.of(context).push<void>(
     MaterialPageRoute<void>(
       builder:
           (_) => CartPage(
             cartItems: commerce.cartItems,
-            onUpdateQuantity: commerce.updateCartQuantity,
-            onRemoveItem: commerce.removeCartItem,
+            onUpdateQuantity: (item) => _runCartAction(
+              context,
+              () => commerce.updateCartQuantity(item),
+            ),
+            onRemoveItem: (item) => _runCartAction(
+              context,
+              () => commerce.removeCartItem(item),
+            ),
             onProceedToCheckout: () => openCheckout(context, commerce),
             isWishlisted: commerce.isWishlisted,
             onToggleWishlist: commerce.toggleWishlist,
             onOpenWishlist: () => openWishlist(context, commerce),
-            onAddToCart: commerce.addToCart,
+            onAddToCart: (product) => _runCartAction(
+              context,
+              () => commerce.addToCart(product),
+            ),
             onOpenCart: () => openCart(context, commerce),
           ),
     ),
@@ -117,13 +146,10 @@ void openCart(BuildContext context, CommerceProvider commerce) {
 }
 
 void openCheckout(BuildContext context, CommerceProvider commerce) {
-  const shippingFee = 5.0;
-  const serviceFee = 2.5;
   final subtotal = commerce.cartItems.fold<double>(
     0,
     (sum, item) => sum + item.totalPrice,
   );
-  final tax = subtotal * 0.08;
   final navigator = Navigator.of(context);
 
   navigator.push<void>(
@@ -132,14 +158,13 @@ void openCheckout(BuildContext context, CommerceProvider commerce) {
           (_) => CheckoutPage(
             cartItems: commerce.cartItems,
             subtotal: subtotal,
-            shippingFee: shippingFee,
-            serviceFee: serviceFee,
-            tax: tax,
-            total: subtotal + shippingFee + serviceFee + tax,
+            shippingFee: 0,
+            serviceFee: 0,
+            tax: 0,
+            total: subtotal,
             onOrderPlaced: (order) {
-              // A completed order is the strongest evidence available: whatever
-              // they actually paid for is what the rest of their feed should be
-              // built around.
+              // A placed order is the strongest evidence available for the
+              // shopper's recommendations.
               for (final item in order.items) {
                 _recordInterest(
                   context,
@@ -155,15 +180,26 @@ void openCheckout(BuildContext context, CommerceProvider commerce) {
                   InterestSignal.purchased,
                 );
               }
-              commerce.clearCart();
+              _runCartAction(context, commerce.clearCart);
               navigator.pop();
-              navigator.push<void>(
-                MaterialPageRoute<void>(
-                  builder: (_) => TrackOrderPage(order: order),
-                ),
-              );
+              context.push('/orders/${Uri.encodeComponent(order.id)}');
             },
           ),
     ),
   );
+}
+
+Future<void> _runCartAction(
+  BuildContext context,
+  Future<void> Function() action,
+) async {
+  try {
+    await action();
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cart update failed: $error')),
+      );
+    }
+  }
 }

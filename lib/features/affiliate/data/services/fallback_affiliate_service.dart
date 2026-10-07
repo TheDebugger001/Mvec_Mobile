@@ -1,169 +1,152 @@
-import 'package:dio/dio.dart';
-
 import '../../../../core/api_client.dart';
 import '../models/affiliate_earnings.dart';
 import '../models/affiliate_marketing.dart';
 import '../models/affiliate_profile.dart';
 import 'affiliate_service.dart';
 import 'api_affiliate_service.dart';
-import 'empty_affiliate_service.dart';
 
-/// Data source that prefers the real backend and transparently degrades to
-/// [EmptyAffiliateService] when the API cannot be reached.
-///
-/// This is the default service for the affiliate module, so the same build works
-/// the day the affiliate endpoints ship and today, when they are not there yet —
-/// no environment flags, no manual wiring. Until then the pages show empty lists
-/// and zeroed metrics instead of bundled figures.
-///
-/// Degradation is sticky for the session: the first unreachable-endpoint
-/// failure switches to the empty adapter and stays there, so a single flaky
-/// request cannot split the UI between two sources.
-///
-/// Passing [forceEmpty] skips the API entirely, which is how the module renders
-/// empty without waiting on connection timeouts (and what the tests use).
+/// Backend-first affiliate service. Any unavailable route is surfaced as an
+/// error instead of falling back to bundled demo data.
 class FallbackAffiliateService implements AffiliateService {
-  FallbackAffiliateService(
-    ApiClient api, {
-    AffiliateService? fallback,
-    bool? forceEmpty,
-  }) : _api = ApiAffiliateService(api),
-       _fallback = fallback ?? EmptyAffiliateService(),
-       _forceEmpty = forceEmpty ?? false {
-    if (_forceEmpty) {
-      _degraded = true;
-      lastFallbackReason =
-          'The affiliate API is not available yet — showing empty figures.';
-    }
-  }
+  FallbackAffiliateService(ApiClient api) : _api = ApiAffiliateService(api);
 
   final ApiAffiliateService _api;
-  final AffiliateService _fallback;
-  final bool _forceEmpty;
-  bool _degraded = false;
-
-  /// Human-readable reason for the last fallback, shown in a small banner.
-  String? lastFallbackReason;
 
   @override
-  bool get isDemo => _degraded && _fallback.isDemo;
+  bool get isDemo => false;
 
-  /// The most recent unreachable-endpoint problem, if any.
-  String? get fallbackReason => lastFallbackReason;
+  String? get fallbackReason => null;
 
-  /// Runs [call] against the live API; on a connectivity / not-implemented
-  /// error, switches to the empty adapter and reports [sourceLabel] to the
-  /// caller.
-  Future<T> _resolve<T>(Future<T> Function(AffiliateService s) call, {required String sourceLabel}) async {
-    if (_degraded) return call(_fallback);
-    try {
-      return await call(_api);
-    } catch (e) {
-      if (_isUnreachable(e)) {
-        _degraded = true;
-        lastFallbackReason = _reason(e);
-        return call(_fallback);
-      }
-      rethrow;
-    }
-  }
-
-  /// Connection failures (`statusCode == null`) and "module not shipped"
-  /// responses (404 / 501) fall back to empty values. Genuine client/server errors on
-  /// a live endpoint keep throwing so the UI can surface them.
-  ///
-  /// Note: [ApiClient] rejects with a `DioException` whose `.error` carries
-  /// the `ApiException`, so both shapes are unwrapped here.
-  bool _isUnreachable(Object e) {
-    if (e is ApiException) {
-      return e.statusCode == null || e.statusCode == 404 || e.statusCode == 501;
-    }
-    if (e is DioException) {
-      final nested = e.error;
-      if (nested is ApiException) return _isUnreachable(nested);
-      final code = e.response?.statusCode;
-      return code == null || code == 404 || code == 501;
-    }
-    return false;
-  }
-
-  String _reason(Object e) {
-    int? code;
-    if (e is ApiException) {
-      code = e.statusCode;
-    } else if (e is DioException) {
-      final nested = e.error;
-      code = nested is ApiException ? nested.statusCode : e.response?.statusCode;
-    }
-    if (code == 404 || code == 501) {
-      return 'Affiliate API not available yet — showing empty figures.';
-    }
-    return 'Cannot reach the affiliate API — showing empty figures.';
+  Future<T> _resolve<T>(
+    Future<T> Function(AffiliateService s) call, {
+    required String sourceLabel,
+  }) async {
+    return call(_api);
   }
 
   @override
-  Future<AffiliateProfile> fetchProfile() => _resolve((s) => s.fetchProfile(), sourceLabel: 'profile');
+  Future<AffiliateProfile> fetchProfile() =>
+      _resolve((s) => s.fetchProfile(), sourceLabel: 'profile');
 
   @override
-  Future<AffiliateProfile> updateProfile(AffiliateProfile draft) => _resolve((s) => s.updateProfile(draft), sourceLabel: 'profile');
+  Future<AffiliateProfile> updateProfile(AffiliateProfile draft) =>
+      _resolve((s) => s.updateProfile(draft), sourceLabel: 'profile');
 
   @override
-  Future<AffiliateVerification> fetchVerification() => _resolve((s) => s.fetchVerification(), sourceLabel: 'verification');
+  Future<AffiliateVerification> fetchVerification() =>
+      _resolve((s) => s.fetchVerification(), sourceLabel: 'verification');
 
   @override
-  Future<AffiliateOverview> fetchOverview() => _resolve((s) => s.fetchOverview(), sourceLabel: 'overview');
+  Future<AffiliateOverview> fetchOverview() =>
+      _resolve((s) => s.fetchOverview(), sourceLabel: 'overview');
 
   @override
-  Future<List<AffiliateLink>> fetchLinks() => _resolve((s) => s.fetchLinks(), sourceLabel: 'links');
+  Future<AffiliateDashboard> fetchDashboard() =>
+      _resolve((s) => s.fetchDashboard(), sourceLabel: 'dashboard');
 
   @override
-  Future<AffiliateLink> generateLink({String? productId, String? campaignId, String? label}) =>
-      _resolve((s) => s.generateLink(productId: productId, campaignId: campaignId, label: label), sourceLabel: 'links');
+  Future<List<AffiliateLink>> fetchLinks() =>
+      _resolve((s) => s.fetchLinks(), sourceLabel: 'links');
 
   @override
-  Future<AffiliateLink> setLinkActive(String id, bool active) => _resolve((s) => s.setLinkActive(id, active), sourceLabel: 'links');
+  Future<AffiliateLink> generateLink({
+    String? productId,
+    String? campaignId,
+    String? label,
+  }) => _resolve(
+    (s) => s.generateLink(
+      productId: productId,
+      campaignId: campaignId,
+      label: label,
+    ),
+    sourceLabel: 'links',
+  );
 
   @override
-  Future<void> deleteLink(String id) => _resolve((s) => s.deleteLink(id), sourceLabel: 'links');
+  Future<AffiliateLink> setLinkActive(String id, bool active) =>
+      _resolve((s) => s.setLinkActive(id, active), sourceLabel: 'links');
 
   @override
-  Future<List<PromotableProduct>> fetchPromotableProducts({String? search, String? campaignId}) =>
-      _resolve((s) => s.fetchPromotableProducts(search: search, campaignId: campaignId), sourceLabel: 'products');
+  Future<void> deleteLink(String id) =>
+      _resolve((s) => s.deleteLink(id), sourceLabel: 'links');
 
   @override
-  Future<List<AffiliateCampaign>> fetchCampaigns() => _resolve((s) => s.fetchCampaigns(), sourceLabel: 'campaigns');
+  Future<List<PromotableProduct>> fetchPromotableProducts({
+    String? search,
+    String? campaignId,
+  }) => _resolve(
+    (s) => s.fetchPromotableProducts(search: search, campaignId: campaignId),
+    sourceLabel: 'products',
+  );
 
   @override
-  Future<AffiliateCampaign> joinCampaign(String id) => _resolve((s) => s.joinCampaign(id), sourceLabel: 'campaigns');
+  Future<List<AffiliateCampaign>> fetchCampaigns() =>
+      _resolve((s) => s.fetchCampaigns(), sourceLabel: 'campaigns');
 
   @override
-  Future<AffiliateStats> fetchStats({String range = '30d'}) => _resolve((s) => s.fetchStats(range: range), sourceLabel: 'stats');
+  Future<AffiliateCampaign> joinCampaign(String id) =>
+      _resolve((s) => s.joinCampaign(id), sourceLabel: 'campaigns');
 
   @override
-  Future<AffiliateWallet> fetchWallet() => _resolve((s) => s.fetchWallet(), sourceLabel: 'wallet');
+  Future<AffiliateStats> fetchStats({String range = '30d'}) =>
+      _resolve((s) => s.fetchStats(range: range), sourceLabel: 'stats');
 
   @override
-  Future<List<AffiliateCommission>> fetchCommissions({String? status}) => _resolve((s) => s.fetchCommissions(status: status), sourceLabel: 'commissions');
+  Future<AffiliateWallet> fetchWallet() =>
+      _resolve((s) => s.fetchWallet(), sourceLabel: 'wallet');
 
   @override
-  Future<List<AffiliatePayout>> fetchPayouts() => _resolve((s) => s.fetchPayouts(), sourceLabel: 'payouts');
-
-  @override
-  Future<AffiliatePayout> requestPayout({required num amount, required String paymentMethod, required String accountName, required String phoneNumber, String? bankName}) =>
+  Future<List<AffiliateCommission>> fetchCommissions({String? status}) =>
       _resolve(
-        (s) => s.requestPayout(amount: amount, paymentMethod: paymentMethod, accountName: accountName, phoneNumber: phoneNumber, bankName: bankName),
-        sourceLabel: 'payouts',
+        (s) => s.fetchCommissions(status: status),
+        sourceLabel: 'commissions',
       );
 
   @override
-  Future<List<AffiliateNotification>> fetchNotifications() => _resolve((s) => s.fetchNotifications(), sourceLabel: 'notifications');
+  Future<List<AffiliateConversion>> fetchConversions() =>
+      _resolve((s) => s.fetchConversions(), sourceLabel: 'conversions');
 
   @override
-  Future<void> markNotificationsRead([String? id]) => _resolve((s) => s.markNotificationsRead(id), sourceLabel: 'notifications');
+  Future<void> trackClick(String code) =>
+      _resolve((s) => s.trackClick(code), sourceLabel: 'track');
 
   @override
-  Future<AffiliateSettings> fetchSettings() => _resolve((s) => s.fetchSettings(), sourceLabel: 'settings');
+  Future<List<AffiliatePayout>> fetchPayouts() =>
+      _resolve((s) => s.fetchPayouts(), sourceLabel: 'payouts');
 
   @override
-  Future<AffiliateSettings> updateSettings(AffiliateSettings settings) => _resolve((s) => s.updateSettings(settings), sourceLabel: 'settings');
+  Future<AffiliatePayout> requestPayout({
+    required num amount,
+    required String paymentMethod,
+    required String accountName,
+    required String phoneNumber,
+    String? bankName,
+  }) => _resolve(
+    (s) => s.requestPayout(
+      amount: amount,
+      paymentMethod: paymentMethod,
+      accountName: accountName,
+      phoneNumber: phoneNumber,
+      bankName: bankName,
+    ),
+    sourceLabel: 'payouts',
+  );
+
+  @override
+  Future<List<AffiliateNotification>> fetchNotifications() =>
+      _resolve((s) => s.fetchNotifications(), sourceLabel: 'notifications');
+
+  @override
+  Future<void> markNotificationsRead([String? id]) => _resolve(
+    (s) => s.markNotificationsRead(id),
+    sourceLabel: 'notifications',
+  );
+
+  @override
+  Future<AffiliateSettings> fetchSettings() =>
+      _resolve((s) => s.fetchSettings(), sourceLabel: 'settings');
+
+  @override
+  Future<AffiliateSettings> updateSettings(AffiliateSettings settings) =>
+      _resolve((s) => s.updateSettings(settings), sourceLabel: 'settings');
 }

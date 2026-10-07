@@ -125,6 +125,21 @@ class PlatformService {
     return listJson(res, ['cases', 'data']).map(SupportCase.fromJson).toList();
   }
 
+  Future<SupportCase> createSupportCase({
+    required String subject,
+    required String description,
+    String category = 'OTHER',
+    String priority = 'MEDIUM',
+  }) async {
+    final res = await _api.post('/support/cases', body: {
+      'subject': subject,
+      'description': description,
+      'category': category,
+      'priority': priority,
+    });
+    return SupportCase.fromJson(singleJson(res, ['case', 'data']));
+  }
+
   Future<void> patchSupportCase(String id, String status) async {
     await _api.patch('/support/cases/$id/status', body: {'status': status});
   }
@@ -149,7 +164,7 @@ class PlatformService {
   }
 
   Future<void> sendMessage(String id, String body) async {
-    await _api.post('/conversations/$id/messages', body: {'body': body});
+    await _api.post('/conversations/$id/messages', body: {'content': body});
   }
 
   // ---------- Translations / languages ----------

@@ -10,10 +10,7 @@ import '../../widgets/common.dart';
 /// Wholesale orders placed by vendors, mirroring the web app's
 /// `SupplierOrders` ("B2B ORDERS" page head + order table).
 ///
-/// The web's Payment/Funds columns are literal values in a hand-written array
-/// (`payment:"SUCCESS"`, `settlement:"HELD"`); no supplier-scoped payment
-/// endpoint exists, so this table reports the supply status the API does
-/// return and lets the supplier advance it.
+/// Orders and shipment updates use the supplier-scoped wholesale API.
 class SupplierOrdersScreen extends ConsumerWidget {
   const SupplierOrdersScreen({super.key});
 
@@ -57,12 +54,7 @@ class _Orders extends ConsumerWidget {
         title: 'Vendor orders',
         child: EmptyState(
           message: unavailable
-              // `GET /orders` is restricted to admins on the backend, so this
-              // is a permission gap rather than genuinely zero orders. Saying
-              // "no orders yet" here would be a lie the user cannot act on.
-              ? 'Vendor orders are not available to supplier accounts yet. The '
-                    'orders endpoint currently only responds to administrators, '
-                    'so no order data can be shown here.'
+              ? 'Could not load vendor orders. Check your connection and retry.'
               : 'No vendor orders yet. Orders placed by vendors appear here once '
                     'they are placed.',
         ),
@@ -154,16 +146,11 @@ class _OrderCard extends ConsumerWidget {
 
 /// The next step in the supply flow, or `null` once the order is terminal.
 String? _nextOrderStatus(String status) => switch (status.toLowerCase()) {
-  'pending' => 'Confirmed',
-  'confirmed' => 'Ready to ship',
-  'ready to ship' => 'Shipped',
-  'shipped' => 'Completed',
+  'escrow_held' => 'SHIPPED',
   _ => null,
 };
 
 String _actionFor(String next) => switch (next) {
-  'Confirmed' => 'Confirm order',
-  'Ready to ship' => 'Mark ready',
-  'Shipped' => 'Mark shipped',
-  _ => 'Complete order',
+  'SHIPPED' => 'Mark shipped',
+  _ => 'Update order',
 };

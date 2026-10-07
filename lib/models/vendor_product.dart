@@ -94,6 +94,8 @@ class VendorProduct {
     this.lowStockThreshold,
     this.status,
     this.thumbnail,
+    this.localImagePath,
+    this.localImagePaths,
     this.images,
     this.variants,
     this.rating,
@@ -121,6 +123,8 @@ class VendorProduct {
   String? status;
 
   String? thumbnail;
+  String? localImagePath;
+  List<String>? localImagePaths;
   List<String>? images;
   List<ProductVariant>? variants;
   double? rating;
@@ -133,6 +137,11 @@ class VendorProduct {
   factory VendorProduct.fromJson(Map<String, dynamic> j) {
     final category = j['category'];
     final variants = j['variants'];
+    final parsedStatus = _toStatus(
+      j['status'] ??
+          j['availability'] ??
+          (j['isActive'] == false ? VendorProductStatus.inactive : null),
+    );
     return VendorProduct(
       id: j['_id'] ?? j['id'],
       name: j['name'] ?? j['title'],
@@ -146,7 +155,9 @@ class VendorProduct {
       discountPrice: (j['discountPrice'] ?? j['salePrice'] ?? j['sellingPrice']) as num?,
       stockQuantity: _toInt(j['stockQuantity'] ?? j['stock'] ?? j['quantity']),
       lowStockThreshold: _toInt(j['lowStockThreshold'] ?? j['lowStockAt'] ?? j['reorderPoint']),
-      status: _toStatus(j['status'] ?? j['availability'] ?? (j['isActive'] == false ? VendorProductStatus.inactive : null)),
+      status: parsedStatus == VendorProductStatus.inactive
+          ? VendorProductStatus.draft
+          : parsedStatus,
       thumbnail: _firstImage(j),
       images: _images(j),
       variants: variants is List
@@ -168,6 +179,19 @@ class VendorProduct {
   /// `image`, or a `images` array of strings/objects.
   static List<String> _images(Map<String, dynamic> j) {
     final out = <String>[];
+    final media = j['media'];
+    if (media is Map) {
+      final main = media['mainImage'];
+      if (main is String && main.trim().isNotEmpty) out.add(main.trim());
+      final gallery = media['gallery'];
+      if (gallery is List) {
+        for (final image in gallery) {
+          if (image is String && image.trim().isNotEmpty) {
+            out.add(image.trim());
+          }
+        }
+      }
+    }
     final imgs = j['images'] ?? j['gallery'];
     if (imgs is List) {
       for (final f in imgs) {
@@ -186,7 +210,12 @@ class VendorProduct {
 
   static String? _firstImage(Map<String, dynamic> j) {
     final all = _images(j);
-    final thumb = j['thumbnail'] ?? j['image'] ?? j['imageUrl'];
+    final media = j['media'];
+    final thumb =
+        (media is Map ? media['mainImage'] : null) ??
+        j['thumbnail'] ??
+        j['image'] ??
+        j['imageUrl'];
     if (thumb is String && thumb.trim().isNotEmpty) return thumb.trim();
     return all.isEmpty ? null : all.first;
   }
@@ -271,15 +300,17 @@ class VendorProductStatus {
 
   static const active = 'ACTIVE';
   static const draft = 'DRAFT';
+  static const pendingApproval = 'PENDING_APPROVAL';
   static const outOfStock = 'OUT_OF_STOCK';
   static const inactive = 'INACTIVE';
 
-  static const all = <String>[active, draft, outOfStock, inactive];
+  static const all = <String>[active, draft, pendingApproval, outOfStock];
 
   /// Explanations shown under the status switch in the product form.
   static const descriptions = <String, String>{
     active: 'Visible in the marketplace and purchasable',
     draft: 'Saved but hidden from buyers while you finish it',
+    pendingApproval: 'Waiting for platform review before it can go live',
     outOfStock: 'Listed but cannot be ordered until you restock',
     inactive: 'Hidden from the marketplace; keeps its history',
   };

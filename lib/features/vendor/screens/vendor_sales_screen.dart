@@ -259,6 +259,7 @@ class VendorSalesScreen extends ConsumerWidget {
   ) async {
     final formKey = GlobalKey<FormState>();
     final amount = TextEditingController();
+    final accountName = TextEditingController();
     final destination = TextEditingController();
     final note = TextEditingController();
     var method = PayoutMethod.mtnMomo;
@@ -314,7 +315,10 @@ class VendorSalesScreen extends ConsumerWidget {
                               border: OutlineInputBorder(),
                             ),
                             items: [
-                              for (final option in PayoutMethod.values)
+                              for (final option in [
+                                PayoutMethod.mtnMomo,
+                                PayoutMethod.airtelMoney,
+                              ])
                                 DropdownMenuItem(
                                   value: option,
                                   child: Text(option.label),
@@ -324,6 +328,19 @@ class VendorSalesScreen extends ConsumerWidget {
                                 (value) => setDialogState(
                                   () => method = value ?? method,
                                 ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: accountName,
+                            decoration: const InputDecoration(
+                              labelText: 'Account holder name',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator:
+                                (value) =>
+                                    value == null || value.trim().isEmpty
+                                        ? 'Enter the account holder name'
+                                        : null,
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
@@ -377,6 +394,7 @@ class VendorSalesScreen extends ConsumerWidget {
             .requestPayout(
               amount: num.parse(amount.text.replaceAll(',', '').trim()),
               method: method,
+              accountName: accountName.text,
               destination: destination.text,
               note: note.text,
             );
@@ -391,6 +409,7 @@ class VendorSalesScreen extends ConsumerWidget {
       }
     }
     amount.dispose();
+    accountName.dispose();
     destination.dispose();
     note.dispose();
   }

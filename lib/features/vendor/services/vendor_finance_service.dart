@@ -27,6 +27,7 @@ abstract class VendorFinanceService {
   Future<PayoutRequest> requestPayout({
     required num amount,
     required PayoutMethod method,
+    required String accountName,
     required String destination,
     String? note,
   });
@@ -45,22 +46,32 @@ class ApiVendorFinanceService implements VendorFinanceService {
 
   @override
   Future<VendorFinanceSummary> summary() async {
-    final res = await _api.get('/stores/mine/finance/summary');
-    return VendorFinanceSummary.fromJson(singleJson(res, ['summary', 'finance', 'data']));
+    final res = await _api.get('/payouts/balance');
+    final balance = singleJson(res, ['balance']);
+    final earned = _number(balance['totalEarned']) ?? 0;
+    final commissionRate = _number(
+      res is Map ? res['commissionRate'] : null,
+    );
+    return VendorFinanceSummary(
+      grossRevenue: earned + (_number(balance['commissionPaid']) ?? 0),
+      commission: _number(balance['commissionPaid']) ?? 0,
+      netEarnings: earned,
+      escrowHeld: _number(balance['pendingBalance']) ?? 0,
+      availablePayout: _number(balance['availableBalance']) ?? 0,
+      commissionRate: commissionRate == null ? 0.1 : commissionRate / 100,
+    );
   }
 
   @override
   Future<List<LedgerEntry>> ledger({LedgerEntryKind? kind, int limit = 50}) async {
-    final res = await _api.get('/stores/mine/finance/ledger', query: {
-      'limit': limit,
-      if (kind != null) 'kind': kind.slug,
-    });
-    return listJson(res, ['entries', 'ledger', 'data']).map(LedgerEntry.fromJson).toList();
+    throw ApiException(
+      'The backend does not expose a vendor transaction-ledger endpoint.',
+    );
   }
 
   @override
   Future<List<PayoutRequest>> payouts() async {
-    final res = await _api.get('/stores/mine/finance/payouts', query: {'limit': 30});
+    final res = await _api.get('/payouts/history');
     return listJson(res, ['payouts', 'withdrawals', 'data']).map(PayoutRequest.fromJson).toList();
   }
 
@@ -68,15 +79,24 @@ class ApiVendorFinanceService implements VendorFinanceService {
   Future<PayoutRequest> requestPayout({
     required num amount,
     required PayoutMethod method,
+    required String accountName,
     required String destination,
     String? note,
   }) async {
-    final res = await _api.post('/stores/mine/finance/payouts', body: {
+    if (method == PayoutMethod.bankTransfer) {
+      throw ApiException('The backend currently supports mobile-money payouts only.');
+    }
+    final res = await _api.post('/payouts/request', body: {
       'amount': amount,
-      'method': method.slug,
-      'destination': destination.trim(),
-      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      'payoutMethod': method == PayoutMethod.mtnMomo ? 'MOMO' : 'AIRTEL',
+      'payoutDetails': {
+        'accountName': accountName.trim(),
+        'accountNumber': destination.trim(),
+      },
     });
     return PayoutRequest.fromJson(singleJson(res, ['payout']));
   }
+
+  static num? _number(dynamic value) =>
+      value is num ? value : num.tryParse(value?.toString().replaceAll('%', '') ?? '');
 }

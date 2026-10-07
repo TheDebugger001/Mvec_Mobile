@@ -26,6 +26,10 @@ abstract class AffiliateService {
   /// One aggregated call for the overview screen.
   Future<AffiliateOverview> fetchOverview();
 
+  /// Wallet, links, payouts and headline totals in a single round trip
+  /// (`GET /affiliates/me/dashboard`).
+  Future<AffiliateDashboard> fetchDashboard();
+
   // ---------- Referral links ----------
   Future<List<AffiliateLink>> fetchLinks();
 
@@ -53,6 +57,13 @@ abstract class AffiliateService {
   Future<AffiliateWallet> fetchWallet();
 
   Future<List<AffiliateCommission>> fetchCommissions({String? status});
+
+  /// Completed referral events that paid commission.
+  Future<List<AffiliateConversion>> fetchConversions();
+
+  // ---------- Tracking ----------
+  /// Registers a click for a referral code (`GET /affiliates/track/:code`).
+  Future<void> trackClick(String code);
 
   // ---------- Payouts ----------
   Future<List<AffiliatePayout>> fetchPayouts();

@@ -82,6 +82,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
     if (!mounted) return;
     if (ok) {
+      if (GoRouterState.of(context).uri.queryParameters['returnTo'] == 'checkout') {
+        context.pop();
+        return;
+      }
       final user = ref.read(currentUserProvider);
       if (user != null) context.go(roleHome(user));
     }

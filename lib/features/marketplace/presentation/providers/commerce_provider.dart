@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/api_client.dart';
 import '../../data/interest/interest_profile.dart';
 import '../../../../models/cart_item.dart';
 import '../../../../models/product.dart';
@@ -14,6 +15,7 @@ class CommerceProvider extends ChangeNotifier {
 
   final List<Product> _wishlistItems = [];
   final List<CartItem> _cartItems = [];
+  final ApiClient _api = ApiClient.instance;
 
   List<Product> get wishlistItems => _wishlistItems;
   List<CartItem> get cartItems => _cartItems;
@@ -38,15 +40,72 @@ class CommerceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addToCart(Product product) {
-    _wishlistItems.removeWhere((item) => item.id == product.id);
-    _addToCart(product);
-    // Stronger than a wishlist entry: the cart is what turns into an order.
-    onInterest?.call(product, InterestSignal.carted);
+  Future<void> loadCart() async {
+    if (await ApiClient.readToken() == null) return;
+    final response = await _api.get('/cart');
+    final cart = singleJson(response, ['cart']);
+    final items = cart['items'];
+    if (items is! List) return;
+    _cartItems
+      ..clear()
+      ..addAll(items.whereType<Map>().map((item) {
+        final row = Map<String, dynamic>.from(item);
+        final rawProduct = row['product'];
+        if (rawProduct is! Map) {
+          throw const FormatException(
+            'The backend returned a cart item without its product.',
+          );
+        }
+        final json = Map<String, dynamic>.from(rawProduct);
+        final media = json['media'];
+        final vendor = json['vendor'];
+        final image = media is Map ? media['mainImage'] : null;
+        final seller = vendor is Map
+            ? (vendor['companyName'] ?? vendor['Fullname'] ?? 'Seller')
+            : 'Seller';
+        return CartItem(
+          product: Product(
+            id: '${json['_id'] ?? json['id'] ?? ''}',
+            name: '${json['name'] ?? 'Product'}',
+            description: '${json['description'] ?? ''}',
+            price: _double(row['price'] ?? json['discountPrice'] ?? json['price']),
+            stock: _int(json['stockQuantity']),
+            images: image is String && image.isNotEmpty ? [image] : const [],
+            colors: const [],
+            sizes: const [],
+            vendor: Vendor(
+              id: vendor is Map ? '${vendor['_id'] ?? ''}' : '',
+              name: '$seller',
+              logo: '',
+              rating: 0,
+              totalProducts: 0,
+            ),
+          ),
+          quantity: _int(row['quantity']),
+        );
+      }));
     notifyListeners();
   }
 
-  void moveToCart(Product product) => addToCart(product);
+  Future<void> addToCart(Product product) async {
+    if (await ApiClient.readToken() != null) {
+      if (product.id.trim().isEmpty) {
+        throw const FormatException(
+          'This product does not have a backend product ID.',
+        );
+      }
+      await _api.post('/cart', body: {'productId': product.id, 'quantity': 1});
+      await loadCart();
+    } else {
+      _wishlistItems.removeWhere((item) => item.id == product.id);
+      _addToCart(product);
+      notifyListeners();
+    }
+    // Stronger than a wishlist entry: the cart is what turns into an order.
+    onInterest?.call(product, InterestSignal.carted);
+  }
+
+  Future<void> moveToCart(Product product) => addToCart(product);
 
   void _addToCart(Product product) {
     final matchingItems = _cartItems.where(
@@ -59,17 +118,39 @@ class CommerceProvider extends ChangeNotifier {
     }
   }
 
-  void updateCartQuantity(CartItem item) => notifyListeners();
+  Future<void> updateCartQuantity(CartItem item) async {
+    if (await ApiClient.readToken() != null) {
+      await _api.put(
+        '/cart/items/${item.product.id}',
+        body: {'quantity': item.quantity},
+      );
+    }
+    notifyListeners();
+  }
 
-  void removeCartItem(CartItem item) {
+  Future<void> removeCartItem(CartItem item) async {
+    if (await ApiClient.readToken() != null) {
+      await _api.delete('/cart/items/${item.product.id}');
+    }
     _cartItems.removeWhere(
       (cartItem) => cartItem.product.id == item.product.id,
     );
     notifyListeners();
   }
 
-  void clearCart() {
+  Future<void> clearCart() async {
+    if (await ApiClient.readToken() != null) {
+      await _api.delete('/cart');
+    }
     _cartItems.clear();
     notifyListeners();
   }
+
+  static double _double(dynamic value) => value is num
+      ? value.toDouble()
+      : double.tryParse(value?.toString() ?? '') ?? 0;
+
+  static int _int(dynamic value) => value is num
+      ? value.toInt()
+      : int.tryParse(value?.toString() ?? '') ?? 1;
 }

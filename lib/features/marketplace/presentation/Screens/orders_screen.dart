@@ -1,42 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/api_client.dart';
 import '../../../../core/theme.dart';
-import '../../../../core/utils.dart';
 import '../../../../core/utils/app_theme.dart';
-import '../../../../models/catalog.dart';
-import '../../../../providers/admin_providers.dart';
-import '../../../../widgets/common.dart';
 
-/// Orders tab: current (active) and previous orders.
-///
-/// Backed by `GET /api/orders`, which the API scopes to the signed-in shopper.
-/// Orders with no status yet are treated as active so a fresh order is not hidden.
-class OrdersScreen extends ConsumerWidget {
+class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
 
-  /// Statuses that count as an in-flight order. Anything else (delivered,
-  /// cancelled, refunded) belongs under Past.
-  static const Set<String> _activeStatuses = <String>{
-    'PENDING',
-    'CONFIRMED',
-    'PROCESSING',
-    'PACKED',
-    'SHIPPED',
-    'OUT_FOR_DELIVERY',
-    'ASSIGNED',
-    'ON_THE_WAY',
-  };
-
-  static bool isActive(OrderRecord order) {
-    final status = (order.status ?? '').trim().toUpperCase().replaceAll(RegExp(r'[\s-]+'), '_');
-    if (status.isEmpty) return true;
-    return _activeStatuses.contains(status);
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ordersAsync = ref.watch(myOrdersProvider);
+  Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Column(
@@ -52,31 +24,13 @@ class OrdersScreen extends ConsumerWidget {
               Tab(text: 'Past'),
             ],
           ),
-          Expanded(
-            child: switch (ordersAsync) {
-              AsyncLoading() => const Center(child: LoadingState()),
-              AsyncError(:final error) => Center(
-                child: ErrorState(
-                  message: friendlyError(error),
-                  onRetry: () => ref.invalidate(myOrdersProvider),
-                ),
-              ),
-              AsyncData(:final value) => TabBarView(
-                children: [
-                  _OrdersList(
-                    orders: value.where(isActive).toList(),
-                    activeOnly: true,
-                    onRetry: () => ref.invalidate(myOrdersProvider),
-                  ),
-                  _OrdersList(
-                    orders: value.where((o) => !isActive(o)).toList(),
-                    activeOnly: false,
-                    onRetry: () => ref.invalidate(myOrdersProvider),
-                  ),
-                ],
-              ),
-              _ => const Center(child: LoadingState()),
-            },
+          const Expanded(
+            child: TabBarView(
+              children: [
+                _OrdersList(activeOnly: true),
+                _OrdersList(activeOnly: false),
+              ],
+            ),
           ),
         ],
       ),
@@ -84,126 +38,164 @@ class OrdersScreen extends ConsumerWidget {
   }
 }
 
-class _OrdersList extends StatelessWidget {
-  const _OrdersList({
-    required this.orders,
-    required this.activeOnly,
-    required this.onRetry,
-  });
+class _OrdersList extends StatefulWidget {
+  const _OrdersList({required this.activeOnly});
 
-  final List<OrderRecord> orders;
   final bool activeOnly;
-  final VoidCallback onRetry;
+
+  @override
+  State<_OrdersList> createState() => _OrdersListState();
+}
+
+class _OrdersListState extends State<_OrdersList> {
+  late Future<_OrdersResult> _orders;
+
+  @override
+  void initState() {
+    super.initState();
+    _orders = _loadOrders();
+  }
+
+  Future<_OrdersResult> _loadOrders() async {
+    if (await ApiClient.readToken() == null) {
+      return const _OrdersResult(signedIn: false, orders: []);
+    }
+    final response = await ApiClient.instance.get('/orders/my-orders');
+    return _OrdersResult(
+      signedIn: true,
+      orders: listJson(response, ['orders']),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (orders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              color: context.mv.textMuted,
-              size: 56,
+    return FutureBuilder<_OrdersResult>(
+      future: _orders,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _MessageState(
+            icon: Icons.cloud_off_outlined,
+            message: 'Could not load orders.',
+            action: TextButton(
+              onPressed: () => setState(() => _orders = _loadOrders()),
+              child: const Text('Retry'),
             ),
-            const SizedBox(height: 12),
-            Text(
-              activeOnly ? 'No active orders' : 'No past orders yet',
-              style: AppTextStyles.title(context),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(onPressed: onRetry, child: const Text('Refresh')),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: orders.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _OrderCard(order: orders[index]),
+          );
+        }
+        final result = snapshot.data!;
+        if (!result.signedIn) {
+          return const _MessageState(
+            icon: Icons.lock_outline,
+            message: 'Sign in to see your orders.',
+          );
+        }
+        final orders = result.orders.where((order) {
+          final status = '${order['orderStatus'] ?? 'PENDING'}'.toUpperCase();
+          final isPast = status == 'DELIVERED' ||
+              status == 'COMPLETED' ||
+              status == 'CANCELLED';
+          return widget.activeOnly ? !isPast : isPast;
+        }).toList();
+        if (orders.isEmpty) {
+          return _MessageState(
+            icon: Icons.receipt_long_outlined,
+            message: widget.activeOnly
+                ? 'No active orders'
+                : 'No past orders yet',
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: orders.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, index) => _OrderTile(order: orders[index]),
+          ),
+        );
+      },
     );
+  }
+
+  Future<void> _refresh() async {
+    final refreshed = _loadOrders();
+    setState(() => _orders = refreshed);
+    await refreshed;
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order});
+class _OrderTile extends StatelessWidget {
+  const _OrderTile({required this.order});
 
-  final OrderRecord order;
+  final Map<String, dynamic> order;
 
   @override
   Widget build(BuildContext context) {
-    final status = (order.status ?? 'Unknown').trim();
-    final statusColor = switch (status.toUpperCase()) {
-      'DELIVERED' => AppColors.success,
-      'CANCELLED' || 'REFUNDED' => AppColors.error,
-      _ => AppColors.warning,
-    };
-    final items = order.itemsCount ?? order.raw?['itemsCount'];
-    final placed = order.createdAt;
+    final orderNumber = '${order['orderNumber'] ?? 'Order'}';
+    final status = '${order['orderStatus'] ?? 'PENDING'}'
+        .replaceAll('_', ' ')
+        .toLowerCase();
+    final total = order['totalAmount'];
+    final amount = total is num ? total.toStringAsFixed(0) : '$total';
+    final createdAt = DateTime.tryParse('${order['createdAt'] ?? ''}');
+    final itemCount = order['items'] is List
+        ? (order['items'] as List).fold<int>(0, (sum, item) {
+            if (item is Map && item['quantity'] is num) {
+              return sum + (item['quantity'] as num).toInt();
+            }
+            return sum;
+          })
+        : 0;
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  order.orderNumber == null ? 'Order' : '#${order.orderNumber}',
-                  style: AppTextStyles.title(context).copyWith(fontSize: 13),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  color: context.mv.textMuted,
-                  size: 14,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  placed == null ? 'Date unavailable' : shortDate(placed),
-                  style: AppTextStyles.caption(context),
-                ),
-                const Spacer(),
-                Text(
-                  order.total == null ? '—' : money(order.total!),
-                  style: AppTextStyles.price(context).copyWith(fontSize: 14),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              items == null ? 'View details' : '$items item(s) · View details',
-              style: AppTextStyles.bodySecondary(context).copyWith(fontSize: 12),
-            ),
-          ],
+      child: ListTile(
+        leading: const Icon(Icons.receipt_long_outlined),
+        title: Text(orderNumber),
+        subtitle: Text(
+          '$itemCount item${itemCount == 1 ? '' : 's'} · '
+          '${createdAt == null ? '' : '${createdAt.toLocal().toString().split(' ').first} · '}$status',
+        ),
+        trailing: Text(
+          '$amount RWF',
+          style: AppTextStyles.price(context),
         ),
       ),
     );
   }
+}
+
+class _MessageState extends StatelessWidget {
+  const _MessageState({
+    required this.icon,
+    required this.message,
+    this.action,
+  });
+
+  final IconData icon;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: context.mv.textMuted, size: 56),
+          const SizedBox(height: 12),
+          Text(message, style: AppTextStyles.title(context)),
+          if (action != null) action!,
+        ],
+      ),
+    );
+  }
+}
+
+class _OrdersResult {
+  const _OrdersResult({required this.signedIn, required this.orders});
+
+  final bool signedIn;
+  final List<Map<String, dynamic>> orders;
 }

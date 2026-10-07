@@ -6,6 +6,7 @@
 class Product {
   const Product({
     required this.id,
+    this.apiId,
     required this.name,
     required this.slug,
     required this.description,
@@ -26,6 +27,7 @@ class Product {
   });
 
   final int id;
+  final String? apiId;
   final String name;
   final String slug;
   final String description;
@@ -67,18 +69,22 @@ class Product {
     final media = json['media'];
     final category = json['category'];
     final vendor = json['vendor'];
-    final fallbackImage = json['image_url'] ?? json['imageUrl'] ?? json['image'];
+    final fallbackImage =
+        json['image_url'] ?? json['imageUrl'] ?? json['image'];
 
     // The backend Product stores the undiscounted amount in `price` and the
     // sale amount in `discountPrice`, which is the inverse of what a card
     // renders. Read both spellings, then orient the pair the way the UI wants:
     // `price` is what you pay now and `originalPrice` is what you struck out.
     final rawDiscount = json['discountPrice'] ?? json['discount_price'];
-    final basePrice = _toDouble(json['price'] ?? json['sale_price'] ?? json['salePrice']);
+    final basePrice = _toDouble(
+      json['price'] ?? json['sale_price'] ?? json['salePrice'],
+    );
     final discountPrice = rawDiscount == null ? null : _toDouble(rawDiscount);
     final onDiscount = discountPrice != null && discountPrice < basePrice;
 
-    final original = json['originalPrice'] ??
+    final original =
+        json['originalPrice'] ??
         json['original_price'] ??
         (json['discount'] is Map
             ? (json['discount'] as Map<String, dynamic>)['originalPrice']
@@ -86,35 +92,53 @@ class Product {
         (onDiscount ? basePrice : null);
 
     return Product(
-      id: _toInt(json['id'] ?? json['publicId']),
+      id: _toInt(json['id'] ?? json['publicId'] ?? json['_id']),
+      apiId:
+          json['_id']?.toString() ??
+          json['apiId']?.toString() ??
+          json['api_id']?.toString(),
       name: _toString(json['name'] ?? json['title'] ?? json['product_name']),
       slug: _toString(json['slug']),
       description: _toString(json['description']),
       price: onDiscount ? discountPrice : basePrice,
       originalPrice: original != null ? _toDouble(original) : null,
-      imageUrl: media is Map
-          ? _toString(media['mainImage'] ?? media['main_image'] ?? media['url'])
-          : _toString(fallbackImage),
+      imageUrl:
+          media is Map
+              ? _toString(
+                media['mainImage'] ?? media['main_image'] ?? media['url'],
+              )
+              : _toString(fallbackImage),
       brand: json['brand']?.toString(),
-      stockQuantity: _toInt(json['stockQuantity'] ?? json['stock'] ?? json['stock_quantity']),
+      stockQuantity: _toInt(
+        json['stockQuantity'] ?? json['stock'] ?? json['stock_quantity'],
+      ),
       rating: _toDouble(json['rating'] ?? json['averageRating']),
-      ratingCount:
-          _toInt(json['ratingCount'] ?? json['rating_count'] ?? json['reviewCount']),
-      badges: json['badges'] is List
-          ? (json['badges'] as List<dynamic>).map((e) => e.toString()).toList()
-          : const <String>[],
-      categoryId: category is Map
-          ? _toIntOrNull(category['id'])
-          : _toIntOrNull(json['category_id']),
-      categoryName: category is Map
-          ? category['name']?.toString()
-          : json['category_name']?.toString(),
-      vendorId: vendor is Map
-          ? _toIntOrNull(vendor['id'])
-          : _toIntOrNull(json['vendor_id']),
-      vendorName: vendor is Map
-          ? vendor['name']?.toString()
-          : json['vendor_name']?.toString(),
+      ratingCount: _toInt(
+        json['ratingCount'] ?? json['rating_count'] ?? json['reviewCount'],
+      ),
+      badges:
+          json['badges'] is List
+              ? (json['badges'] as List<dynamic>)
+                  .map((e) => e.toString())
+                  .toList()
+              : const <String>[],
+      categoryId:
+          category is Map
+              ? _toIntOrNull(category['id'] ?? category['_id'])
+              : _toIntOrNull(json['category_id']),
+      categoryName:
+          category is Map
+              ? category['name']?.toString()
+              : json['category_name']?.toString(),
+      vendorId:
+          vendor is Map
+              ? _toIntOrNull(vendor['id'] ?? vendor['_id'])
+              : _toIntOrNull(json['vendor_id']),
+      vendorName:
+          vendor is Map
+              ? (vendor['name'] ?? vendor['companyName'] ?? vendor['Fullname'])
+                  ?.toString()
+              : json['vendor_name']?.toString(),
       isFeatured:
           json['isFeatured'] == true ||
           json['is_featured'] == true ||
@@ -128,43 +152,44 @@ class Product {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'slug': slug,
-        'description': description,
-        'price': price,
-        'originalPrice': originalPrice,
-        'stockQuantity': stockQuantity,
-        'rating': rating,
-        'ratingCount': ratingCount,
-        'badges': badges,
-        'isFeatured': isFeatured,
-        'isOnSale': onSale,
-        'brand': brand,
-        'category': <String, dynamic>{
-          'id': categoryId,
-          'name': categoryName,
-        },
-        'vendor': <String, dynamic>{
-          'id': vendorId,
-          'name': vendorName,
-        },
-        'media': <String, dynamic>{
-          'mainImage': imageUrl,
-        },
-      };
+    'id': id,
+    'name': name,
+    'slug': slug,
+    'description': description,
+    'price': price,
+    'originalPrice': originalPrice,
+    'stockQuantity': stockQuantity,
+    'rating': rating,
+    'ratingCount': ratingCount,
+    'badges': badges,
+    'isFeatured': isFeatured,
+    'isOnSale': onSale,
+    'brand': brand,
+    'category': <String, dynamic>{'id': categoryId, 'name': categoryName},
+    'vendor': <String, dynamic>{'id': vendorId, 'name': vendorName},
+    'media': <String, dynamic>{'mainImage': imageUrl},
+  };
 
   static String _toString(dynamic value) => value?.toString() ?? '';
 
-  static double _toDouble(dynamic value) => value is num
-      ? value.toDouble()
-      : double.tryParse(value?.toString() ?? '') ?? 0;
+  static double _toDouble(dynamic value) =>
+      value is num
+          ? value.toDouble()
+          : double.tryParse(value?.toString() ?? '') ?? 0;
 
-  static int _toInt(dynamic value) => value is num
-      ? value.toInt()
-      : int.tryParse(value?.toString() ?? '') ?? 0;
+  static int _toInt(dynamic value) =>
+      value is num ? value.toInt() : _parseId(value) ?? 0;
 
-  static int? _toIntOrNull(dynamic value) => value is num
-      ? value.toInt()
-      : int.tryParse(value?.toString() ?? '');
+  static int? _toIntOrNull(dynamic value) =>
+      value is num ? value.toInt() : _parseId(value);
+
+  static int? _parseId(dynamic value) {
+    final text = value?.toString() ?? '';
+    final decimal = int.tryParse(text);
+    if (decimal != null) return decimal;
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(text)) {
+      return int.tryParse(text.substring(0, 12), radix: 16);
+    }
+    return null;
+  }
 }

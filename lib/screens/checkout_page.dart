@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../core/api_client.dart';
 import '../core/theme.dart';
 import '../core/utils/app_theme.dart';
 import '../models/cart_item.dart';
@@ -35,9 +38,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Address? _selectedAddress;
   String _selectedPaymentMethod = 'Mobile Money';
 
-  final List<String> _paymentMethods = ['Mobile Money', 'Credit / Debit Card'];
+  final List<String> _paymentMethods = ['Mobile Money'];
 
   bool _isSubmitting = false;
+  String? _pendingOrderId;
+  Map<String, dynamic>? _pendingOrder;
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
@@ -398,7 +403,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ),
                     Text(
-                      '\$${item.totalPrice.toStringAsFixed(2)}',
+                      'RWF ${item.totalPrice.toStringAsFixed(0)}',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -467,20 +472,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Widget _buildPaymentInput() {
-    final isMobileMoney = _selectedPaymentMethod == 'Mobile Money';
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
         controller: _paymentInputController,
-        keyboardType:
-            isMobileMoney ? TextInputType.phone : TextInputType.number,
+        keyboardType: TextInputType.phone,
         decoration: InputDecoration(
-          labelText:
-              isMobileMoney ? 'Mobile money phone number' : 'Card number',
-          hintText: isMobileMoney ? '+2507 -------' : '1234 5678 9012 3456',
-          prefixIcon: Icon(
-            isMobileMoney ? Icons.phone_outlined : Icons.credit_card_outlined,
-          ),
+          labelText: 'Mobile money phone number',
+          hintText: '+2507 -------',
+          prefixIcon: const Icon(Icons.phone_outlined),
         ),
       ),
     );
@@ -528,7 +528,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
         ),
         Text(
-          '\$${amount.toStringAsFixed(2)}',
+          'RWF ${amount.toStringAsFixed(0)}',
           style: TextStyle(
             fontSize: isTotal ? 17 : 14,
             fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
@@ -541,6 +541,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // ==================== SUBMIT ORDER ====================
   Future<void> _submitOrder() async {
+    if (await ApiClient.readToken() == null) {
+      if (mounted) context.push('/signup?returnTo=checkout');
+      return;
+    }
+
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a delivery address')),
@@ -563,13 +568,56 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     setState(() => _isSubmitting = true);
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() => _isSubmitting = false);
-
-    if (mounted) {
-      // Show success
+    try {
+      final order =
+          _pendingOrder ??
+          singleJson(
+            await ApiClient.instance.post(
+              '/orders/direct-checkout',
+              body: {
+                'items': [
+                  for (final item in widget.cartItems)
+                    {'productId': item.product.id, 'qty': item.quantity},
+                ],
+                'shippingAddress': {
+                  'fullName': _selectedAddress!.fullName,
+                  'phone': _selectedAddress!.phone,
+                  'street': _selectedAddress!.addressLine,
+                  'city': _selectedAddress!.city,
+                  'state': _selectedAddress!.region,
+                  'country': 'Rwanda',
+                },
+                'paymentMethod': 'MOMO',
+              },
+            ),
+            ['order'],
+          );
+      final orderId = _pendingOrderId ?? order['_id']?.toString();
+      if (orderId == null || orderId.isEmpty) {
+        throw const FormatException(
+          'The backend created no order ID, so payment cannot be started.',
+        );
+      }
+      _pendingOrderId = orderId;
+      _pendingOrder = order;
+      final payment = await ApiClient.instance.post(
+        '/payments/pay',
+        body: {
+          'orderId': orderId,
+          'phoneNumber': _paymentInputController.text.trim(),
+        },
+      );
+      final paymentData = singleJson(payment, ['payment']);
+      final paid = '${paymentData['status'] ?? ''}'.toUpperCase() == 'SUCCESS';
+      final refreshedOrder = <String, dynamic>{
+        ...order,
+        if (paid) 'paymentStatus': 'PAID',
+        if (paid) 'orderStatus': 'CONFIRMED',
+      };
+      _pendingOrderId = null;
+      _pendingOrder = null;
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -580,50 +628,72 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
               title: Row(
                 children: [
-                  const Icon(
-                    Icons.check_circle,
-                    color: MvColors.successText,
+                  Icon(
+                    paid ? Icons.check_circle : Icons.info_outline,
+                    color: paid ? MvColors.successText : AppColors.primary,
                     size: 28,
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'Order Placed!',
+                    paid ? 'Order Placed!' : 'Payment requested',
                     style: TextStyle(color: context.mv.text),
                   ),
                 ],
               ),
-              content: const Text(
-                'Your order has been placed successfully. You will receive a confirmation soon.',
+              content: Text(
+                paid
+                    ? 'Payment confirmed. Your order has been placed.'
+                    : 'Approve the payment prompt on your phone to complete the order.',
               ),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context); // close dialog
-                    widget.onOrderPlaced(_buildOrder());
+                    widget.onOrderPlaced(_buildOrder(refreshedOrder));
                   },
                   child: const Text('OK'),
                 ),
               ],
             ),
       );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Checkout failed: $error')));
     }
   }
 
-  Order _buildOrder() {
+  Order _buildOrder(Map<String, dynamic> data) {
+    final status = '${data['orderStatus'] ?? 'PENDING'}'.toUpperCase();
     return Order(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      orderNumber: 'MV-${DateTime.now().millisecondsSinceEpoch}',
-      orderDate: DateTime.now(),
-      status: OrderStatus.confirmed,
+      id: '${data['_id'] ?? _pendingOrderId ?? ''}',
+      orderNumber: '${data['orderNumber'] ?? '—'}',
+      orderDate:
+          DateTime.tryParse('${data['createdAt'] ?? ''}') ?? DateTime.now(),
+      status: switch (status) {
+        'CONFIRMED' => OrderStatus.confirmed,
+        'PROCESSING' => OrderStatus.processing,
+        'SHIPPED' => OrderStatus.shipped,
+        'OUT_FOR_DELIVERY' => OrderStatus.outForDelivery,
+        'DELIVERED' || 'COMPLETED' => OrderStatus.delivered,
+        'CANCELLED' => OrderStatus.cancelled,
+        _ => OrderStatus.pending,
+      },
       items: List<CartItem>.from(widget.cartItems),
       deliveryAddress: _selectedAddress!,
       paymentMethod: _selectedPaymentMethod,
-      subtotal: widget.subtotal,
+      subtotal: _number(data['totalAmount']) ?? widget.subtotal,
       shippingFee: widget.shippingFee,
       serviceFee: widget.serviceFee,
       tax: widget.tax,
-      total: widget.total,
-      trackingNumber: 'TRK-${DateTime.now().millisecondsSinceEpoch}',
+      total: _number(data['totalAmount']) ?? widget.total,
     );
   }
+
+  double? _number(dynamic value) =>
+      value is num
+          ? value.toDouble()
+          : double.tryParse(value?.toString() ?? '');
 }

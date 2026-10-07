@@ -21,7 +21,6 @@ abstract class VendorSettingsService {
 /// Live adapter for the vendor settings endpoints.
 class ApiVendorSettingsService implements VendorSettingsService {
   ApiVendorSettingsService(this._api);
-
   final ApiClient _api;
 
   @override
@@ -29,21 +28,45 @@ class ApiVendorSettingsService implements VendorSettingsService {
 
   @override
   Future<VendorStoreSettings> settings() async {
-    final response = await _api.get('/stores/mine/settings');
-    return VendorStoreSettings.fromJson(
-      singleJson(response, ['settings', 'store', 'data']),
-    );
+    final responses = await Future.wait([
+      _api.get('/stores/mine'),
+      _api.get('/staff'),
+      _api.get('/auth/me'),
+    ]);
+    final store = singleJson(responses[0], ['store']);
+    final staff = listJson(responses[1], ['staff']);
+    final user = singleJson(responses[2], ['user']);
+    final address = store['address'];
+    return VendorStoreSettings.fromJson({
+      ...store,
+      'storeSlug': store['slug'] ?? store['storeSlug'],
+      'logoUrl': store['logo'] ?? store['logoUrl'],
+      'phone': store['contactPhone'] ?? store['phone'],
+      'supportEmail': store['contactEmail'] ?? store['supportEmail'],
+      'businessAddress':
+          store['businessAddress'] ??
+          (address is Map ? address['street'] : address),
+      'staff': staff,
+      'lastPasswordChangeAt': user['lastPasswordChangeAt'],
+    });
   }
 
   @override
   Future<VendorStoreSettings> save(VendorStoreSettings settings) async {
-    final response = await _api.put(
-      '/stores/mine/settings',
-      body: settings.toJson(),
-    );
-    return VendorStoreSettings.fromJson(
-      singleJson(response, ['settings', 'store', 'data']),
-    );
+    final body = settings.toJson()..remove('staff');
+    await _api.put('/stores/mine', body: body);
+
+    for (final member in settings.staff.where((member) => !member.isOwner)) {
+      await _api.put(
+        '/staff/${member.id}',
+        body: {
+          'role': member.role == StaffRole.manager ? 'manager' : 'staff',
+          'permissions': member.permissions.map((permission) => permission.slug).toList(),
+          'active': member.active,
+        },
+      );
+    }
+    return this.settings();
   }
 
   @override
@@ -51,21 +74,17 @@ class ApiVendorSettingsService implements VendorSettingsService {
     required VendorStaffMember member,
     required String password,
   }) async {
-    final response = await _api.post(
-      '/stores/mine/settings/staff',
+    await _api.post(
+      '/staff',
       body: {
         'name': member.name,
         'email': member.email,
-        'role': member.role.name,
-        'permissions': [
-          for (final permission in member.permissions) permission.slug,
-        ],
         'password': password,
+        'role': member.role == StaffRole.manager ? 'manager' : 'staff',
+        'permissions': member.permissions.map((permission) => permission.slug).toList(),
       },
     );
-    return VendorStoreSettings.fromJson(
-      singleJson(response, ['settings', 'store', 'data']),
-    );
+    return settings();
   }
 
   @override
@@ -74,19 +93,20 @@ class ApiVendorSettingsService implements VendorSettingsService {
     required String newPassword,
   }) async {
     await _api.post(
-      '/stores/mine/security/password',
-      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      '/auth/change-password',
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
     );
   }
 
   @override
   Future<VendorStoreSettings> setStaffActive(String id, bool active) async {
-    final response = await _api.patch(
-      '/stores/mine/settings/staff/$id',
+    await _api.put(
+      '/staff/$id',
       body: {'active': active},
     );
-    return VendorStoreSettings.fromJson(
-      singleJson(response, ['settings', 'store', 'data']),
-    );
+    return settings();
   }
 }

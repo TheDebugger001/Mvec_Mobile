@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/utils.dart';
 import '../../features/supplier/data/supplier_workspace.dart';
+import '../../providers/supplier_providers.dart';
 import '../../widgets/common.dart';
 
 /// Supplier self-service profile.
@@ -25,19 +27,20 @@ class SupplierProfileScreen extends ConsumerWidget {
         PageHead(
           eyebrow: 'SUPPLIER PORTAL',
           title: 'Business profile',
-          subtitle: 'Keep the details buyers and the MVEC team rely on up to date.',
+          subtitle:
+              'Keep the details buyers and the MVEC team rely on up to date.',
         ),
         switch (workspace) {
           AsyncLoading() => const LoadingState(),
           AsyncError(:final error) => ErrorState(
-              message: friendlyError(error),
-              onRetry: () => ref.invalidate(supplierWorkspaceProvider),
-            ),
+            message: friendlyError(error),
+            onRetry: () => ref.invalidate(supplierWorkspaceProvider),
+          ),
           // An empty profile means the account exists but has not been onboarded.
           AsyncData(:final value) =>
-              value.profile.isOnboarded
-                  ? _ProfileBody(profile: value.profile)
-                  : const _OnboardingPrompt(),
+            value.profile.isOnboarded
+                ? _ProfileBody(profile: value.profile)
+                : const _OnboardingPrompt(),
           _ => const LoadingState(),
         },
       ],
@@ -55,14 +58,19 @@ class _OnboardingPrompt extends ConsumerWidget {
       children: [
         DataCard(
           title: 'Finish setting up your business',
-          subtitle: 'Your supplier account is ready but has no business profile yet.',
+          subtitle:
+              'Your supplier account is ready but has no business profile yet.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Add your business name, contact details and a short description. '
                 'The MVEC team reviews new suppliers before their catalogue goes live.',
-                style: TextStyle(fontSize: 12.5, color: Theme.of(context).hintColor, height: 1.45),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Theme.of(context).hintColor,
+                  height: 1.45,
+                ),
               ),
               const SizedBox(height: 16),
               GradientButton(
@@ -111,12 +119,16 @@ class _ProfileBody extends ConsumerWidget {
           ),
           child: KeyValueGrid(
             entries: [
-              MapEntry('Business name', s.businessName.isEmpty ? '—' : s.businessName),
+              MapEntry(
+                'Business name',
+                s.businessName.isEmpty ? '—' : s.businessName,
+              ),
               MapEntry('Description', _ellipsis(s.description)),
               if (s.publicId != null) MapEntry('Supplier ID', s.publicId!),
               if (s.slug != null) MapEntry('Store slug', s.slug!),
               MapEntry('Account status', titleCase(s.effectiveStatus)),
-              if (s.ratingAvg != null) MapEntry('Rating', '${s.ratingAvg!.toStringAsFixed(1)} / 5'),
+              if (s.ratingAvg != null)
+                MapEntry('Rating', '${s.ratingAvg!.toStringAsFixed(1)} / 5'),
             ],
           ),
         ),
@@ -164,22 +176,22 @@ class _VerificationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final (headline, note) = switch (profile.verificationStatusOrDefault) {
       'VERIFIED' => (
-          'Verified',
-          'Your business was approved. The products in your catalogue are visible to buyers.'
-        ),
+        'Verified',
+        'Your business was approved. The products in your catalogue are visible to buyers.',
+      ),
       'PENDING' => (
-          'Under review',
-          'The MVEC team is reviewing your business. This usually takes 1–2 business days.'
-        ),
+        'Under review',
+        'The MVEC team is reviewing your business. This usually takes 1–2 business days.',
+      ),
       'REJECTED' => (
-          'Rejected',
-          'Your business was not approved. Update your details below and contact support to ask for a review.'
-        ),
+        'Rejected',
+        'Your business was not approved. Update your details below and contact support to ask for a review.',
+      ),
       _ => (
-          'Not verified',
-          'New suppliers are reviewed by the MVEC team before their catalogue goes live. '
-              'Make sure the business and contact details below are correct.'
-        ),
+        'Not verified',
+        'New suppliers are reviewed by the MVEC team before their catalogue goes live. '
+            'Make sure the business and contact details below are correct.',
+      ),
     };
 
     return DataCard(
@@ -189,9 +201,19 @@ class _VerificationPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(headline, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+          Text(
+            headline,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(height: 5),
-          Text(note, style: TextStyle(fontSize: 12.5, color: Theme.of(context).hintColor, height: 1.45)),
+          Text(
+            note,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Theme.of(context).hintColor,
+              height: 1.45,
+            ),
+          ),
         ],
       ),
     );
@@ -206,13 +228,18 @@ class _SupplierProfileForm extends ConsumerStatefulWidget {
   final SupplierProfile? initial;
 
   @override
-  ConsumerState<_SupplierProfileForm> createState() => _SupplierProfileFormState();
+  ConsumerState<_SupplierProfileForm> createState() =>
+      _SupplierProfileFormState();
 }
 
 class _SupplierProfileFormState extends ConsumerState<_SupplierProfileForm> {
   late final Map<String, TextEditingController> _f = {
-    'businessName': TextEditingController(text: widget.initial?.businessName ?? ''),
-    'description': TextEditingController(text: widget.initial?.description ?? ''),
+    'businessName': TextEditingController(
+      text: widget.initial?.businessName ?? '',
+    ),
+    'description': TextEditingController(
+      text: widget.initial?.description ?? '',
+    ),
     'email': TextEditingController(text: widget.initial?.email ?? ''),
     'phone': TextEditingController(text: widget.initial?.phone ?? ''),
     'logoUrl': TextEditingController(text: widget.initial?.logoUrl ?? ''),
@@ -272,9 +299,15 @@ class _SupplierProfileFormState extends ConsumerState<_SupplierProfileForm> {
               logoUrl: _f['logoUrl']!.text.trim(),
             ),
           );
+      if (isNew) refreshSupplierData(ref);
       if (mounted) {
         Navigator.pop(context);
-        showMvSnack(context, isNew ? 'Business profile created' : 'Profile updated', success: true);
+        showMvSnack(
+          context,
+          isNew ? 'Business profile created' : 'Profile updated',
+          success: true,
+        );
+        if (isNew) context.go('/supplier');
       }
     } catch (e) {
       if (mounted) showMvSnack(context, friendlyError(e));
@@ -291,7 +324,11 @@ class _SupplierProfileFormState extends ConsumerState<_SupplierProfileForm> {
         if (widget.initial == null) ...[
           Text(
             'These details identify your business to buyers and to the MVEC review team.',
-            style: TextStyle(fontSize: 12.5, color: Theme.of(context).hintColor, height: 1.45),
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Theme.of(context).hintColor,
+              height: 1.45,
+            ),
           ),
           const SizedBox(height: 18),
         ],
@@ -313,7 +350,12 @@ class _SupplierProfileFormState extends ConsumerState<_SupplierProfileForm> {
 }
 
 class _Field extends StatelessWidget {
-  const _Field(this.controller, this.label, {this.lines = 1, this.required = false});
+  const _Field(
+    this.controller,
+    this.label, {
+    this.lines = 1,
+    this.required = false,
+  });
 
   final TextEditingController controller;
   final String label;
@@ -327,7 +369,10 @@ class _Field extends StatelessWidget {
       child: TextField(
         controller: controller,
         maxLines: lines,
-        keyboardType: label.contains('email') ? TextInputType.emailAddress : TextInputType.text,
+        keyboardType:
+            label.contains('email')
+                ? TextInputType.emailAddress
+                : TextInputType.text,
         decoration: InputDecoration(labelText: required ? '$label *' : label),
       ),
     );

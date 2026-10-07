@@ -27,30 +27,10 @@ class SupplierDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _SupplierDashboardScreenState extends ConsumerState<SupplierDashboardScreen> {
-  /// Guards the onboarding redirect so a rebuild cannot bounce the supplier
-  /// away from the profile page while they are filling the form in.
-  bool _redirected = false;
-
-  /// A supplier account with no business profile has nothing to see on the
-  /// dashboard, so it is forwarded to the profile page to onboard. The check
-  /// needs a resolved provider — hence both the synchronous read and the
-  /// listener, which covers the case where the profile resolves after mount.
-  void _forwardIfUnOnboarded(AsyncValue<SupplierDetail?> profile) {
-    if (_redirected) return;
-    if (profile is! AsyncData || profile.value != null) return;
-    _redirected = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.go('/supplier/profile');
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    ref.listen(supplierProfileProvider, (_, next) => _forwardIfUnOnboarded(next));
-
     final profileAsync = ref.watch(supplierProfileProvider);
     final metricsAsync = ref.watch(supplierMetricsProvider);
-    _forwardIfUnOnboarded(profileAsync);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

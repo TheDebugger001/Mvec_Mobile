@@ -8,6 +8,7 @@ import '../../models/vendor_product.dart';
 import '../../providers/vendor_providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/mv_icon.dart';
+import '../../widgets/product_image.dart';
 import '../../widgets/smart_table.dart';
 import 'vendor_product_form.dart';
 
@@ -17,7 +18,8 @@ class VendorProductsScreen extends ConsumerStatefulWidget {
   const VendorProductsScreen({super.key});
 
   @override
-  ConsumerState<VendorProductsScreen> createState() => _VendorProductsScreenState();
+  ConsumerState<VendorProductsScreen> createState() =>
+      _VendorProductsScreenState();
 }
 
 class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
@@ -85,16 +87,18 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
             ),
           ],
         ),
-        const InfoBox('Products you mark ACTIVE appear in the marketplace. Use DRAFT while you finish a listing and INACTIVE to hide a finished one.'),
+        const InfoBox(
+          'Products you mark ACTIVE appear in the marketplace. Use DRAFT while you finish a listing and INACTIVE to hide a finished one.',
+        ),
         const SizedBox(height: 16),
         _toolbar(),
         const SizedBox(height: 14),
         switch (productsAsync) {
           AsyncLoading() => const SizedBox(height: 200, child: LoadingState()),
           AsyncError(:final error) => ErrorState(
-              message: friendlyError(error),
-              onRetry: () => ref.invalidate(vendorProductsProvider(_query)),
-            ),
+            message: friendlyError(error),
+            onRetry: () => ref.invalidate(vendorProductsProvider(_query)),
+          ),
           AsyncData(:final value) => _table(value),
           _ => const SizedBox(height: 200, child: LoadingState()),
         },
@@ -119,21 +123,31 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
               hintText: 'Search by name or SKU…',
-              prefixIcon: const Padding(padding: EdgeInsets.all(11), child: MvIcon('search', size: 16)),
-              prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
+              prefixIcon: const Padding(
+                padding: EdgeInsets.all(11),
+                child: MvIcon('search', size: 16),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 0,
+              ),
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              suffixIcon: _query.search.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.close, size: 16),
-                      tooltip: 'Clear search',
-                      onPressed: () {
-                        _search.clear();
-                        ref.read(vendorSearchSeedProvider.notifier).clear();
-                        _applySearch('');
-                      },
-                    ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              suffixIcon:
+                  _query.search.isEmpty
+                      ? null
+                      : IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          _search.clear();
+                          ref.read(vendorSearchSeedProvider.notifier).clear();
+                          _applySearch('');
+                        },
+                      ),
             ),
           ),
         ),
@@ -142,11 +156,23 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _query.status,
-              hint: const Text('All statuses', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+              hint: const Text(
+                'All statuses',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+              ),
               items: [
-                const DropdownMenuItem<String>(value: VendorProductQuery.allStatuses, child: Text('All statuses', style: TextStyle(fontSize: 12.5))),
+                const DropdownMenuItem<String>(
+                  value: VendorProductQuery.allStatuses,
+                  child: Text('All statuses', style: TextStyle(fontSize: 12.5)),
+                ),
                 for (final s in VendorProductStatus.all)
-                  DropdownMenuItem(value: s, child: Text(titleCase(s), style: const TextStyle(fontSize: 12.5))),
+                  DropdownMenuItem(
+                    value: s,
+                    child: Text(
+                      titleCase(s),
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
+                  ),
               ],
               onChanged: (v) => _setQuery(_query.copyWith(status: v, page: 1)),
             ),
@@ -156,7 +182,8 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
           label: const Text('Low stock only'),
           selected: _query.lowStockOnly,
           showCheckmark: false,
-          onSelected: (v) => _setQuery(_query.copyWith(lowStockOnly: v, page: 1)),
+          onSelected:
+              (v) => _setQuery(_query.copyWith(lowStockOnly: v, page: 1)),
         ),
         if (_query.isFiltered)
           TextButton.icon(
@@ -170,21 +197,23 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
 
   // ─── TABLE ──────────────────────────────────────────────────────────────
   Widget _table(Paged<VendorProduct> paged) {
-    final rows = paged.items
-        .map(
-          (p) => {
-            'product': p.display,
-            'sku': p.sku ?? '—',
-            'category': p.category ?? '—',
-            'price': p.hasDiscount
-                ? '${money(p.effectivePrice)}  (${p.discountPercent}% off)'
-                : money(p.effectivePrice),
-            'stock': p.stockLabel,
-            'status': StatusChip(p.availability),
-            '_product': p,
-          },
-        )
-        .toList();
+    final rows =
+        paged.items
+            .map(
+              (p) => {
+                'product': _ProductCell(product: p),
+                'sku': p.sku ?? '—',
+                'category': p.category ?? '—',
+                'price':
+                    p.hasDiscount
+                        ? '${money(p.effectivePrice)}  (${p.discountPercent}% off)'
+                        : money(p.effectivePrice),
+                'stock': p.stockLabel,
+                'status': StatusChip(p.availability),
+                '_product': p,
+              },
+            )
+            .toList();
 
     return SmartTable(
       columns: const [
@@ -202,7 +231,10 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
       serverTotalPages: paged.pages ?? 1,
       onServerPageChanged: (page) => _setQuery(_query.copyWith(page: page)),
       csvFileName: 'vendor-products',
-      emptyMessage: _query.isFiltered ? 'No products match these filters' : 'No products yet — add your first listing',
+      emptyMessage:
+          _query.isFiltered
+              ? 'No products match these filters'
+              : 'No products yet — add your first listing',
       rowActions: (row) {
         final p = row['_product'] as VendorProduct;
         final live = p.availability == VendorProductStatus.active;
@@ -257,7 +289,14 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(p.display, style: const TextStyle(fontFamily: 'Manrope', fontSize: 16, fontWeight: FontWeight.w800)),
+                  Text(
+                    p.display,
+                    style: const TextStyle(
+                      fontFamily: 'Manrope',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   StatusChip(p.availability),
                 ],
@@ -272,10 +311,15 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
             MapEntry('Brand', p.brand ?? '—'),
             MapEntry('Category', p.category ?? '—'),
             MapEntry('Regular price', money(p.price)),
-            if (p.discountPrice != null) MapEntry('Discount price', money(p.discountPrice)),
+            if (p.discountPrice != null)
+              MapEntry('Discount price', money(p.discountPrice)),
             MapEntry('Stock', p.stockLabel),
             MapEntry('Reorder at', '${p.lowStockThreshold ?? 5}'),
-            if (p.variantList.isNotEmpty) MapEntry('Variants', p.variantList.map((v) => v.label).join(', ')),
+            if (p.variantList.isNotEmpty)
+              MapEntry(
+                'Variants',
+                p.variantList.map((v) => v.label).join(', '),
+              ),
             MapEntry('Created', shortDate(p.createdAt)),
           ],
         ),
@@ -283,9 +327,12 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
           const SizedBox(height: 16),
           Text('DESCRIPTION', style: context.mvEyebrow),
           const SizedBox(height: 6),
-          Text(p.description!, style: const TextStyle(fontSize: 13, height: 1.5)),
+          Text(
+            p.description!,
+            style: const TextStyle(fontSize: 13, height: 1.5),
+          ),
         ],
-        if (p.gallery.isNotEmpty) ...[
+        if (p.gallery.isNotEmpty || (p.localImagePaths?.isNotEmpty ?? false)) ...[
           const SizedBox(height: 16),
           Text('MEDIA', style: context.mvEyebrow),
           const SizedBox(height: 8),
@@ -293,23 +340,43 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
             height: 74,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: p.gallery.length,
+              itemCount: (p.localImagePaths?.length ?? 0) + p.gallery.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) => _Thumb(product: p, url: p.gallery[i], size: 74),
+              itemBuilder:
+                  (context, i) {
+                    final localPaths = p.localImagePaths ?? const <String>[];
+                    return i < localPaths.length
+                        ? _Thumb(
+                          product: p,
+                          localPath: localPaths[i],
+                          size: 74,
+                        )
+                        : _Thumb(
+                          product: p,
+                          url: p.gallery[i - localPaths.length],
+                          size: 74,
+                        );
+                  },
             ),
           ),
         ],
       ],
-      footer: GradientButton(label: 'Edit product', icon: 'edit', expanded: true, onPressed: () {
-        Navigator.pop(context);
-        _openForm(context, product: p);
-      }),
+      footer: GradientButton(
+        label: 'Edit product',
+        icon: 'edit',
+        expanded: true,
+        onPressed: () {
+          Navigator.pop(context);
+          _openForm(context, product: p);
+        },
+      ),
     );
   }
 
   /// Publish / take a listing offline without opening the edit form.
   Future<void> _toggleAvailability(VendorProduct p, bool isLive) async {
-    final next = isLive ? VendorProductStatus.inactive : VendorProductStatus.active;
+    final next =
+        isLive ? VendorProductStatus.draft : VendorProductStatus.active;
     final ok = await ref
         .read(vendorProductControllerProvider.notifier)
         .setAvailability(p.id ?? '', next);
@@ -317,7 +384,9 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
     final state = ref.read(vendorProductControllerProvider);
     showMvSnack(
       context,
-      ok ? (state.success ?? 'Availability updated') : (state.error ?? 'Could not update availability'),
+      ok
+          ? (state.success ?? 'Availability updated')
+          : (state.error ?? 'Could not update availability'),
       success: ok,
     );
   }
@@ -326,12 +395,16 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
   Future<void> _remove(VendorProduct p) async {
     final confirmed = await _confirmRemove(context, p);
     if (confirmed != true || !mounted) return;
-    final ok = await ref.read(vendorProductControllerProvider.notifier).removeProduct(p.id ?? '');
+    final ok = await ref
+        .read(vendorProductControllerProvider.notifier)
+        .removeProduct(p.id ?? '');
     if (!mounted) return;
     final state = ref.read(vendorProductControllerProvider);
     showMvSnack(
       context,
-      ok ? (state.success ?? 'Product removed') : (state.error ?? 'Could not remove the product'),
+      ok
+          ? (state.success ?? 'Product removed')
+          : (state.error ?? 'Could not remove the product'),
       success: ok,
     );
   }
@@ -339,28 +412,64 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
   Future<bool?> _confirmRemove(BuildContext context, VendorProduct p) {
     return showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove product'),
-        content: Text(
-          'Remove "${p.display}" from your catalogue? Past orders keep the product, but the listing stops being visible to buyers.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: MvColors.dangerIcon),
-            child: const Text('Remove'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Remove product'),
+            content: Text(
+              'Remove "${p.display}" from your catalogue? Past orders keep the product, but the listing stops being visible to buyers.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: MvColors.dangerIcon,
+                ),
+                child: const Text('Remove'),
+              ),
+            ],
           ),
-        ],
-      ),
+    );
+  }
+}
+
+class _ProductCell extends StatelessWidget {
+  const _ProductCell({required this.product});
+
+  final VendorProduct product;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _Thumb(product: product),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            product.display,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
 class _Thumb extends StatelessWidget {
-  const _Thumb({required this.product, this.url, this.size = 56});
+  const _Thumb({required this.product, this.url, this.localPath, this.size = 56});
   final VendorProduct product;
   final String? url;
+  final String? localPath;
   final double size;
 
   @override
@@ -375,13 +484,16 @@ class _Thumb extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
-      child: src == null || src.trim().isEmpty
-          ? const Center(child: MvIcon('box', size: 18, color: MvColors.primaryDeep))
-          : Image.network(
-              src,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Center(child: MvIcon('box', size: 18, color: MvColors.primaryDeep)),
-            ),
+      child: ProductImage(
+        url: src,
+        localPath:
+            localPath ??
+            (src == null || src == product.thumbnail
+                ? product.localImagePath
+                : null),
+        size: size,
+        radius: 9,
+      ),
     );
   }
 }
