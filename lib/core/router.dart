@@ -40,6 +40,7 @@ import '../screens/matching/matching_screen.dart';
 import '../screens/messages/messages_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/orders/orders_screen.dart';
+import '../screens/orders/buyer_order_detail_screen.dart';
 import '../screens/overview/overview_screen.dart';
 import '../screens/payments/payments_screen.dart';
 import '../screens/products/products_screen.dart';
@@ -174,6 +175,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (auth.isLoggedIn) {
         final user = auth.session!.user;
         // A signed-in user should never sit on a public auth page.
+        // Keep checkout registration on screen until RegisterScreen pops back
+        // to the already-mounted checkout page.
+        if (loc == '/signup' && state.uri.queryParameters['returnTo'] == 'checkout') {
+          return null;
+        }
         if (isPublic) return roleHome(user);
         // Only super admins may enter the control center.
         if (loc.startsWith('/admin') && user.userType != 'super_admin') {
@@ -237,6 +243,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ResetPasswordScreen(),
       ),
       GoRoute(path: '/home', builder: (_, __) => const MainNavigationScreen()),
+      GoRoute(
+        path: '/orders/:orderId',
+        builder: (_, state) => BuyerOrderDetailScreen(
+          orderId: state.pathParameters['orderId']!,
+        ),
+      ),
       // Supplier portal. Deliberately outside /admin so the super-admin-only
       // guard below never bounces a supplier away from their own dashboard.
       //

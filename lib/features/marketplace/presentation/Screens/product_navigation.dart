@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../screens/cart_page.dart';
 import '../../../../screens/checkout_page.dart';
 import '../../../../screens/product_detail_page.dart';
-import '../../../../screens/track_order_page.dart';
 import '../../../../screens/wishlist_page.dart';
 import '../../../../models/product.dart' as legacy;
 import '../../data/interest/interest_profile.dart';
@@ -163,9 +163,8 @@ void openCheckout(BuildContext context, CommerceProvider commerce) {
             tax: 0,
             total: subtotal,
             onOrderPlaced: (order) {
-              // A completed order is the strongest evidence available: whatever
-              // they actually paid for is what the rest of their feed should be
-              // built around.
+              // A placed order is the strongest evidence available for the
+              // shopper's recommendations.
               for (final item in order.items) {
                 _recordInterest(
                   context,
@@ -183,11 +182,7 @@ void openCheckout(BuildContext context, CommerceProvider commerce) {
               }
               _runCartAction(context, commerce.clearCart);
               navigator.pop();
-              navigator.push<void>(
-                MaterialPageRoute<void>(
-                  builder: (_) => TrackOrderPage(order: order),
-                ),
-              );
+              context.push('/orders/${Uri.encodeComponent(order.id)}');
             },
           ),
     ),

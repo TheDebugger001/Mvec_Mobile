@@ -97,14 +97,27 @@ class _VendorProfileScreenState extends ConsumerState<VendorProfileScreen> {
       return t.isEmpty ? null : t;
     }
 
+    final cityVal = v('city') ?? v('street') ?? 'Kigali';
     return {
       if (v('storeName') != null) 'businessName': v('storeName'),
+      if (v('storeName') != null) 'storeName': v('storeName'),
       if (v('description') != null) 'description': v('description'),
       if (v('logo') != null) 'logoUrl': v('logo'),
+      if (v('logo') != null) 'logo': v('logo'),
       if (v('email') != null) 'email': v('email'),
+      if (v('email') != null) 'contactEmail': v('email'),
       if (v('phone') != null) 'phone': v('phone'),
-      if (v('city') != null) 'location': v('city'),
+      if (v('phone') != null) 'contactPhone': v('phone'),
+      'location': cityVal,
+      if (v('city') != null) 'city': v('city'),
       if (v('website') != null) 'website': v('website'),
+      'address': {
+        if (v('street') != null) 'street': v('street'),
+        'city': cityVal,
+        if (v('state') != null) 'state': v('state'),
+        if (v('country') != null) 'country': v('country'),
+        if (v('postalCode') != null) 'postalCode': v('postalCode'),
+      },
     };
   }
 

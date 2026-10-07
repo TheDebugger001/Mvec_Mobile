@@ -29,10 +29,10 @@ const bool kDemoMode = false;
 
 const String kAdminEmail = String.fromEnvironment(
   'ADMIN_EMAIL',
-  defaultValue: 'admin@gmail.com',
+  defaultValue: 'admin@example.com',
 );
 
 const String kAdminPassword = String.fromEnvironment(
   'ADMIN_PASSWORD',
-  defaultValue: 'admin!',
+  defaultValue: 'password123',
 );

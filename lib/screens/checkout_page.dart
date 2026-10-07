@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/api_client.dart';
 import '../core/theme.dart';
@@ -540,6 +541,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // ==================== SUBMIT ORDER ====================
   Future<void> _submitOrder() async {
+    if (await ApiClient.readToken() == null) {
+      if (mounted) context.push('/signup?returnTo=checkout');
+      return;
+    }
+
     if (_selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a delivery address')),
