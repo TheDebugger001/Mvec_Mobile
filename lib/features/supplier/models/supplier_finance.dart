@@ -30,21 +30,20 @@ enum SupplierPayoutMethod {
     SupplierPayoutMethod.bankTransfer => 'Bank transfer',
   };
 
-  /// Masked destination shown next to the method as a placeholder, so the payout
-  /// form shows the expected shape without inventing an account to withdraw to.
+  /// Guidance for the destination format; actual account details are entered by
+  /// the supplier and are never prefilled with sample personal data.
   String get hint => switch (this) {
-    SupplierPayoutMethod.mtnMomo => 'MTN MoMo · +250 7•• ••• •••',
-    SupplierPayoutMethod.airtelMoney => 'Airtel Money · +250 7•• ••• •••',
-    SupplierPayoutMethod.bankTransfer => 'Bank account · •••• ••••',
+    SupplierPayoutMethod.mtnMomo => 'Enter the MTN MoMo number to receive funds.',
+    SupplierPayoutMethod.airtelMoney => 'Enter the Airtel Money number to receive funds.',
+    SupplierPayoutMethod.bankTransfer => 'Enter the bank account to receive funds.',
   };
 
   /// Mobile money settles instantly, bank transfers take a day or two.
   String get settlementNote => switch (this) {
-    SupplierPayoutMethod.mtnMomo =>
-      'Arrives on your MoMo wallet within minutes.',
-    SupplierPayoutMethod.airtelMoney =>
-      'Arrives on your Airtel wallet within minutes.',
-    SupplierPayoutMethod.bankTransfer => 'Settles within 1–2 business days.',
+    SupplierPayoutMethod.mtnMomo ||
+    SupplierPayoutMethod.airtelMoney ||
+    SupplierPayoutMethod.bankTransfer =>
+      'MVEC will review and process this payout request.',
   };
 
   static SupplierPayoutMethod parse(String? raw) {

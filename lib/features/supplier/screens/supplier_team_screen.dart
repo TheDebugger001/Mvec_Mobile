@@ -24,7 +24,6 @@ class SupplierTeamScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(supplierTeamProvider);
     final summaryAsync = ref.watch(supplierTeamSummaryProvider);
-    final fallback = ref.watch(supplierTeamModuleProvider).fallbackReason;
     // Staff without the manage-team permission get a read-only roster rather
     // than buttons that would only fail on the server.
     final canManage = ref.watch(canManageTeamProvider);
@@ -37,21 +36,16 @@ class SupplierTeamScreen extends ConsumerWidget {
           eyebrow: 'ACCOUNT',
           title: 'Team & staff',
           subtitle:
-              'Give everyone who works on your account their own login and only '
-              'the access their job needs.',
+              'Keep your supplier staff roster and assign each person an '
+              'operational role.',
           actions: [
             FilledButton.icon(
-              onPressed:
-                  canManage ? () => _openForm(context, ref) : null,
+              onPressed: canManage ? () => _openForm(context, ref) : null,
               icon: const Icon(Icons.person_add_alt, size: 17),
               label: const Text('Add team member'),
             ),
           ],
         ),
-        if (fallback != null) ...[
-          InfoBox(fallback, icon: 'bell'),
-          const SizedBox(height: 14),
-        ],
         if (!canManage && role != null) ...[
           InfoBox(
             'You are signed in as ${role.label.toLowerCase()}, which cannot '
@@ -139,9 +133,8 @@ class SupplierTeamScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 14),
         const InfoBox(
-          'Role permissions apply immediately. A staff member only ever sees '
-          'the pages their role unlocks — for example a warehouse role cannot '
-          'see earnings or request a payout.',
+          'Staff records and roles are saved to your supplier account. Adding a '
+          'staff record does not create a separate sign-in or change API access.',
           icon: 'shield',
         ),
       ],
@@ -178,13 +171,13 @@ class SupplierTeamScreen extends ConsumerWidget {
           tone: gaps.isEmpty ? MvColors.successText : MvColors.warningText,
         ),
         SupplierOpsMetric(
-          label: 'Pending invites',
+          label: 'Marked invited',
           value: '${value.invited}',
           icon: 'bell',
           caption:
               value.invited == 0
-                  ? 'nobody waiting to sign in'
-                  : 'waiting to accept',
+                  ? 'no records marked invited'
+                  : 'roster status only',
         ),
       ],
     );
@@ -201,8 +194,7 @@ class SupplierTeamScreen extends ConsumerWidget {
       return DataCard(
         child: EmptyState(
           message:
-              'No staff yet. Add the people who help you run orders so they '
-              'can each get their own login.',
+              'No staff records yet. Add the people who help you run orders.',
         ),
       );
     }
@@ -252,8 +244,8 @@ class SupplierTeamScreen extends ConsumerWidget {
           (dialogContext) => AlertDialog(
             title: Text('Remove ${member.fullName}?'),
             content: Text(
-              'They lose access to this account immediately. Their catalogue '
-              'and order history stays put.',
+              'This removes their staff record. It does not revoke a separate '
+              'user login or change their account permissions.',
             ),
             actions: [
               TextButton(
@@ -378,7 +370,7 @@ class _TeamMemberFormState extends ConsumerState<_TeamMemberForm> {
           context,
           _isEditing
               ? '${_name.text.trim()} updated'
-              : 'Invite sent to ${_name.text.trim()}',
+              : '${_name.text.trim()} added to your team',
           success: true,
         );
       }
@@ -471,7 +463,8 @@ class _TeamMemberFormState extends ConsumerState<_TeamMemberForm> {
                 Text('Role', style: context.mvH1.copyWith(fontSize: 13)),
                 const SizedBox(height: 4),
                 Text(
-                  'The role decides what they can see and do on this account.',
+                  'Roles organize staff responsibilities. They do not grant '
+                  'sign-in access or change backend permissions.',
                   style: TextStyle(fontSize: 11, color: context.mv.textMuted),
                 ),
                 const SizedBox(height: 10),

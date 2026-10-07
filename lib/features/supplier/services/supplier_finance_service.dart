@@ -52,12 +52,7 @@ abstract class SupplierFinanceService {
 /// Minimum withdrawal MVEC will process for a supplier, in RWF.
 const double kMinSupplierPayoutAmount = 50000;
 
-/// Talks to the platform's supplier finance API.
-///
-/// The routes mirror the vendor finance module (`/stores/mine/finance/*`) under
-/// the supplier's own token-scoped prefix. They are not served by the backend
-/// yet, so [FallbackSupplierFinanceService] degrades to
-/// [EmptySupplierFinanceService] instead of leaving the pages blank.
+/// Talks to the platform's token-scoped supplier finance API.
 class ApiSupplierFinanceService implements SupplierFinanceService {
   ApiSupplierFinanceService(this._api);
   final ApiClient _api;

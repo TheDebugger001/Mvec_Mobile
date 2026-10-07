@@ -5,9 +5,6 @@ import 'models/supplier_finance.dart';
 import 'models/supplier_insights.dart';
 import 'models/supplier_operations.dart';
 import 'models/supplier_team.dart';
-import 'services/fallback_supplier_finance_service.dart';
-import 'services/fallback_supplier_operations_service.dart';
-import 'services/fallback_supplier_team_service.dart';
 import 'services/supplier_finance_service.dart';
 import 'services/supplier_operations_service.dart';
 import 'services/supplier_team_service.dart';
@@ -15,12 +12,9 @@ import 'services/supplier_team_service.dart';
 /// One wiring point keeps every Finance & Insights module on the same data
 /// source, mirroring `vendor_dependencies.dart`.
 ///
-/// `FallbackSupplierFinanceService` wraps the live API so the pages stay usable
-/// before `/suppliers/me/finance/*` ships; until it does, every read degrades to
-/// [EmptySupplierFinanceService] — zeroed balances and empty lists — and
-/// `fallbackReason` explains why on screen.
+/// Supplier finance always comes from the authenticated backend API.
 final supplierFinanceModuleProvider = Provider<SupplierFinanceService>(
-  (ref) => FallbackSupplierFinanceService(ref.watch(apiProvider)),
+  (ref) => ApiSupplierFinanceService(ref.watch(apiProvider)),
 );
 
 /// Headline balances for the Payments page.
@@ -64,15 +58,9 @@ final supplierReviewSummaryProvider =
 
 // ── operations: delivery, settlement and supply ─────────────────────────────
 
-/// One wiring point for the Delivery & Settlement and Supply Requests pages,
-/// following the same fallback contract as [supplierFinanceModuleProvider].
-///
-/// `FallbackSupplierOperationsService` wraps the live API so the pages stay
-/// usable before `/suppliers/me/deliveries` and `/suppliers/me/supply-requests`
-/// ship; until they do, every read degrades to
-/// [EmptySupplierOperationsService] — empty lists and zeroed counters.
+/// Delivery, settlement, and supply requests always come from the backend API.
 final supplierOperationsModuleProvider = Provider<SupplierOperationsService>(
-  (ref) => FallbackSupplierOperationsService(ref.watch(apiProvider)),
+  (ref) => ApiSupplierOperationsService(ref.watch(apiProvider)),
 );
 
 /// Consignments on the road, behind the Delivery page milestone tracks.
@@ -116,11 +104,9 @@ final supplierSupplySummaryProvider =
 
 // ── team & staff ───────────────────────────────────────────────────────────
 
-/// One wiring point for the Team & Staff page. The backend does not serve
-/// `/suppliers/me/team` yet, so reads degrade to [EmptySupplierTeamService] —
-/// an empty roster with every counter at zero — and the page says so.
+/// Supplier staff records always come from the authenticated backend API.
 final supplierTeamModuleProvider = Provider<SupplierTeamService>(
-  (ref) => FallbackSupplierTeamService(ref.watch(apiProvider)),
+  (ref) => ApiSupplierTeamService(ref.watch(apiProvider)),
 );
 
 /// Everyone on the account, owners first.
@@ -130,6 +116,8 @@ final supplierTeamProvider = FutureProvider.autoDispose<List<TeamMember>>(
 
 /// Counters and per-permission coverage, derived from [supplierTeamProvider] so
 /// the coverage panel always describes the roster on screen.
-final supplierTeamSummaryProvider = Provider.autoDispose<
-  AsyncValue<TeamSummary>
->((ref) => ref.watch(supplierTeamProvider).whenData(TeamSummary.fromMembers));
+final supplierTeamSummaryProvider =
+    Provider.autoDispose<AsyncValue<TeamSummary>>(
+      (ref) =>
+          ref.watch(supplierTeamProvider).whenData(TeamSummary.fromMembers),
+    );

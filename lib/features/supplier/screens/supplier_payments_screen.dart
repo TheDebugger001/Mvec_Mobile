@@ -23,8 +23,6 @@ class SupplierPaymentsScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(supplierFinanceSummaryProvider);
     final ledgerAsync = ref.watch(supplierLedgerProvider);
     final payoutsAsync = ref.watch(supplierPayoutsProvider);
-    final fallback = ref.watch(supplierFinanceModuleProvider).fallbackReason;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -49,10 +47,6 @@ class SupplierPaymentsScreen extends ConsumerWidget {
             ),
           ],
         ),
-        if (fallback != null) ...[
-          InfoBox(fallback, icon: 'bell'),
-          const SizedBox(height: 14),
-        ],
         switch (summaryAsync) {
           AsyncLoading() => const SizedBox(height: 170, child: LoadingState()),
           AsyncError(:final error) => ErrorState(

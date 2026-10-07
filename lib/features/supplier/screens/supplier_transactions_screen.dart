@@ -27,8 +27,6 @@ class _SupplierTransactionsScreenState
   @override
   Widget build(BuildContext context) {
     final entriesAsync = ref.watch(supplierLedgerProvider);
-    final module = ref.watch(supplierFinanceModuleProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -38,10 +36,6 @@ class _SupplierTransactionsScreenState
           subtitle:
               'Every movement on your wholesale account, from order to payout.',
         ),
-        if (module.fallbackReason != null) ...[
-          InfoBox(module.fallbackReason!, icon: 'bell'),
-          const SizedBox(height: 14),
-        ],
         switch (entriesAsync) {
           AsyncLoading() => const SizedBox(height: 220, child: LoadingState()),
           AsyncError(:final error) => ErrorState(

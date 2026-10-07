@@ -17,8 +17,6 @@ class SupplierReviewsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reviewsAsync = ref.watch(supplierReviewsProvider);
     final summaryAsync = ref.watch(supplierReviewSummaryProvider);
-    final module = ref.watch(supplierFinanceModuleProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -28,10 +26,6 @@ class SupplierReviewsScreen extends ConsumerWidget {
           subtitle:
               'What the vendors buying your wholesale catalogue say about you.',
         ),
-        if (module.fallbackReason != null) ...[
-          InfoBox(module.fallbackReason!, icon: 'bell'),
-          const SizedBox(height: 14),
-        ],
         switch (summaryAsync) {
           AsyncLoading() => const SizedBox(height: 120, child: LoadingState()),
           AsyncError(:final error) => ErrorState(
