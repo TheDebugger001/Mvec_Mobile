@@ -217,7 +217,11 @@ class SupplierOrder {
     final first = items is List && items.isNotEmpty ? items.first : null;
     final firstItem = first is Map ? Map<String, dynamic>.from(first) : null;
     final product =
-        firstItem?['name'] ?? json['productName'] ?? json['product'] ?? 'Supplier item';
+        firstItem?['name'] ??
+        firstItem?['productName'] ??
+        json['productName'] ??
+        json['product'] ??
+        'Supplier item';
     return SupplierOrder(
       id: _str(json['_id'] ?? json['id'] ?? json['orderNumber']),
       buyer:
@@ -884,12 +888,15 @@ class ApiSupplierWorkspaceService implements SupplierWorkspaceService {
         'data',
       ]).map(SupplierProduct.fromJson).toList();
 
-  /// `GET /orders`, scoped to the signed-in supplier by the bearer token.
+  /// `GET /wholesale/orders/mine`, scoped to the signed-in supplier.
   @override
   Future<List<SupplierOrder>> orders() async =>
       _tolerant(
         () async =>
-            listJson(await _api.get('/orders'), ['orders', 'data'])
+            listJson(
+              await _api.get('/wholesale/orders/mine'),
+              ['orders', 'data'],
+            )
                 .map(SupplierOrder.fromJson)
                 .toList(),
       );
@@ -969,8 +976,12 @@ class ApiSupplierWorkspaceService implements SupplierWorkspaceService {
   }
 
   @override
-  Future<void> updateOrderStatus(String id, String status) =>
-      _api.patch('/orders/$id/status', body: {'status': status});
+  Future<void> updateOrderStatus(String id, String status) async {
+    if (status != 'SHIPPED') {
+      throw ArgumentError.value(status, 'status', 'Unsupported supplier action');
+    }
+    await _api.post('/wholesale/orders/$id/ship');
+  }
 
   /// `PATCH /notifications/:id/read` — the backend exposes this as a PATCH;
   /// there is no POST twin, so the verb has to match or it 404s.

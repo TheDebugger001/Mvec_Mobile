@@ -127,7 +127,7 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
       ),
       'suppliers' => await ApiClient.instance.get(
         '/suppliers',
-        query: {'page': 1, 'limit': 50},
+        query: {'page': 1, 'pageSize': 50},
       ),
       'purchases' => await ApiClient.instance.get('/wholesale/orders/mine'),
       'delivery' => await ApiClient.instance.get('/orders/deliverable'),
@@ -178,13 +178,6 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
           subtitle: _subtitle,
         ),
         if (_error != null) ErrorState(message: _error!, onRetry: _load),
-        if (_module == 'purchases' && !kDemoMode)
-          const DataCard(
-            title: 'Purchases',
-            subtitle:
-                'The backend does not currently expose a vendor wholesale order-history endpoint.',
-            child: SizedBox(height: 4),
-          ),
         if (_module == 'delivery' && !kDemoMode)
           const DataCard(
             title: 'Delivery & settlement',
@@ -323,13 +316,20 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
                 child: Chip(label: Text('Low stock')),
               ),
             if (_module == 'suppliers')
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => _startConversation(row),
-                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                  label: const Text('Message supplier'),
-                ),
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _browseSupplierProducts(row),
+                    icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                    label: const Text('Browse products / order'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _startConversation(row),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                    label: const Text('Message supplier'),
+                  ),
+                ],
               ),
             if (_module == 'reviews')
               Align(
@@ -538,6 +538,7 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
       );
       return;
     }
+
     try {
       await ApiClient.instance.post(
         '/conversations',
@@ -549,6 +550,117 @@ class _VendorWorkspaceState extends ConsumerState<VendorWorkspaceScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(friendlyError(error))));
+      }
+    }
+  }
+
+  Future<void> _browseSupplierProducts(Map<String, dynamic> supplier) async {
+    final supplierId = '${supplier['_id'] ?? supplier['id'] ?? ''}';
+    if (supplierId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Supplier profile ID is unavailable.')),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiClient.instance.get(
+        '/suppliers/$supplierId/products',
+      );
+      final products = listJson(response, ['products']);
+      if (!mounted) return;
+      if (products.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This supplier has no active products yet.')),
+        );
+        return;
+      }
+      final product = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Supplier catalogue'),
+          content: SizedBox(
+            width: 520,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final item in products)
+                  ListTile(
+                    title: Text('${item['name'] ?? 'Product'}'),
+                    subtitle: Text(
+                      'Wholesale ${item['wholesalePrice'] ?? 0} · '
+                      'MOQ ${item['moq'] ?? 1} · Stock ${item['stockQuantity'] ?? 0}',
+                    ),
+                    trailing: const Icon(Icons.shopping_cart_outlined),
+                    onTap: () => Navigator.pop(dialogContext, item),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      if (product == null || !mounted) return;
+
+      final moq = (product['moq'] as num?)?.toInt() ?? 1;
+      final quantityController = TextEditingController(text: '$moq');
+      final quantity = await showDialog<int>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('Order ${product['name'] ?? 'product'}'),
+          content: TextField(
+            controller: quantityController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: 'Quantity (minimum $moq)'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                int.tryParse(quantityController.text.trim()),
+              ),
+              child: const Text('Request order'),
+            ),
+          ],
+        ),
+      );
+      quantityController.dispose();
+      if (quantity == null || !mounted) return;
+      if (quantity < moq) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Minimum order quantity is $moq.')),
+        );
+        return;
+      }
+
+      await ApiClient.instance.post(
+        '/wholesale/orders',
+        body: {
+          'supplierId': supplierId,
+          'items': [
+            {'productId': product['_id'], 'quantity': quantity},
+          ],
+        },
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Wholesale order request submitted.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyError(error))),
+        );
       }
     }
   }

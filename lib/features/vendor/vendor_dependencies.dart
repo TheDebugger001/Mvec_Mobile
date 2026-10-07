@@ -24,7 +24,7 @@ final vendorNotificationModuleProvider = Provider<VendorNotificationService>(
 );
 
 final vendorSettingsModuleProvider = Provider<VendorSettingsService>(
-  (ref) => ApiVendorSettingsService(),
+  (ref) => ApiVendorSettingsService(ref.watch(apiProvider)),
 );
 
 final vendorOrdersPageProvider = FutureProvider.autoDispose.family<

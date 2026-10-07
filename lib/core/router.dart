@@ -108,13 +108,6 @@ const _unavailableSupplierPages = <_UnavailablePage>[
     'Supplier team management is not available yet. The backend staff API is '
         'for vendor-owned stores only.',
   ),
-  _UnavailablePage(
-    '/supplier/messages',
-    'Messages',
-    'users',
-    'Supplier messaging is not available yet. Use MVEC support for anything '
-        'urgent.',
-  ),
 ];
 
 /// Routes that a signed-in user must never stay on.
@@ -369,6 +362,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             (context, state) => const SupplierShell(
               path: '/supplier/support',
               child: SupplierSupportScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/supplier/messages',
+        builder:
+            (context, state) => const SupplierShell(
+              path: '/supplier/messages',
+              child: MessagesScreen(
+                eyebrow: 'SUPPLIER PORTAL',
+                subtitle: 'Talk with vendors and review product requests.',
+              ),
             ),
       ),
       // Legacy alias kept so older deep links keep working.

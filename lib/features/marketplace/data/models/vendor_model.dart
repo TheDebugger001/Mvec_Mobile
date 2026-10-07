@@ -30,16 +30,16 @@ class Vendor {
   factory Vendor.fromJson(Map<String, dynamic> json) {
     final media = json['media'];
     return Vendor(
-      id: _toInt(json['id']),
-      name: _toString(json['name']),
+      id: _toInt(json['id'] ?? json['_id']),
+      name: _toString(json['name'] ?? json['companyName'] ?? json['businessName']),
       slug: _toString(json['slug']),
       description: _toString(json['description']),
       logoUrl: media is Map
-          ? _toString(media['logo'])
-          : _toString(json['logo_url'] ?? json['logo'] ?? json['image']),
+          ? _toString(media['logo'] ?? media['mainImage'])
+          : _toString(json['logoUrl'] ?? json['logo_url'] ?? json['logo'] ?? json['image']),
       bannerUrl: media is Map
           ? media['banner']?.toString()
-          : json['banner_url']?.toString(),
+          : (json['bannerUrl'] ?? json['banner_url'])?.toString(),
       rating: _toDouble(json['rating']),
       reviewCount: _toInt(json['reviewCount'] ?? json['review_count'] ?? json['reviews']),
       productCount: _toInt(json['productCount'] ?? json['product_count']),
@@ -72,5 +72,15 @@ class Vendor {
 
   static int _toInt(dynamic value) => value is num
       ? value.toInt()
-      : int.tryParse(value?.toString() ?? '') ?? 0;
+      : _parseId(value) ?? 0;
+
+  static int? _parseId(dynamic value) {
+    final text = value?.toString() ?? '';
+    final decimal = int.tryParse(text);
+    if (decimal != null) return decimal;
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(text)) {
+      return int.tryParse(text.substring(0, 12), radix: 16);
+    }
+    return null;
+  }
 }

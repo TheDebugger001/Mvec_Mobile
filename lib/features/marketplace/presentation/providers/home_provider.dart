@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' hide Category;
 
 import '../../data/models/category_model.dart';
@@ -69,36 +71,31 @@ class HomeFeed {
   /// All known vendors (featured set acts as the default store list).
   List<Vendor> get vendors => featuredVendors;
 
-  factory HomeFeed.fromJson(Map<String, dynamic> json) => HomeFeed(
-        banners: _parse(
-          json['banners'],
-          (map) => BannerItem.fromJson(map),
-        ),
-        categories: _parse(
-          json['categories'],
-          Category.fromJson,
-        ),
-        featuredVendors: _parse(
-          json['featuredVendors'],
-          Vendor.fromJson,
-        ),
-        featuredProducts: _parse(
-          json['featuredProducts'],
-          Product.fromJson,
-        ),
-        recommendedProducts: _parse(
-          json['recommendedProducts'],
-          Product.fromJson,
-        ),
-        products: _parse(
-          json['products'],
-          Product.fromJson,
-        ),
-        recentlyViewed: _parse(
-          json['recentlyViewed'],
-          Product.fromJson,
-        ),
-      );
+  factory HomeFeed.fromJson(Map<String, dynamic> json) {
+    final nested = json['feed'];
+    final data = nested is Map
+        ? Map<String, dynamic>.from(nested)
+        : json;
+    final products = json['products'] ??
+        data['products'] ??
+        data['featuredProducts'];
+
+    return HomeFeed(
+      banners: _parse(data['banners'], BannerItem.fromJson),
+      categories: _parse(data['categories'], Category.fromJson),
+      featuredVendors: _parse(
+        data['featuredVendors'] ?? data['topVendors'],
+        Vendor.fromJson,
+      ),
+      featuredProducts: _parse(data['featuredProducts'], Product.fromJson),
+      recommendedProducts: _parse(
+        data['recommendedProducts'],
+        Product.fromJson,
+      ),
+      products: _parse(products, Product.fromJson),
+      recentlyViewed: _parse(data['recentlyViewed'], Product.fromJson),
+    );
+  }
 
   static List<T> _parse<T>(dynamic value, T Function(Map<String, dynamic>) fromJson) {
     if (value is! List<dynamic>) return <T>[];
@@ -114,12 +111,20 @@ class HomeFeed {
 /// The app is backend-first: the provider resolves the live API response and
 /// never ships with bundled mock marketplace content.
 class HomeProvider extends ChangeNotifier {
-  HomeProvider({HomeService? service}) : _service = service ?? ApiHomeService();
+  HomeProvider({HomeService? service}) : _service = service ?? ApiHomeService() {
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => loadHomeFeed(),
+    );
+  }
 
   final HomeService _service;
+  late final Timer _refreshTimer;
 
   HomeFeed _feed = const HomeFeed();
   bool _isLoading = true;
+  bool _isFetching = false;
+  bool _hasLoaded = false;
   String? _error;
 
   HomeFeed get feed => _feed;
@@ -140,7 +145,9 @@ class HomeProvider extends ChangeNotifier {
 
   /// Loads the home feed from the injected service and notifies listeners.
   Future<void> loadHomeFeed() async {
-    _isLoading = true;
+    if (_isFetching) return;
+    _isFetching = true;
+    _isLoading = !_hasLoaded;
     _error = null;
     notifyListeners();
 
@@ -150,9 +157,17 @@ class HomeProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Could not load the home feed: $e';
     } finally {
+      _hasLoaded = true;
+      _isFetching = false;
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer.cancel();
+    super.dispose();
   }
 
   /// Tracks a product as recently viewed (deduplicated, capped at 12).

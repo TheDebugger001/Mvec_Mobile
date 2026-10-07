@@ -76,7 +76,7 @@ class Product {
             : null);
 
     return Product(
-      id: _toInt(json['id']),
+      id: _toInt(json['id'] ?? json['_id']),
       apiId: (json['_id'] ?? json['id'])?.toString(),
       name: _toString(json['name']),
       slug: _toString(json['slug']),
@@ -94,16 +94,16 @@ class Product {
           ? (json['badges'] as List<dynamic>).map((e) => e.toString()).toList()
           : const <String>[],
       categoryId: category is Map
-          ? _toIntOrNull(category['id'])
+          ? _toIntOrNull(category['id'] ?? category['_id'])
           : _toIntOrNull(json['category_id']),
       categoryName: category is Map
           ? category['name']?.toString()
           : json['category_name']?.toString(),
       vendorId: vendor is Map
-          ? _toIntOrNull(vendor['id'])
+          ? _toIntOrNull(vendor['id'] ?? vendor['_id'])
           : _toIntOrNull(json['vendor_id']),
       vendorName: vendor is Map
-          ? vendor['name']?.toString()
+          ? (vendor['name'] ?? vendor['companyName'] ?? vendor['Fullname'])?.toString()
           : json['vendor_name']?.toString(),
       isFeatured: json['isFeatured'] == true || json['featured'] == true,
       isOnSale:
@@ -146,9 +146,19 @@ class Product {
 
   static int _toInt(dynamic value) => value is num
       ? value.toInt()
-      : int.tryParse(value?.toString() ?? '') ?? 0;
+      : _parseId(value) ?? 0;
 
   static int? _toIntOrNull(dynamic value) => value is num
       ? value.toInt()
-      : int.tryParse(value?.toString() ?? '');
+      : _parseId(value);
+
+  static int? _parseId(dynamic value) {
+    final text = value?.toString() ?? '';
+    final decimal = int.tryParse(text);
+    if (decimal != null) return decimal;
+    if (RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(text)) {
+      return int.tryParse(text.substring(0, 12), radix: 16);
+    }
+    return null;
+  }
 }

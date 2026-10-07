@@ -164,7 +164,7 @@ class PlatformService {
   }
 
   Future<void> sendMessage(String id, String body) async {
-    await _api.post('/conversations/$id/messages', body: {'body': body});
+    await _api.post('/conversations/$id/messages', body: {'content': body});
   }
 
   // ---------- Translations / languages ----------
