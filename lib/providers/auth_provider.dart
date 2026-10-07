@@ -95,13 +95,18 @@ class AuthController extends Notifier<AuthState> {
   }
 
   /// Logs in with an email or a phone number plus a password.
-  Future<bool> login(String emailOrPhone, String password) async {
+  Future<bool> login(
+    String emailOrPhone,
+    String password, {
+    String? staffInviteToken,
+  }) async {
     state = state.copyWith(loading: true, clearError: true);
     try {
       final isEmail = emailOrPhone.contains('@');
       final body = {
         if (isEmail) 'email': emailOrPhone else 'phone': emailOrPhone,
         'password': password,
+        if (staffInviteToken != null) 'staffInviteToken': staffInviteToken,
       };
       final res = await _api.post('/auth/login', body: body);
       final token = res['token'] as String?;
@@ -126,6 +131,7 @@ class AuthController extends Notifier<AuthState> {
     String role = 'buyer',
     String? companyName,
     required String password,
+    String? staffInviteToken,
   }) async {
     state = state.copyWith(loading: true, clearError: true);
     try {
@@ -139,6 +145,7 @@ class AuthController extends Notifier<AuthState> {
           'role': role,
           if (companyName != null && companyName.trim().isNotEmpty)
             'companyName': companyName.trim(),
+          if (staffInviteToken != null) 'staffInviteToken': staffInviteToken,
           'password': password,
         },
       );

@@ -27,7 +27,7 @@ class _VendorTeamScreenState extends ConsumerState<VendorTeamScreen> {
       () => ref
           .read(vendorTeamServiceProvider)
           .addMember(email: draft.email, role: draft.role),
-      success: 'Team member added',
+      success: 'Invitation email sent to ${draft.email}',
     );
   }
 
@@ -51,7 +51,7 @@ class _VendorTeamScreenState extends ConsumerState<VendorTeamScreen> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Remove team member?'),
         content: Text(
-          'Remove ${member.name} (${member.email}) from your store?',
+          'Remove ${member.name} (${member.email}) from your vendor team?',
         ),
         actions: [
           TextButton(
@@ -95,23 +95,23 @@ class _VendorTeamScreenState extends ConsumerState<VendorTeamScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PageHead(
-          eyebrow: 'STORE ADMIN',
+          eyebrow: 'VENDOR ADMIN',
           title: 'Team / staff',
           subtitle:
-              'Add people to your store and assign access based on the work '
+              'Add people to your vendor team and assign access based on the work '
               'they do.',
           actions: [
             FilledButton.icon(
               onPressed: _working ? null : _addMember,
               icon: const Icon(Icons.person_add_alt_1, size: 17),
-              label: const Text('Add team member'),
+              label: const Text('Invite team member'),
             ),
           ],
         ),
         const InfoBox(
-          'Add an existing MVEC user by email. This adds them to your store; '
-          'it does not create a new login. Each role grants the matching '
-          'product, order, or analytics access.',
+          'Send an invitation to any email address. New team members can create '
+          'an MVEC account from the email link; existing members can sign in to '
+          'accept. Access is enabled after the invitation is accepted.',
         ),
         const SizedBox(height: 16),
         switch (membersAsync) {
@@ -129,7 +129,7 @@ class _VendorTeamScreenState extends ConsumerState<VendorTeamScreen> {
 
   Widget _memberList(BuildContext context, List<VendorTeamMember> members) {
     return DataCard(
-      title: 'Store team',
+      title: 'Vendor team',
       subtitle:
           '${members.length} team member${members.length == 1 ? '' : 's'}',
       child: members.isEmpty
@@ -252,7 +252,7 @@ class _AddVendorStaffDialogState extends State<_AddVendorStaffDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Add team member'),
+    title: const Text('Invite a team member'),
     content: Form(
       key: _formKey,
       child: Column(
@@ -304,7 +304,7 @@ class _AddVendorStaffDialogState extends State<_AddVendorStaffDialog> {
             Navigator.pop(context, _NewVendorStaff(_email.text.trim(), _role));
           }
         },
-        child: const Text('Add member'),
+        child: const Text('Send invitation'),
       ),
     ],
   );
@@ -350,9 +350,15 @@ class _EditVendorStaffDialogState extends State<_EditVendorStaffDialog> {
         ),
         SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Access active'),
+          title: Text(
+            widget.member.status.toUpperCase() == 'INVITED'
+                ? 'Waiting for invitation acceptance'
+                : 'Access active',
+          ),
           value: _active,
-          onChanged: (active) => setState(() => _active = active),
+          onChanged: widget.member.status.toUpperCase() == 'INVITED'
+              ? null
+              : (active) => setState(() => _active = active),
         ),
       ],
     ),

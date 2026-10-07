@@ -98,7 +98,7 @@ class _UnavailablePage {
 }
 
 /// The remaining supplier destinations the backend does not serve. Team
-/// management is only available for vendor-owned stores through `/api/staff`;
+/// management is only available to vendor accounts through `/api/staff`;
 /// it is not a supplier team API.
 const _unavailableSupplierPages = <_UnavailablePage>[
   _UnavailablePage(
@@ -106,7 +106,7 @@ const _unavailableSupplierPages = <_UnavailablePage>[
     'Team / Staff',
     'users',
     'Supplier team management is not available yet. The backend staff API is '
-        'for vendor-owned stores only.',
+        'for vendor accounts only.',
   ),
 ];
 
@@ -180,6 +180,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             state.uri.queryParameters['returnTo'] == 'checkout') {
           return null;
         }
+        if (isPublic && state.uri.queryParameters['staffInviteToken'] != null) {
+          return null;
+        }
         if (isPublic) return roleHome(user);
         // Only super admins may enter the control center.
         if (loc.startsWith('/admin') && user.userType != 'super_admin') {
@@ -194,6 +197,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc.startsWith('/vendor') && user.userType != 'vendor') {
           return roleHome(user);
         }
+        if (loc == '/vendor/team' && user.vendorStaff) return '/vendor';
         // The supplier portal is exclusive to suppliers.
         if (loc.startsWith('/supplier') && user.userType != 'supplier') {
           return roleHome(user);
@@ -228,8 +232,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/home';
         },
       ),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/signup', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/login',
+        builder:
+            (_, state) => LoginScreen(
+              staffInviteToken: state.uri.queryParameters['staffInviteToken'],
+              invitedEmail: state.uri.queryParameters['email'],
+            ),
+      ),
+      GoRoute(
+        path: '/signup',
+        builder:
+            (_, state) => RegisterScreen(
+              staffInviteToken: state.uri.queryParameters['staffInviteToken'],
+              invitedEmail: state.uri.queryParameters['email'],
+            ),
+      ),
       GoRoute(
         path: '/forgot-password',
         builder: (_, __) => const ForgotPasswordScreen(),

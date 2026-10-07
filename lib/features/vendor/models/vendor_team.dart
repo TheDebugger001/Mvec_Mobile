@@ -13,14 +13,14 @@ enum VendorTeamRole {
   };
 
   String get label => switch (this) {
-    VendorTeamRole.storeManager => 'Store manager',
+    VendorTeamRole.storeManager => 'Vendor manager',
     VendorTeamRole.orderManager => 'Order manager',
     VendorTeamRole.catalogManager => 'Catalog manager',
   };
 
   String get description => switch (this) {
     VendorTeamRole.storeManager =>
-      'Manage products and orders, and view store analytics.',
+      'Manage products and orders, and view vendor analytics.',
     VendorTeamRole.orderManager => 'Manage and process store orders.',
     VendorTeamRole.catalogManager => 'Create and maintain store products.',
   };
@@ -81,12 +81,14 @@ class VendorTeamMember {
   ];
 
   factory VendorTeamMember.fromJson(Map<String, dynamic> json) {
-    final user = json['user'] is Map
-        ? Map<String, dynamic>.from(json['user'] as Map)
-        : const <String, dynamic>{};
-    final rawPermissions = json['permissions'] is Map
-        ? Map<String, dynamic>.from(json['permissions'] as Map)
-        : const <String, dynamic>{};
+    final user =
+        json['user'] is Map
+            ? Map<String, dynamic>.from(json['user'] as Map)
+            : const <String, dynamic>{};
+    final rawPermissions =
+        json['permissions'] is Map
+            ? Map<String, dynamic>.from(json['permissions'] as Map)
+            : const <String, dynamic>{};
     final email = '${user['email'] ?? json['email'] ?? ''}'.trim();
     final name =
         '${user['Fullname'] ?? user['fullname'] ?? user['name'] ?? ''}'.trim();

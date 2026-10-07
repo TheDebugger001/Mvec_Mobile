@@ -13,7 +13,7 @@ class VendorTeamService {
         .toList();
   }
 
-  /// Adds an existing MVEC account to this vendor's store.
+  /// Adds an existing MVEC account to this vendor's team.
   Future<void> addMember({
     required String email,
     required VendorTeamRole role,

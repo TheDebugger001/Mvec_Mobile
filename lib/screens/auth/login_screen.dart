@@ -9,7 +9,10 @@ import 'auth_validation.dart';
 import 'auth_widgets.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.staffInviteToken, this.invitedEmail});
+
+  final String? staffInviteToken;
+  final String? invitedEmail;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -23,6 +26,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _remember = true;
 
   @override
+  void initState() {
+    super.initState();
+    _identity.text = widget.invitedEmail ?? '';
+  }
+
+  @override
   void dispose() {
     _identity.dispose();
     _password.dispose();
@@ -34,7 +43,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final controller = ref.read(authControllerProvider.notifier);
-    final ok = await controller.login(_identity.text.trim(), _password.text);
+    final ok = await controller.login(
+      _identity.text.trim(),
+      _password.text,
+      staffInviteToken: widget.staffInviteToken,
+    );
     if (!mounted) return;
     if (ok) {
       final user = ref.read(currentUserProvider);
@@ -54,7 +67,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context,
         "Don't have an account?",
         'Create one',
-        () => context.go('/signup'),
+        () => context.go(
+          widget.staffInviteToken == null
+              ? '/signup'
+              : Uri(
+                  path: '/signup',
+                  queryParameters: {
+                    'staffInviteToken': widget.staffInviteToken,
+                    if (widget.invitedEmail != null) 'email': widget.invitedEmail,
+                  },
+                ).toString(),
+        ),
       ),
       children: [
         if (error != null) ...[
