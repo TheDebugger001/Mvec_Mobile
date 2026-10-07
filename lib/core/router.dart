@@ -84,6 +84,7 @@ import '../features/vendor/screens/vendor_orders_screen.dart';
 import '../features/vendor/screens/vendor_sales_screen.dart';
 import '../features/vendor/screens/vendor_notifications_screen.dart';
 import '../features/vendor/screens/vendor_settings_screen.dart';
+import '../features/vendor/screens/vendor_team_screen.dart';
 
 /// A supplier portal destination the API does not serve yet.
 class _UnavailablePage {
@@ -832,6 +833,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             (context, state) => const VendorShell(
               path: '/vendor/settings',
               child: VendorSettingsScreen(),
+            ),
+      ),
+      GoRoute(
+        path: '/vendor/team',
+        builder:
+            (context, state) => const VendorShell(
+              path: '/vendor/team',
+              child: VendorTeamScreen(),
             ),
       ),
     ],
