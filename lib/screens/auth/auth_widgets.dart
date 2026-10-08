@@ -189,6 +189,7 @@ class AuthField extends StatelessWidget {
     this.autofillHints,
     this.suffix,
     this.enabled = true,
+    this.readOnly = false,
     this.onSubmitted,
     this.validator,
   });
@@ -203,6 +204,7 @@ class AuthField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final Widget? suffix;
   final bool enabled;
+  final bool readOnly;
   final ValueChanged<String>? onSubmitted;
   final FormFieldValidator<String>? validator;
 
@@ -212,6 +214,7 @@ class AuthField extends StatelessWidget {
       controller: controller,
       obscureText: obscure,
       enabled: enabled,
+      readOnly: readOnly,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       autofillHints: autofillHints,

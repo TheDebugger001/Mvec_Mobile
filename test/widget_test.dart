@@ -18,16 +18,23 @@ import 'package:mvec_mobile/features/marketplace/data/interest/interest_profile.
 import 'package:mvec_mobile/features/marketplace/data/interest/interest_store.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/home_screen.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/Screens/main_navigation.dart';
+import 'package:mvec_mobile/features/marketplace/presentation/Widgets/product_card.dart';
+import 'package:mvec_mobile/features/marketplace/data/services/home_service.dart';
 import 'package:mvec_mobile/features/marketplace/presentation/providers/commerce_provider.dart';
+import 'package:mvec_mobile/features/marketplace/presentation/providers/home_provider.dart';
 import 'package:mvec_mobile/main.dart';
+import 'package:mvec_mobile/models/catalog.dart';
 import 'package:mvec_mobile/models/product.dart';
 import 'package:mvec_mobile/models/supplier.dart';
 import 'package:mvec_mobile/models/user.dart';
+import 'package:mvec_mobile/providers/admin_providers.dart';
 import 'package:mvec_mobile/providers/auth_provider.dart';
 import 'package:mvec_mobile/screens/auth/auth_validation.dart';
 import 'package:mvec_mobile/screens/auth/login_screen.dart';
 import 'package:mvec_mobile/screens/suppliers/supplier_shell.dart';
 import 'package:mvec_mobile/widgets/common.dart';
+
+import 'helpers/fake_home_feed.dart';
 
 Product _demoProduct() => Product(
   id: 'p1',
@@ -54,6 +61,7 @@ Future<void> _pumpDashboard(WidgetTester tester, String role) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        homeServiceProvider.overrideWithValue(FakeHomeService()),
         authControllerProvider.overrideWith(
           () => _StubAuthController(_user(role)),
         ),
@@ -98,10 +106,34 @@ UserRecord _user(String role) => UserRecord(
 /// The real controller sits in `restoring` until secure storage answers, which
 /// never happens in a widget test, so the session state is stubbed instead.
 Future<void> _pumpGuest(WidgetTester tester) async {
+  await _pumpApp(tester, overrides: [
+    authControllerProvider.overrideWith(() => _StubAuthController(null)),
+  ]);
+}
+
+/// Screens that read the admin/shopper APIs are stubbed empty so they settle
+/// instead of waiting on a request that cannot succeed in a test.
+List<Override> get _emptyApiOverrides => <Override>[
+  myOrdersProvider.overrideWith((ref) async => const <OrderRecord>[]),
+];
+
+/// Pumps the app with the storefront served from [FakeHomeService].
+///
+/// The app reads the home feed from the API, so a widget test injects a
+/// fixture feed rather than waiting on (or shipping) a dataset. Every helper
+/// below goes through here so no test can accidentally hit the network and hang
+/// on its request timeout.
+Future<void> _pumpApp(
+  WidgetTester tester, {
+  required List<Override> overrides,
+  HomeService? home,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        authControllerProvider.overrideWith(() => _StubAuthController(null)),
+        homeServiceProvider.overrideWithValue(home ?? FakeHomeService()),
+        ..._emptyApiOverrides,
+        ...overrides,
       ],
       child: const MvecApp(),
     ),
@@ -125,17 +157,9 @@ Future<void> _pumpSignedOut(WidgetTester tester) async {
 /// Boots the app as [role]; the router then sends the user to the landing
 /// route for that role.
 Future<void> _pumpSignedIn(WidgetTester tester, String role) async {
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        authControllerProvider.overrideWith(
-          () => _StubAuthController(_user(role)),
-        ),
-      ],
-      child: const MvecApp(),
-    ),
-  );
-  await tester.pumpAndSettle();
+  await _pumpApp(tester, overrides: [
+    authControllerProvider.overrideWith(() => _StubAuthController(_user(role))),
+  ]);
 }
 
 /// The marketplace is served by mock data in tests, so the home feed and its
@@ -382,6 +406,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+                homeServiceProvider.overrideWithValue(FakeHomeService()),
             authControllerProvider.overrideWith(
               () => _StubAuthController(_user('super_admin')),
             ),
@@ -403,6 +428,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+                homeServiceProvider.overrideWithValue(FakeHomeService()),
             authControllerProvider.overrideWith(
               () => _StubAuthController(_user('vendor')),
             ),
@@ -469,9 +495,16 @@ void main() {
       expect(find.text('Categories'), findsOneWidget);
       expect(find.text('All'), findsOneWidget);
       expect(find.text('More'), findsNothing);
-      expect(find.byIcon(Icons.category_outlined), findsOneWidget);
+      // Scoped to the strip's header: the category cards themselves carry
+      // the same glyph.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('category-bar')),
+          matching: find.byIcon(Icons.category_outlined),
+        ),
+        findsOneWidget,
+      );
 
-      expect(find.textContaining('demo data'), findsOneWidget);
     });
 
     testWidgets('only the active tab takes the sky-blue accent', (
@@ -555,7 +588,7 @@ void main() {
 
       // Everything else is neutral grey, never sky-blue.
       final muted = MvPalette.light().textMuted;
-      for (final label in <String>['Electronics', 'Fashion', 'Home & Garden']) {
+      for (final label in <String>['Electronics', 'Fashion', 'Sports']) {
         expect(chipFill(label), AppColors.chipNeutral, reason: label);
         expect(chipFill(label), isNot(AppColors.skyBlueSolid), reason: label);
         expect(chipText(label), muted, reason: label);
@@ -618,6 +651,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+                homeServiceProvider.overrideWithValue(FakeHomeService()),
             sharedPreferencesProvider.overrideWithValue(prefs),
             authControllerProvider.overrideWith(
               () => _StubAuthController(_user('buyer')),
@@ -684,8 +718,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Electronics product visible, Fashion product filtered out.
-      expect(find.text('Gaming Mechanical Keyboard'), findsOneWidget);
-      expect(find.text('Linen Summer Dress'), findsNothing);
+      expect(find.text('Wireless Earbuds'), findsOneWidget);
+      expect(find.text('Cotton T-Shirt'), findsNothing);
     });
 
     testWidgets('opens search plus every destination behind the More drawer', (
@@ -781,6 +815,10 @@ void main() {
   });
 
   group('marketplace cart and wishlist', () {
+    /// The product the card actions below target: the first one in the fixture
+    /// feed, which the home rows render first.
+    const firstProduct = 'Wireless Over-Ear Headphones';
+
     /// Scrolls the home feed far enough to bring the product rows onstage.
     Future<void> scrollToProducts(WidgetTester tester) async {
       final homeList =
@@ -797,6 +835,30 @@ void main() {
     Badge badgeFor(WidgetTester tester, String countKey) =>
         tester.widget<Badge>(find.byKey(ValueKey<String>(countKey)));
 
+    /// The [ProductCard] showing [name], so an action targets that product
+    /// rather than whichever card happens to be first in the tree.
+    Finder cardFor(String name) => find.ancestor(
+      of: find.text(name),
+      matching: find.byType(ProductCard),
+    );
+
+    /// Scrolls [finder] into view before tapping it.
+    ///
+    /// The feed is taller than the test surface, so a card that has not been
+    /// scrolled to is in the tree but not hittable.
+    Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+      await tester.tap(finder);
+    }
+
+    /// The action button on the card showing [name].
+    Finder cardAction(String name, String tooltip) => find
+        .descendant(of: cardFor(name), matching: find.byTooltip(tooltip))
+        // The same product can sit in more than one row of the feed; the first
+        // card onstage is the one a shopper would press.
+        .first;
+
     testWidgets('product cards add directly to cart and wishlist', (
       tester,
     ) async {
@@ -806,11 +868,11 @@ void main() {
       expect(find.byTooltip('Add to cart'), findsWidgets);
       expect(badgeFor(tester, 'bottom-cart-badge').isLabelVisible, isFalse);
 
-      await tester.tap(find.byTooltip('Add to cart').first);
+      await tapVisible(tester, cardAction(firstProduct, 'Add to cart'));
       await tester.pumpAndSettle();
       expect((badgeFor(tester, 'bottom-cart-badge').label as Text).data, '1');
 
-      await tester.tap(find.byTooltip('Add to wishlist').first);
+      await tapVisible(tester, cardAction(firstProduct, 'Add to wishlist'));
       await tester.pumpAndSettle();
       expect((badgeFor(tester, 'home-wishlist-count').label as Text).data, '1');
     });
@@ -821,11 +883,11 @@ void main() {
       await _pumpMarketplace(tester);
       await scrollToProducts(tester);
 
-      await tester.tap(find.byTooltip('Add to wishlist').first);
+      await tapVisible(tester, cardAction(firstProduct, 'Add to wishlist'));
       await tester.pumpAndSettle();
       expect(badgeFor(tester, 'home-wishlist-count').isLabelVisible, isTrue);
 
-      await tester.tap(find.byTooltip('Add to cart').first);
+      await tapVisible(tester, cardAction(firstProduct, 'Add to cart'));
       await tester.pumpAndSettle();
 
       expect(badgeFor(tester, 'home-wishlist-count').isLabelVisible, isFalse);
@@ -846,7 +908,7 @@ void main() {
       await _pumpMarketplace(tester);
       await scrollToProducts(tester);
 
-      await tester.tap(find.text('Wireless Over-Ear Headphones').first);
+      await tapVisible(tester, find.text('Wireless Over-Ear Headphones').first);
       await tester.pumpAndSettle();
 
       expect(find.text('In Stock (42)'), findsOneWidget);
@@ -867,7 +929,7 @@ void main() {
       await _pumpMarketplace(tester);
       await scrollToProducts(tester);
 
-      await tester.tap(find.byTooltip('Add to wishlist').first);
+      await tapVisible(tester, cardAction(firstProduct, 'Add to wishlist'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Wishlist'));
@@ -1110,6 +1172,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+                homeServiceProvider.overrideWithValue(FakeHomeService()),
             authControllerProvider.overrideWith(
               () => _StubAuthController(null, restoring: true),
             ),
@@ -1182,6 +1245,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+                homeServiceProvider.overrideWithValue(FakeHomeService()),
             authControllerProvider.overrideWith(
               () => _StubAuthController(_user('buyer')),
             ),
@@ -1223,6 +1287,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+                homeServiceProvider.overrideWithValue(FakeHomeService()),
             authControllerProvider.overrideWith(
               () => _StubAuthController(_user('buyer')),
             ),
@@ -1264,6 +1329,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+                homeServiceProvider.overrideWithValue(FakeHomeService()),
             authControllerProvider.overrideWith(
               () => _StubAuthController(_user('buyer')),
             ),

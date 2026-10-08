@@ -32,8 +32,6 @@ class _SupplierSupplyRequestsScreenState
     final requestsAsync = ref.watch(supplierSupplyRequestsProvider);
     final summaryAsync = ref.watch(supplierSupplySummaryProvider);
     final processAsync = ref.watch(supplierSupplyProcessProvider);
-    final fallback = ref.watch(supplierOperationsModuleProvider).fallbackReason;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -51,10 +49,6 @@ class _SupplierSupplyRequestsScreenState
             ),
           ],
         ),
-        if (fallback != null) ...[
-          InfoBox(fallback, icon: 'bell'),
-          const SizedBox(height: 14),
-        ],
         switch (summaryAsync) {
           AsyncLoading() => const SizedBox(height: 110, child: LoadingState()),
           AsyncError(:final error) => ErrorState(
@@ -108,10 +102,9 @@ class _SupplierSupplyRequestsScreenState
           label: 'Open requests',
           value: '${value.open}',
           icon: 'cart',
-          caption:
-              value.oldestOpenDays == 0
-                  ? 'nothing waiting'
-                  : 'oldest ${value.oldestOpenDays}d old',
+          caption: value.oldestOpenDays == 0
+              ? 'nothing waiting'
+              : 'oldest ${value.oldestOpenDays}d old',
         ),
         SupplierOpsMetric(
           label: 'Awaiting MVEC',
@@ -162,11 +155,10 @@ class _SupplierSupplyRequestsScreenState
     if (visible.isEmpty) {
       return DataCard(
         child: EmptyState(
-          message:
-              _filter == _RequestFilter.open
-                  ? 'No open requests. Raise one and MVEC will source the '
-                      'stock for you.'
-                  : 'No requests in this view.',
+          message: _filter == _RequestFilter.open
+              ? 'No open requests. Raise one and MVEC will source the '
+                    'stock for you.'
+              : 'No requests in this view.',
         ),
       );
     }
@@ -176,12 +168,12 @@ class _SupplierSupplyRequestsScreenState
           SupplyRequestCard(
             request: request,
             onTap: () => _openDetail(context, request),
-            onCancel:
-                request.canCancel
-                    ? () => _confirmCancel(context, request)
-                    : null,
-            onResubmit:
-                request.canResubmit ? () => _resubmit(context, request) : null,
+            onCancel: request.canCancel
+                ? () => _confirmCancel(context, request)
+                : null,
+            onResubmit: request.canResubmit
+                ? () => _resubmit(context, request)
+                : null,
           ),
           const SizedBox(height: 12),
         ],
@@ -266,18 +258,17 @@ class _SupplierSupplyRequestsScreenState
         const SizedBox(height: 10),
         SupplyRequestTimeline(request: request),
       ],
-      footer:
-          request.canResubmit
-              ? GradientButton(
-                label: 'Resubmit request',
-                icon: 'plus',
-                expanded: true,
-                onPressed: () {
-                  Navigator.pop(context);
-                  _resubmit(context, request);
-                },
-              )
-              : null,
+      footer: request.canResubmit
+          ? GradientButton(
+              label: 'Resubmit request',
+              icon: 'plus',
+              expanded: true,
+              onPressed: () {
+                Navigator.pop(context);
+                _resubmit(context, request);
+              },
+            )
+          : null,
     );
   }
 
@@ -353,6 +344,7 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
   final _formKey = GlobalKey<FormState>();
   final _product = TextEditingController();
   final _category = TextEditingController();
+  final _unit = TextEditingController();
   final _units = TextEditingController(text: '1');
   final _unitPrice = TextEditingController();
   final _note = TextEditingController();
@@ -360,24 +352,6 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
 
   final List<SupplyRequestLine> _lines = [];
   bool _saving = false;
-
-  /// Units the supplier expects to buy from the demo catalogue, so the price
-  /// field can be prefilled the way the real quote would be.
-  static const _catalogue =
-      <String, ({String category, num price, String unit})>{
-        'Arabica Coffee Beans': (
-          category: 'Beverages',
-          price: 12500,
-          unit: 'kg',
-        ),
-        'Raw Forest Honey': (category: 'Pantry', price: 7800, unit: 'kg'),
-        'Dried Red Kidney Beans': (
-          category: 'Grains & pulses',
-          price: 2400,
-          unit: 'kg',
-        ),
-        'Fresh Avocados': (category: 'Produce', price: 900, unit: 'kg'),
-      };
 
   @override
   void initState() {
@@ -392,6 +366,7 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
   void dispose() {
     _product.dispose();
     _category.dispose();
+    _unit.dispose();
     _units.dispose();
     _unitPrice.dispose();
     _note.dispose();
@@ -402,22 +377,21 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
   void _addLine() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final name = _product.text.trim();
-    final entry = _catalogue[name];
     setState(() {
       _lines.add(
         SupplyRequestLine(
           product: name,
-          category:
-              _category.text.trim().isEmpty
-                  ? entry?.category ?? 'General'
-                  : _category.text.trim(),
+          category: _category.text.trim().isEmpty
+              ? 'General'
+              : _category.text.trim(),
           units: int.parse(_units.text.trim()),
-          unit: entry?.unit ?? 'kg',
+          unit: _unit.text.trim(),
           unitPrice: num.parse(_unitPrice.text.trim()),
         ),
       );
       _product.clear();
       _category.clear();
+      _unit.clear();
       _units.text = '1';
       _unitPrice.clear();
     });
@@ -451,11 +425,7 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
       ref.invalidate(supplierSupplyRequestsProvider);
       if (mounted) {
         Navigator.pop(context);
-        showMvSnack(
-          context,
-          '${request.reference} submitted — MVEC will review it today',
-          success: true,
-        );
+        showMvSnack(context, '${request.reference} submitted', success: true);
       }
     } catch (error) {
       if (mounted) showMvSnack(context, friendlyError(error));
@@ -484,29 +454,15 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
                 const SizedBox(height: 14),
                 Text('Add an item', style: context.mvH1.copyWith(fontSize: 13)),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue:
-                      _catalogue.containsKey(_product.text.trim())
-                          ? _product.text.trim()
-                          : null,
+                TextFormField(
+                  controller: _product,
                   decoration: const InputDecoration(
                     labelText: 'Item',
                     border: OutlineInputBorder(),
                   ),
-                  items: [
-                    for (final name in _catalogue.keys)
-                      DropdownMenuItem(value: name, child: Text(name)),
-                  ],
-                  onChanged:
-                      (value) => setState(() {
-                        final entry = value == null ? null : _catalogue[value];
-                        _product.text = value ?? '';
-                        if (entry != null) {
-                          _category.text = entry.category;
-                          _unitPrice.text = entry.price.toStringAsFixed(0);
-                        }
-                      }),
-                  validator: (value) => value == null ? 'Choose an item' : null,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter an item'
+                      : null,
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -549,6 +505,17 @@ class _SupplyRequestFormState extends ConsumerState<_SupplyRequestForm> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _unit,
+                  decoration: const InputDecoration(
+                    labelText: 'Unit (e.g. kg, box, piece)',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter a unit'
+                      : null,
                 ),
                 const SizedBox(height: 10),
                 TextFormField(

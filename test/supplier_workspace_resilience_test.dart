@@ -80,7 +80,54 @@ class _ForbiddenOrdersService implements SupplierWorkspaceService {
   Future<void> markNotificationRead(String id) async {}
 }
 
-ProviderContainer _container(_ForbiddenOrdersService service) =>
+/// A supplier who has not completed onboarding. The API answers exactly like
+/// the backend does before a `Supplier` profile exists: the catalogue list
+/// degrades to empty (`ApiSupplierWorkspaceService` swallows its 404 the same
+/// way it swallows the one from `profile()`) and the profile is blank, which is
+/// what routes the portal to its onboarding state.
+class _NotOnboardedService implements SupplierWorkspaceService {
+  @override
+  Future<List<SupplierProduct>> products() async => const [];
+
+  @override
+  Future<List<SupplierOrder>> orders() async => const [];
+
+  @override
+  Future<List<SupplierNotice>> notifications() async => const [];
+
+  @override
+  Future<SupplierProfile> profile() async => const SupplierProfile(
+    businessName: '',
+    email: '',
+    phone: '',
+    address: '',
+    orderNotifications: true,
+    stockNotifications: true,
+  );
+
+  @override
+  Future<void> saveProduct(SupplierProduct product) async {}
+
+  @override
+  Future<void> saveProfile(
+    SupplierProfile profile, {
+    required bool isNewProfile,
+  }) async {}
+
+  @override
+  Future<void> deleteProduct(String id) async {}
+
+  @override
+  Future<void> updateStock(String id, int stock) async {}
+
+  @override
+  Future<void> updateOrderStatus(String id, String status) async {}
+
+  @override
+  Future<void> markNotificationRead(String id) async {}
+}
+
+ProviderContainer _container(SupplierWorkspaceService service) =>
     ProviderContainer(
       overrides: [supplierWorkspaceServiceProvider.overrideWithValue(service)],
     );
@@ -124,5 +171,24 @@ void main() {
     expect(data.ordersUnavailable, isFalse);
     expect(data.notificationsUnavailable, isFalse);
     expect(data.metrics.activeProducts, 1);
+  });
+
+  test('a supplier who has not onboarded sees empty pages, not an error', () async {
+    // Regression: before completing onboarding the catalogue endpoint answers
+    // 404, and that used to escape from `products()` and flip the whole
+    // workspace into AsyncError — so Overview, Products, Inventory, Orders and
+    // Profile all rendered the backend's "Supplier profile not found. Please
+    // complete onboarding." with a Retry that could never succeed, instead of
+    // the empty pages plus the onboarding form this service contract promises.
+    final container = _container(_NotOnboardedService());
+    addTearDown(container.dispose);
+
+    final data = await container.read(supplierWorkspaceProvider.future);
+
+    expect(data.products, isEmpty);
+    expect(data.orders, isEmpty);
+    expect(data.notifications, isEmpty);
+    expect(data.profile.businessName, isEmpty);
+    expect(data.profile.isOnboarded, isFalse, reason: 'must route to onboarding');
   });
 }

@@ -133,12 +133,11 @@ final zonesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>(
   (ref) => ref.watch(platformServiceProvider).shippingZones(),
 );
 
-/// Mock-only modules (no dedicated backend endpoints). Data lives in the app,
-/// mirroring the frontend's local `mvecStore` behaviour.
-class MockStore {
-  MockStore._();
-  static final MockStore instance = MockStore._();
-
-  final ledgerEntries = <Map<String, dynamic>>[];
-  final commissions = <Map<String, dynamic>>[];
-}
+/// Admin intelligence lists moved to `lib/providers/admin_intelligence_providers.dart`
+/// so this shared file stays scoped to the admin surfaces that already existed.
+///
+/// Orders for the signed-in shopper. Scoped by the bearer token, and empty while
+/// the route is unshipped — the shopper's orders tab then shows its empty state.
+final myOrdersProvider = FutureProvider.autoDispose<List<OrderRecord>>(
+  (ref) => ref.watch(platformServiceProvider).myOrders(),
+);

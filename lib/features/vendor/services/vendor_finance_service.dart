@@ -4,9 +4,10 @@ import '../models/vendor_finance.dart';
 /// Contract for the vendor's money: summary metrics, the transaction ledger and
 /// withdrawal requests.
 ///
-/// [MockVendorFinanceService] and [ApiVendorFinanceService] are interchangeable;
-/// see `vendor_dependencies.dart` for the DEMO_MODE switch.
+/// [ApiVendorFinanceService] is the shipped implementation; see
+/// `vendor_dependencies.dart` for the wiring.
 abstract class VendorFinanceService {
+  /// True only when this service is answering from a bundled/local dataset.
   bool get isDemo;
 
   /// The four headline balances plus the commission rate and the daily series.

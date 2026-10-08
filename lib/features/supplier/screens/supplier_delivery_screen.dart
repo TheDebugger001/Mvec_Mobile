@@ -33,8 +33,6 @@ class _SupplierDeliveryScreenState
     final summaryAsync = ref.watch(supplierDeliverySummaryProvider);
     final shipmentsAsync = ref.watch(supplierShipmentsProvider);
     final settlementsAsync = ref.watch(supplierSettlementsProvider);
-    final fallback = ref.watch(supplierOperationsModuleProvider).fallbackReason;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -45,10 +43,6 @@ class _SupplierDeliveryScreenState
               'Follow every consignment to the buyer and watch the escrow it '
               'holds, release by release.',
         ),
-        if (fallback != null) ...[
-          InfoBox(fallback, icon: 'bell'),
-          const SizedBox(height: 14),
-        ],
         switch (summaryAsync) {
           AsyncLoading() => const SizedBox(height: 120, child: LoadingState()),
           AsyncError(:final error) => ErrorState(
@@ -136,9 +130,15 @@ class _SupplierDeliveryScreenState
         ),
         SupplierOpsMetric(
           label: 'On-time delivery',
-          value: '${(value.onTimeRate * 100).toStringAsFixed(0)}%',
+          value:
+              value.onTimeRate == null
+                  ? '—'
+                  : '${(value.onTimeRate! * 100).toStringAsFixed(0)}%',
           icon: 'chart',
-          caption: 'landed on or before the promise',
+          caption:
+              value.onTimeRate == null
+                  ? 'delivery promises are not recorded yet'
+                  : 'landed on or before the promise',
         ),
       ],
     );

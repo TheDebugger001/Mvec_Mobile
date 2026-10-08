@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
-import '../../core/utils/app_theme.dart';
 
 class BuyerOrderDetailScreen extends StatefulWidget {
   const BuyerOrderDetailScreen({super.key, required this.orderId});
@@ -47,9 +46,15 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
 
   Future<void> _load() async {
     try {
-      final response = await ApiClient.instance.get('/orders/${widget.orderId}');
+      final response = await ApiClient.instance.get(
+        '/orders/${widget.orderId}',
+      );
       final order = singleJson(response, ['order']);
-      if (mounted) setState(() { _order = order; _error = null; });
+      if (mounted)
+        setState(() {
+          _order = order;
+          _error = null;
+        });
     } catch (error) {
       if (mounted) setState(() => _error = error);
     }
@@ -82,68 +87,111 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
     final order = _order;
     return Scaffold(
       appBar: AppBar(title: const Text('Order details')),
-      body: _error != null && order == null
-          ? Center(child: Text('Could not load this order: $_error'))
-          : order == null
+      body:
+          _error != null && order == null
+              ? Center(child: Text('Could not load this order: $_error'))
+              : order == null
               ? const Center(child: CircularProgressIndicator())
               : _buildOrder(context, order),
     );
   }
 
   Widget _buildOrder(BuildContext context, Map<String, dynamic> order) {
-    final createdAt = DateTime.tryParse('${order['createdAt'] ?? ''}')?.toLocal();
+    final createdAt =
+        DateTime.tryParse('${order['createdAt'] ?? ''}')?.toLocal();
     final deadline = createdAt?.add(_window);
-    final remaining = deadline == null ? Duration.zero : deadline.difference(_now);
+    final remaining =
+        deadline == null ? Duration.zero : deadline.difference(_now);
     final status = '${order['orderStatus'] ?? 'PENDING'}'.toUpperCase();
-    final paymentStatus = '${order['paymentStatus'] ?? 'PENDING'}'.toUpperCase();
+    final paymentStatus =
+        '${order['paymentStatus'] ?? 'PENDING'}'.toUpperCase();
     final paid = paymentStatus == 'PAID' || paymentStatus == 'CONFIRMED';
-    final canCancel = paid && remaining > Duration.zero &&
-        !{'CANCELLED', 'REFUNDED', 'COMPLETED', 'DELIVERED', 'RETURNED'}.contains(status);
+    final canCancel =
+        paid &&
+        remaining > Duration.zero &&
+        !{
+          'CANCELLED',
+          'REFUNDED',
+          'COMPLETED',
+          'DELIVERED',
+          'RETURNED',
+        }.contains(status);
     final items = order['items'] is List ? order['items'] as List : const [];
     final total = order['totalAmount'];
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Card(child: ListTile(
-          title: Text('Order #${order['orderNumber'] ?? widget.orderId}',
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text('Status: $status · Payment: $paymentStatus'),
-        )),
+        Card(
+          child: ListTile(
+            title: Text(
+              'Order #${order['orderNumber'] ?? widget.orderId}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text('Status: $status · Payment: $paymentStatus'),
+          ),
+        ),
         const SizedBox(height: 12),
         if (paid && canCancel) ...[
           Card(
             color: context.mv.surface,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('You can cancel this order within: ${_format(remaining)}',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 12),
-                SizedBox(width: double.infinity, child: OutlinedButton(
-                  onPressed: _cancelling ? null : _cancelOrder,
-                  child: _cancelling
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Cancel Order'),
-                )),
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'You can cancel this order within: ${_format(remaining)}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _cancelling ? null : _cancelOrder,
+                      child:
+                          _cancelling
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text('Cancel Order'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ] else if (paid && remaining <= Duration.zero && status != 'CANCELLED')
-          const Card(child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('Cancellation window expired. Order is now being processed for delivery.'),
-          )),
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Cancellation window expired. Order is now being processed for delivery.',
+              ),
+            ),
+          ),
         const SizedBox(height: 8),
         for (final raw in items)
           if (raw is Map)
-            Card(child: ListTile(
-              title: Text('${raw['name'] ?? 'Item'}'),
-              subtitle: Text('Quantity: ${raw['quantity'] ?? 1}'),
-              trailing: Text('RWF ${raw['price'] ?? ''}'),
-            )),
+            Card(
+              child: ListTile(
+                title: Text('${raw['name'] ?? 'Item'}'),
+                subtitle: Text('Quantity: ${raw['quantity'] ?? 1}'),
+                trailing: Text('RWF ${raw['price'] ?? ''}'),
+              ),
+            ),
         ListTile(
-          title: const Text('Total', style: TextStyle(fontWeight: FontWeight.bold)),
-          trailing: Text('RWF ${total ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Total',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          trailing: Text(
+            'RWF ${total ?? ''}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         if (!paid)
           const Padding(

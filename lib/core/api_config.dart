@@ -23,16 +23,14 @@ String get kApiBaseUrl {
   return 'http://localhost:4000/api';
 }
 
-/// Demo mode is disabled in production builds. The app must always use the
-/// live backend rather than shipping bundled mock data.
 const bool kDemoMode = false;
 
-const String kAdminEmail = String.fromEnvironment(
-  'ADMIN_EMAIL',
-  defaultValue: 'admin@example.com',
-);
+/// The admin credentials the login screen offers to prefill during development.
+///
+/// Deliberately empty by default so a production build ships no working
+/// credential in the binary. Supply them per build with
+/// `--dart-define=ADMIN_EMAIL=... --dart-define=ADMIN_PASSWORD=...`, or leave
+/// them out and let the autofill button do nothing.
+const String kAdminEmail = String.fromEnvironment('ADMIN_EMAIL');
 
-const String kAdminPassword = String.fromEnvironment(
-  'ADMIN_PASSWORD',
-  defaultValue: 'password123',
-);
+const String kAdminPassword = String.fromEnvironment('ADMIN_PASSWORD');

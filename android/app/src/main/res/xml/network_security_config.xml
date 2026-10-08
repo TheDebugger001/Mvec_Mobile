@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The MVEC backend is served over plain HTTP on a raw IP, which Android 9+
+     (API 28) blocks by default. Only that host is opened up; every other
+     connection stays on the platform default of "no cleartext". -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">157.173.119.15</domain>
+    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

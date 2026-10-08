@@ -3,14 +3,13 @@ import '../models/supplier_team.dart';
 
 /// Contract for the staff roster on a supplier account.
 ///
-/// [MockSupplierTeamService] and [ApiSupplierTeamService] are interchangeable;
-/// see `supplier_dependencies.dart` for the switch. Writes are token-scoped
-/// (`/me/team/*`) so the app never sends a supplier id.
+/// Writes are token-scoped (`/me/team/*`) so the app never sends a supplier id.
 abstract class SupplierTeamService {
+  /// True only when this service is answering from a bundled/local dataset.
   bool get isDemo;
 
-  /// Why the bundled dataset is being served instead of the API, when that is
-  /// the case. Null while the live API is answering.
+  /// Why the empty-state adapter is being served instead of the API, when that
+  /// is the case. Null while the live API is answering.
   String? get fallbackReason;
 
   /// Everyone on the account, owners first.
@@ -21,8 +20,8 @@ abstract class SupplierTeamService {
 
   /// Adds a staff member.
   ///
-  /// Throws when [fullName] or [phone] is blank, the phone number is malformed
-  /// for Rwanda, or [role] is [TeamRole.owner] — the account already has one.
+  /// Adds a staff roster record. This does not provision a login or grant API
+  /// permissions.
   Future<TeamMember> addMember({
     required String fullName,
     required String phone,
@@ -49,9 +48,7 @@ abstract class SupplierTeamService {
 
 /// Talks to the platform's supplier team API.
 ///
-/// The route is not served by the backend yet, so
-/// `FallbackSupplierTeamService` takes over from the bundled roster rather than
-/// leaving the page blank.
+/// Talks to the supplier dashboard staff-roster API.
 class ApiSupplierTeamService implements SupplierTeamService {
   ApiSupplierTeamService(this._api);
   final ApiClient _api;

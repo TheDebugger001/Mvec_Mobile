@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_fields.dart';
 import '../../core/utils.dart';
+import '../../providers/admin_intelligence_providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/smart_table.dart';
 
@@ -10,6 +12,7 @@ class SystemScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(systemSettingsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -18,26 +21,71 @@ class SystemScreen extends ConsumerWidget {
           title: 'System Administration',
           subtitle: 'Runtime platform settings.',
         ),
-        SmartTable(
-          columns: const [
-            MvColumn('setting', 'Setting', flex: 2),
-            MvColumn('value', 'Value', flex: 2),
-            MvColumn('scope', 'Scope'),
-            MvColumn('changed', 'Last changed'),
-            MvColumn('owner', 'Owner'),
-          ],
-          rows: const [],
-          pageSize: 8,
-          actionsLabel: 'Actions',
-          rowActions: (row) => TableActionBtn(
-            icon: 'check',
-            tooltip: 'Apply',
-            onPressed: () {
-              showMvSnack(context, 'Applied “${row['setting']}”.', success: true);
-            },
+        switch (settingsAsync) {
+          AsyncLoading() => const SizedBox(height: 160, child: LoadingState()),
+          AsyncError(:final error) => ErrorState(
+            message: friendlyError(error),
+            onRetry: () => ref.invalidate(systemSettingsProvider),
           ),
-        ),
+          AsyncData(:final value) =>
+            value.isEmpty
+                ? const EmptyState(message: 'No runtime settings reported yet')
+                : SmartTable(
+                  columns: const [
+                    MvColumn('setting', 'Setting', flex: 2),
+                    MvColumn('value', 'Value', flex: 2),
+                    MvColumn('scope', 'Scope'),
+                    MvColumn('changed', 'Last changed'),
+                    MvColumn('owner', 'Owner'),
+                  ],
+                  rows: value.map(_settingRow).toList(),
+                  pageSize: 8,
+                  actionsLabel: 'Actions',
+                  rowActions: (row) => TableActionBtn(
+                    icon: 'check',
+                    tooltip: 'Apply',
+                    onPressed: () {
+                      showMvSnack(context, 'Applied “${row['setting']}”.', success: true);
+                    },
+                  ),
+                ),
+          _ => const SizedBox(height: 160, child: LoadingState()),
+        },
       ],
     );
+  }
+
+  /// Projects a runtime setting onto the columns above. Absent fields render as
+  /// a dash rather than a placeholder.
+  Map<String, dynamic> _settingRow(Map<String, dynamic> s) {
+    return {
+      'setting': _text(
+        stringField(s, ['setting', ...spellings('key'), ...spellings('name')]),
+      ),
+      'value': _text(stringField(s, spellings('value'))),
+      'scope': _text(stringField(s, spellings('scope'))),
+      'changed': _dateOf(
+        field(s, [
+          ...spellings('changed'),
+          ...spellings('updatedAt'),
+          ...spellings('lastChanged'),
+        ]),
+      ),
+      'owner': _text(
+        stringField(s, [...spellings('owner'), ...spellings('team')]),
+      ),
+    };
+  }
+
+  String _text(Object? raw) => raw == null || raw.toString().isEmpty ? '—' : raw.toString();
+
+  String _dateOf(Object? raw) {
+    if (raw is DateTime) return shortDate(raw);
+    if (raw is String) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return shortDate(parsed);
+      if (raw.isNotEmpty) return raw;
+    }
+    return '—';
   }
 }

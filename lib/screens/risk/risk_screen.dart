@@ -87,35 +87,38 @@ class RiskScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                SmartTable(
-                  columns: const [
-                    MvColumn('Risk ID', 'Risk ID', bold: true),
-                    MvColumn('Area', 'Area'),
-                    MvColumn('Party', 'Party'),
-                    MvColumn('Signal', 'Signal'),
-                    MvColumn('Risk', 'Risk'),
-                    MvColumn('Status', 'Status'),
-                  ],
-                  rows: [
-                    for (final r in reports)
-                      {
-                        'Risk ID': _shortId(r['id']?.toString()),
-                        'Area': r['area']?.toString() ?? '—',
-                        'Party': r['party']?.toString() ?? '—',
-                        'Signal': r['signal']?.toString() ?? '—',
-                        'Risk': StatusChip(r['risk']?.toString(), overrideColor: _riskColor(r['risk'])),
-                        'Status': StatusChip(r['status']?.toString()),
-                        '_r': r,
-                      },
-                  ],
-                  actionsLabel: 'Details',
-                  pageSize: 8,
-                  rowActions: (row) => TableActionBtn(
-                    icon: 'eye',
-                    tooltip: 'View report',
-                    onPressed: () => _showDetail(context, ref, row['_r'] as Map<String, dynamic>),
+                if (reports.isEmpty)
+                  const EmptyState(message: 'No abuse reports submitted')
+                else
+                  SmartTable(
+                    columns: const [
+                      MvColumn('Risk ID', 'Risk ID', bold: true),
+                      MvColumn('Area', 'Area'),
+                      MvColumn('Party', 'Party'),
+                      MvColumn('Signal', 'Signal'),
+                      MvColumn('Risk', 'Risk'),
+                      MvColumn('Status', 'Status'),
+                    ],
+                    rows: [
+                      for (final r in reports)
+                        {
+                          'Risk ID': _shortId(r['id']?.toString()),
+                          'Area': r['area']?.toString() ?? '—',
+                          'Party': r['party']?.toString() ?? '—',
+                          'Signal': r['signal']?.toString() ?? '—',
+                          'Risk': StatusChip(r['risk']?.toString(), overrideColor: _riskColor(r['risk'])),
+                          'Status': StatusChip(r['status']?.toString()),
+                          '_r': r,
+                        },
+                    ],
+                    actionsLabel: 'Details',
+                    pageSize: 8,
+                    rowActions: (row) => TableActionBtn(
+                      icon: 'eye',
+                      tooltip: 'View report',
+                      onPressed: () => _showDetail(context, ref, row['_r'] as Map<String, dynamic>),
+                    ),
                   ),
-                ),
               ],
             );
           },

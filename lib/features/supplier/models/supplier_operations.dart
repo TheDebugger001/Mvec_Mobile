@@ -264,7 +264,7 @@ class DeliverySettlementSummary {
     this.scheduled = 0,
     this.releasedThisPeriod = 0,
     this.heldOrders = 0,
-    this.onTimeRate = 0,
+    this.onTimeRate,
     this.nextReleaseAt,
   });
 
@@ -288,7 +288,7 @@ class DeliverySettlementSummary {
 
   /// Share of delivered consignments that landed on or before their [eta], as a
   /// fraction. Zero when nothing has been delivered yet.
-  final double onTimeRate;
+  final double? onTimeRate;
 
   /// Earliest date escrow is due to release anything.
   final DateTime? nextReleaseAt;
@@ -310,7 +310,7 @@ class DeliverySettlementSummary {
         scheduled: _num(j['scheduled']) ?? 0,
         releasedThisPeriod: _num(j['releasedThisPeriod']) ?? 0,
         heldOrders: (_num(j['heldOrders']) ?? 0).toInt(),
-        onTimeRate: (_num(j['onTimeRate']) ?? 0).toDouble(),
+        onTimeRate: _num(j['onTimeRate'])?.toDouble(),
         nextReleaseAt: parseDate(j['nextReleaseAt']),
       );
 }

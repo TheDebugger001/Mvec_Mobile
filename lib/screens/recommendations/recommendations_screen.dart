@@ -1,44 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/json_fields.dart';
 import '../../core/theme.dart';
+import '../../core/utils.dart';
+import '../../providers/admin_intelligence_providers.dart';
 import '../../widgets/common.dart';
 import '../../widgets/smart_table.dart';
-
-final _signalsProvider = StateProvider<List<Map<String, dynamic>>>((ref) => const []);
 
 class RecommendationsScreen extends ConsumerWidget {
   const RecommendationsScreen({super.key});
 
-  Widget _toggleChip(WidgetRef ref, Map<String, dynamic> signal) {
-    final enabled = signal['enabled'] == true;
-    final fg = enabled ? MvColors.successText : MvColors.neutralText;
-    return InkWell(
-      onTap: () {
-        ref.read(_signalsProvider.notifier).state = [
-          for (final s in ref.read(_signalsProvider))
-            if (s['id'] == signal['id']) {...s, 'enabled': s['enabled'] != true} else s,
-        ];
-      },
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: enabled ? MvColors.successBg : MvColors.neutralBg,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: fg.withValues(alpha: .35)),
-        ),
-        child: Text(
-          enabled ? 'Enabled' : 'Disabled',
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fg),
-        ),
-      ),
+  Future<void> _toggle(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> signal,
+  ) async {
+    final id = (signal['id'] ?? '').toString();
+    if (id.isEmpty) return;
+    final next = signal['enabled'] != true;
+    try {
+      await ref.read(recommendationSignalToggleProvider)(id, enabled: next);
+      if (context.mounted) {
+        showMvSnack(context, 'Signal ${next ? 'enabled' : 'disabled'}.', success: true);
+      }
+    } catch (e) {
+      if (context.mounted) showMvSnack(context, friendlyError(e));
+    }
+  }
+
+  Widget _statusChip(bool enabled) {
+    return StatusChip(
+      enabled ? 'ENABLED' : 'DISABLED',
+      overrideColor: enabled ? MvColors.successText : MvColors.neutralText,
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final signals = ref.watch(_signalsProvider);
+    final signalsAsync = ref.watch(recommendationSignalsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -48,33 +48,75 @@ class RecommendationsScreen extends ConsumerWidget {
           subtitle: 'Signals powering personalised recommendations.',
         ),
         DataCard(
-          child: InfoBox('These signals drive personalized product recommendations across the marketplace. Toggle a signal to enable or disable it.'),
+          child: InfoBox(
+            'These signals drive personalized product recommendations across the '
+            'marketplace. Toggle a signal to enable or disable it.',
+          ),
         ),
         const SizedBox(height: 14),
-        SmartTable(
-          columns: const [
-            MvColumn('Signal', 'Signal', bold: true),
-            MvColumn('Source', 'Source'),
-            MvColumn('Weight', 'Weight'),
-            MvColumn('Enabled', 'Enabled'),
-            MvColumn('Last updated', 'Last updated'),
-          ],
-          rows: [
-            for (final s in signals)
-              {
-                'Signal': s['signal']?.toString() ?? '—',
-                'Source': s['source']?.toString() ?? '—',
-                'Weight': '${s['weight']}%',
-                'Enabled': StatusChip(s['enabled'] == true ? 'ENABLED' : 'DISABLED', overrideColor: s['enabled'] == true ? MvColors.successText : MvColors.neutralText),
-                'Last updated': s['updated']?.toString() ?? '—',
-                '_s': s,
-              },
-          ],
-          actionsLabel: 'Status',
-          pageSize: 8,
-          rowActions: (row) => _toggleChip(ref, row['_s'] as Map<String, dynamic>),
-        ),
+        switch (signalsAsync) {
+          AsyncLoading() => const SizedBox(height: 160, child: LoadingState()),
+          AsyncError(:final error) => ErrorState(
+            message: friendlyError(error),
+            onRetry: () => ref.invalidate(recommendationSignalsProvider),
+          ),
+          AsyncData(:final value) =>
+            value.isEmpty
+                ? const EmptyState(message: 'No recommendation signals configured')
+                : SmartTable(
+                  columns: const [
+                    MvColumn('Signal', 'Signal', bold: true),
+                    MvColumn('Source', 'Source'),
+                    MvColumn('Weight', 'Weight'),
+                    MvColumn('Enabled', 'Enabled'),
+                    MvColumn('Last updated', 'Last updated'),
+                  ],
+                  rows: value.map(_signalRow).toList(),
+                  actionsLabel: 'Status',
+                  pageSize: 8,
+                  rowActions: (row) => TableActionBtn(
+                    icon: 'check',
+                    tooltip: 'Toggle signal',
+                    onPressed: () => _toggle(
+                      context,
+                      ref,
+                      row['_s'] as Map<String, dynamic>,
+                    ),
+                  ),
+                ),
+          _ => const SizedBox(height: 160, child: LoadingState()),
+        },
       ],
     );
+  }
+
+  /// Projects a signal onto the columns above. Absent fields render as a dash.
+  Map<String, dynamic> _signalRow(Map<String, dynamic> s) {
+    return {
+      'Signal': cellText(s, ['signal', ...spellings('name')]),
+      'Source': cellText(s, spellings('source')),
+      'Weight': _weight(numField(s, spellings('weight'))),
+      'Enabled': _statusChip(boolField(s, spellings('enabled'))),
+      'Last updated': _dateOf(
+        field(s, [...spellings('updated'), ...spellings('updatedAt')]),
+      ),
+      '_s': s,
+    };
+  }
+
+  String _weight(Object? raw) {
+    if (raw is num) return '${raw.round()}%';
+    if (raw is String && raw.isNotEmpty) return raw;
+    return '—';
+  }
+
+  String _dateOf(Object? raw) {
+    if (raw is DateTime) return shortDate(raw);
+    if (raw is String) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return shortDate(parsed);
+      if (raw.isNotEmpty) return raw;
+    }
+    return '—';
   }
 }

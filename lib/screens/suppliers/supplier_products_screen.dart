@@ -358,7 +358,7 @@ class _ProductFormSheetState extends ConsumerState<_ProductFormSheet> {
       imageUrl: existing?.imageUrl ?? '',
       gallery: existing?.gallery ?? const <String>[],
       // A device-local path: it means nothing to the backend, so it is kept out
-      // of the payload and only travels with the local demo workspace.
+      // of the payload and only stays in the cached workspace copy.
       localImagePath: _localImagePath,
       status: existing?.status ?? 'ACTIVE',
     );

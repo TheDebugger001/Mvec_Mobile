@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_client.dart';
-import '../../../core/api_config.dart';
 
 /// A supplier's own wholesale catalogue item.
 ///
@@ -60,8 +59,8 @@ class SupplierProduct {
   /// A picture the supplier picked off *this* device, as an absolute file path.
   ///
   /// Deliberately not part of the API contract: there is no upload endpoint to
-  /// send the bytes to, so this is a local-only reference that the demo
-  /// workspace keeps in memory. The backend only ever knows [imageUrl].
+  /// send the bytes to, so this is a local-only reference the app keeps in
+  /// memory for the session. The backend only ever knows [imageUrl].
   final String localImagePath;
 
   factory SupplierProduct.fromJson(Map<String, dynamic> json) {
@@ -635,236 +634,70 @@ abstract interface class SupplierWorkspaceService {
   Future<void> saveProfile(SupplierProfile profile, {required bool isNewProfile});
 }
 
-/// Supplier workspace is now live-only. The backend owns the catalogue and order
-/// state; no bundled demo supplier dataset ships with the app.
-class DemoSupplierWorkspaceService implements SupplierWorkspaceService {
-  final List<SupplierProduct> _products = [
-    const SupplierProduct(
-      id: 'sp-101',
-      name: 'Arabica Coffee Beans',
-      category: 'Beverages',
-      description: 'Washed specialty beans from Nyamasheke, medium roast.',
-      imageUrl: 'https://picsum.photos/seed/mvec-coffee/320/240',
-      price: 12500,
-      stock: 84,
-      status: 'ACTIVE',
-      minimumOrderQuantity: 10,
-      bulkDiscount: 8,
-      retailPrice: 16000,
-      unit: 'kg',
-    ),
-    const SupplierProduct(
-      id: 'sp-102',
-      name: 'Fresh Avocados',
-      category: 'Produce',
-      description: 'Ripe Hass avocados, packed in reusable crates.',
-      imageUrl: 'https://picsum.photos/seed/mvec-avocado/320/240',
-      price: 900,
-      stock: 12,
-      status: 'ACTIVE',
-      minimumOrderQuantity: 5,
-      bulkDiscount: 5,
-      unit: 'crate',
-    ),
-    const SupplierProduct(
-      id: 'sp-103',
-      name: 'Dried Red Kidney Beans',
-      category: 'Grains & pulses',
-      description: 'Sorted, clean and ready for wholesale delivery.',
-      imageUrl: 'https://picsum.photos/seed/mvec-beans/320/240',
-      price: 2400,
-      stock: 0,
-      status: 'OUT_OF_STOCK',
-      minimumOrderQuantity: 10,
-      bulkDiscount: 8,
-      unit: 'kg',
-    ),
-    const SupplierProduct(
-      id: 'sp-104',
-      name: 'Raw Forest Honey',
-      category: 'Pantry',
-      description: 'Unfiltered honey sourced from local beekeepers.',
-      imageUrl: 'https://picsum.photos/seed/mvec-honey/320/240',
-      price: 7800,
-      stock: 31,
-      status: 'ACTIVE',
-      minimumOrderQuantity: 5,
-      bulkDiscount: 5,
-      unit: 'jar',
-    ),
-  ];
-
-  final List<SupplierOrder> _orders = [
-    SupplierOrder(
-      id: 'MV-4821',
-      buyer: 'Kigali Market Kitchen',
-      product: 'Arabica Coffee Beans',
-      quantity: 8,
-      total: 100000,
-      status: 'Pending',
-      requestedAt: DateTime(2026, 9, 28),
-    ),
-    SupplierOrder(
-      id: 'MV-4814',
-      buyer: 'Green Basket Ltd',
-      product: 'Fresh Avocados',
-      quantity: 24,
-      total: 21600,
-      status: 'Confirmed',
-      requestedAt: DateTime(2026, 9, 27),
-    ),
-    SupplierOrder(
-      id: 'MV-4792',
-      buyer: 'Umurimo Grocers',
-      product: 'Raw Forest Honey',
-      quantity: 6,
-      total: 46800,
-      status: 'Ready to ship',
-      requestedAt: DateTime(2026, 9, 25),
-    ),
-    SupplierOrder(
-      id: 'MV-4760',
-      buyer: 'Kivu Cafe',
-      product: 'Arabica Coffee Beans',
-      quantity: 4,
-      total: 50000,
-      status: 'Completed',
-      requestedAt: DateTime(2026, 9, 22),
-    ),
-  ];
-
-  final List<SupplierNotice> _notifications = [
-    SupplierNotice(
-      id: 'sn-1',
-      title: 'New order request',
-      message:
-          'Kigali Market Kitchen requested 8 bags of Arabica Coffee Beans.',
-      createdAt: DateTime(2026, 9, 28, 9),
-      read: false,
-      type: 'ORDER',
-      actionLabel: 'Review order',
-    ),
-    SupplierNotice(
-      id: 'sn-2',
-      title: 'Low stock reminder',
-      message: 'Fresh Avocados are down to 12 units.',
-      createdAt: DateTime(2026, 9, 27, 14),
-      read: false,
-      type: 'STOCK',
-      actionLabel: 'Restock',
-    ),
-    SupplierNotice(
-      id: 'sn-3',
-      title: 'Payout processed',
-      message: 'Your RWF 50,000 payout for MV-4760 is complete.',
-      createdAt: DateTime(2026, 9, 23, 11),
-      read: true,
-      type: 'PAYOUT',
-      actionLabel: 'View payout',
-    ),
-  ];
-
-  SupplierProfile _profile = const SupplierProfile(
-    id: 'demo-supplier',
-    publicId: 'MVEC-SUP-7F3A21C4',
-    businessName: 'Rwanda Fresh Produce Co.',
-    description:
-        'Wholesale produce and pantry goods sourced from cooperatives across '
-        'Rwanda.',
-    email: 'supplier@mvec.rw',
-    phone: '+250 788 245 610',
-    address: 'KN 5 Road, Kigali, Rwanda',
-    verificationStatus: 'VERIFIED',
-    accountStatus: 'ACTIVE',
-    ratingAvg: 4.6,
+/// Empty-state implementation of [SupplierWorkspaceService].
+///
+/// The bundled supplier portal this used to serve is gone, so every read now
+/// resolves to the same shape [ApiSupplierWorkspaceService] returns for a
+/// supplier who has not set anything up yet: no catalogue items, no orders, no
+/// notices, and a blank profile — which is what routes the app to its
+/// onboarding / not-available states instead of inventing a business.
+///
+/// Writes throw an [ApiException]: nothing may be kept in memory, so the forms
+/// report a real failure instead of silently dropping the supplier's edits.
+class EmptySupplierWorkspaceService implements SupplierWorkspaceService {
+  /// Blank profile for a supplier that has not completed onboarding. Mirrors the
+  /// 404 branch of `ApiSupplierWorkspaceService.profile`.
+  static const SupplierProfile _blankProfile = SupplierProfile(
+    businessName: '',
+    email: '',
+    phone: '',
+    address: '',
     orderNotifications: true,
     stockNotifications: true,
   );
 
   @override
-  Future<List<SupplierProduct>> products() async =>
-      List.unmodifiable(_products);
+  Future<List<SupplierProduct>> products() async => const <SupplierProduct>[];
+
   @override
-  Future<List<SupplierOrder>> orders() async => List.unmodifiable(_orders);
+  Future<List<SupplierOrder>> orders() async => const <SupplierOrder>[];
+
   @override
   Future<List<SupplierNotice>> notifications() async =>
-      List.unmodifiable(_notifications);
-  @override
-  Future<SupplierProfile> profile() async => _profile;
+      const <SupplierNotice>[];
 
   @override
-  Future<void> saveProduct(SupplierProduct product) async {
-    final index = _products.indexWhere((item) => item.id == product.id);
-    // The backend forces `OUT_OF_STOCK` whenever `stockQuantity <= 0`, so the
-    // status follows the stock rather than being set independently.
-    final status = product.stock == 0 ? 'OUT_OF_STOCK' : product.status;
-    if (index < 0) {
-      _products.insert(
-        0,
-        product.copyWith(
-          id: 'sp-${DateTime.now().microsecondsSinceEpoch}',
-          status: status,
-        ),
-      );
-    } else {
-      _products[index] = product.copyWith(status: status);
-    }
-  }
+  Future<SupplierProfile> profile() async => _blankProfile;
+
+  Never _writeUnsupported(String what) => throw ApiException(
+    '$what is not available yet — this endpoint has not shipped.',
+    statusCode: 501,
+  );
 
   @override
-  Future<void> deleteProduct(String id) async {
-    _products.removeWhere((item) => item.id == id);
-  }
+  Future<void> saveProduct(SupplierProduct product) =>
+      _writeUnsupported('Saving products');
 
   @override
-  Future<void> updateStock(String id, int stock) async {
-    final index = _products.indexWhere((item) => item.id == id);
-    if (index < 0) throw StateError('Product not found');
-    _products[index] = _products[index].copyWith(
-      stock: stock,
-      status: stock == 0 ? 'OUT_OF_STOCK' : 'ACTIVE',
-    );
-  }
+  Future<void> deleteProduct(String id) => _writeUnsupported('Product changes');
 
   @override
-  Future<void> updateOrderStatus(String id, String status) async {
-    final index = _orders.indexWhere((item) => item.id == id);
-    if (index < 0) throw StateError('Order not found');
-    final order = _orders[index];
-    _orders[index] = SupplierOrder(
-      id: order.id,
-      buyer: order.buyer,
-      product: order.product,
-      quantity: order.quantity,
-      total: order.total,
-      status: status,
-      requestedAt: order.requestedAt,
-    );
-  }
+  Future<void> updateStock(String id, int stock) =>
+      _writeUnsupported('Stock changes');
 
   @override
-  Future<void> markNotificationRead(String id) async {
-    final index = _notifications.indexWhere((item) => item.id == id);
-    if (index < 0) return;
-    final notice = _notifications[index];
-    _notifications[index] = SupplierNotice(
-      id: notice.id,
-      title: notice.title,
-      message: notice.message,
-      createdAt: notice.createdAt,
-      read: true,
-      // Kept so the row still leads to the right page once it is read.
-      type: notice.type,
-      actionPath: notice.actionPath,
-      actionLabel: notice.actionLabel,
-    );
-  }
+  Future<void> updateOrderStatus(String id, String status) =>
+      _writeUnsupported('Order updates');
+
+  @override
+  Future<void> markNotificationRead(String id) =>
+      _writeUnsupported('Notification updates');
 
   @override
   Future<void> saveProfile(
     SupplierProfile profile, {
     required bool isNewProfile,
-  }) async => _profile = profile;
+  }) => _writeUnsupported('Saving the profile');
 }
 
 /// Live supplier portal, backed by the marketplace backend.
@@ -881,12 +714,24 @@ class ApiSupplierWorkspaceService implements SupplierWorkspaceService {
 
   /// `GET /suppliers/me/products` → `{ success, supplier, count, products }`.
   /// The backend returns the whole catalogue unpaginated.
+  ///
+  /// 404s until onboarding is complete — exactly like [profile] — and gets the
+  /// same treatment: a supplier who has not set up a business profile has no
+  /// catalogue, not a broken portal. Returning an empty list here keeps the
+  /// shared workspace provider healthy, so the Business Profile page can offer
+  /// onboarding instead of every supplier page sitting on the same error.
   @override
-  Future<List<SupplierProduct>> products() async =>
-      listJson(await _api.get('/suppliers/me/products'), [
+  Future<List<SupplierProduct>> products() async {
+    try {
+      return listJson(await _api.get('/suppliers/me/products'), [
         'products',
         'data',
       ]).map(SupplierProduct.fromJson).toList();
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return const <SupplierProduct>[];
+      rethrow;
+    }
+  }
 
   /// `GET /wholesale/orders/mine`, scoped to the signed-in supplier.
   @override
@@ -1021,11 +866,11 @@ String _str(Object? value, {String fallback = ''}) {
   return text.isEmpty ? fallback : text;
 }
 
+/// The supplier portal always reads from the marketplace backend. Until the
+/// catalogue/profile routes answer for a given supplier the app simply shows the
+/// empty states the pages already implement.
 final supplierWorkspaceServiceProvider = Provider<SupplierWorkspaceService>(
-  (ref) =>
-      kDemoMode
-          ? DemoSupplierWorkspaceService()
-          : ApiSupplierWorkspaceService(ref.watch(apiProvider)),
+  (ref) => ApiSupplierWorkspaceService(ref.watch(apiProvider)),
 );
 
 final supplierWorkspaceProvider =

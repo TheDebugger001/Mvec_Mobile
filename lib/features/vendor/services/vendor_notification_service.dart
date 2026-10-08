@@ -1,8 +1,10 @@
 import '../../../core/api_client.dart';
 import '../models/vendor_notification.dart';
 
-/// Notification feed contract shared by the live API and local demo adapter.
+/// Notification feed contract shared by the live API and any future transport
+/// (cache, fixture-backed test double).
 abstract class VendorNotificationService {
+  /// True only when this service is answering from a bundled/local dataset.
   bool get isDemo;
 
   Future<List<VendorNotification>> notifications({

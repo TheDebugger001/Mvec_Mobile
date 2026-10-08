@@ -12,31 +12,22 @@ import 'package:mvec_mobile/features/affiliate/data/services/fallback_affiliate_
 void main() {
   group('FallbackAffiliateService', () {
     test('it stays backend-first and never enters demo mode', () async {
-      final svc = FallbackAffiliateService(
-        ApiClient.instance,
-        forceDemo: false,
-      );
+      final svc = FallbackAffiliateService(ApiClient.instance);
 
       expect(svc.isDemo, isFalse);
       expect(svc.fallbackReason, isNull);
-      await expectLater(
-        svc.fetchOverview(),
-        throwsA(isA<ApiException>()),
-      );
+      await expectLater(svc.fetchOverview(), throwsA(isA<ApiException>()));
     });
 
-    test('a backend outage is surfaced as an API error instead of demo data', () async {
-      final svc = FallbackAffiliateService(
-        ApiClient.instance,
-        forceDemo: false,
-      );
+    test(
+      'a backend outage is surfaced as an API error instead of demo data',
+      () async {
+        final svc = FallbackAffiliateService(ApiClient.instance);
 
-      await expectLater(
-        svc.fetchLinks(),
-        throwsA(isA<ApiException>()),
-      );
-      expect(svc.isDemo, isFalse);
-      expect(svc.fallbackReason, isNull);
-    });
+        await expectLater(svc.fetchLinks(), throwsA(isA<ApiException>()));
+        expect(svc.isDemo, isFalse);
+        expect(svc.fallbackReason, isNull);
+      },
+    );
   });
 }

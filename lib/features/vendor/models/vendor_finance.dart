@@ -98,8 +98,8 @@ class VendorFinanceSummary {
   /// withdrawals. Explains why gross revenue exceeds the withdrawable balance.
   num get totalHeld => escrowHeld + pendingPayouts;
 
-  /// Sanity invariant used by the mock data and asserted in tests: the net
-  /// figure must equal gross minus commission.
+  /// Sanity invariant asserted in tests: the net figure must equal gross
+  /// minus commission.
   bool get isConsistent =>
       (netEarnings - (grossRevenue - commission)).abs() < 1;
 

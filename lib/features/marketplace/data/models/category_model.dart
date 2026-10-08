@@ -23,7 +23,14 @@ class Category {
       slug: _toString(json['slug']),
       imageUrl: media is Map
           ? _toString(media['mainImage'])
-          : _toString(json['icon'] ?? json['image_url'] ?? json['image']),
+          : _toString(
+              // The backend Category document stores the image as `imageUrl`,
+              // so the catalogue spellings alone would leave every tile blank.
+              json['imageUrl'] ??
+                  json['image_url'] ??
+                  json['icon'] ??
+                  json['image'],
+            ),
       productCount: _toInt(json['productCount'] ?? json['product_count']),
     );
   }

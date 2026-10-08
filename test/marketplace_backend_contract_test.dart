@@ -24,9 +24,9 @@ void main() {
     });
 
     expect(feed.categories.single.id, isNot(0));
-    expect(feed.products.single.apiId, '65b1b2c3d4e5f67890123456');
-    expect(feed.products.single.id, isNot(0));
-    expect(feed.products.single.categoryId, feed.categories.single.id);
+    expect(feed.featuredProducts.single.apiId, '65b1b2c3d4e5f67890123456');
+    expect(feed.featuredProducts.single.id, isNot(0));
+    expect(feed.featuredProducts.single.categoryId, feed.categories.single.id);
     expect(feed.featuredVendors.single.name, 'Fresh Market');
     expect(feed.featuredVendors.single.id, isNot(0));
   });

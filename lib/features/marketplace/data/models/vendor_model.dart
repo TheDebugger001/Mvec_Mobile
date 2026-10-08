@@ -30,49 +30,69 @@ class Vendor {
   factory Vendor.fromJson(Map<String, dynamic> json) {
     final media = json['media'];
     return Vendor(
-      id: _toInt(json['id'] ?? json['_id']),
-      name: _toString(json['name'] ?? json['companyName'] ?? json['businessName']),
+      id: _toInt(json['id'] ?? json['publicId'] ?? json['_id']),
+      // The backend Vendor document names the shop `businessName` and rates it
+      // with `ratingAvg`; the catalogue routes use the shorter spellings.
+      name: _toString(
+        json['businessName'] ?? json['name'] ?? json['companyName'],
+      ),
       slug: _toString(json['slug']),
       description: _toString(json['description']),
-      logoUrl: media is Map
-          ? _toString(media['logo'] ?? media['mainImage'])
-          : _toString(json['logoUrl'] ?? json['logo_url'] ?? json['logo'] ?? json['image']),
-      bannerUrl: media is Map
-          ? media['banner']?.toString()
-          : (json['bannerUrl'] ?? json['banner_url'])?.toString(),
-      rating: _toDouble(json['rating']),
-      reviewCount: _toInt(json['reviewCount'] ?? json['review_count'] ?? json['reviews']),
+      logoUrl:
+          media is Map
+              ? _toString(media['logo'] ?? media['logoUrl'])
+              : _toString(
+                json['logoUrl'] ??
+                    json['logo_url'] ??
+                    json['logo'] ??
+                    json['image'],
+              ),
+      bannerUrl:
+          media is Map
+              ? (media['banner'] ?? media['bannerUrl'])?.toString()
+              : (json['bannerUrl'] ?? json['banner_url'])?.toString(),
+      rating: _toDouble(
+        json['rating'] ?? json['ratingAvg'] ?? json['rating_avg'],
+      ),
+      reviewCount: _toInt(
+        json['reviewCount'] ?? json['review_count'] ?? json['reviews'],
+      ),
       productCount: _toInt(json['productCount'] ?? json['product_count']),
-      isVerified: json['isVerified'] == true || json['verified'] == true,
-      isFeatured: json['isFeatured'] == true || json['featured'] == true,
+      isVerified:
+          json['isVerified'] == true ||
+          json['is_verified'] == true ||
+          // `verificationStatus` is what the backend actually stores.
+          json['verificationStatus']?.toString().toUpperCase() == 'VERIFIED' ||
+          json['verified'] == true,
+      isFeatured:
+          json['isFeatured'] == true ||
+          json['is_featured'] == true ||
+          json['featured'] == true,
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'slug': slug,
-        'description': description,
-        'rating': rating,
-        'reviewCount': reviewCount,
-        'productCount': productCount,
-        'isVerified': isVerified,
-        'isFeatured': isFeatured,
-        'media': <String, dynamic>{
-          'logo': logoUrl,
-          'banner': bannerUrl,
-        },
-      };
+    'id': id,
+    'name': name,
+    'slug': slug,
+    'description': description,
+    'rating': rating,
+    'reviewCount': reviewCount,
+    'productCount': productCount,
+    'isVerified': isVerified,
+    'isFeatured': isFeatured,
+    'media': <String, dynamic>{'logo': logoUrl, 'banner': bannerUrl},
+  };
 
   static String _toString(dynamic value) => value?.toString() ?? '';
 
-  static double _toDouble(dynamic value) => value is num
-      ? value.toDouble()
-      : double.tryParse(value?.toString() ?? '') ?? 0;
+  static double _toDouble(dynamic value) =>
+      value is num
+          ? value.toDouble()
+          : double.tryParse(value?.toString() ?? '') ?? 0;
 
-  static int _toInt(dynamic value) => value is num
-      ? value.toInt()
-      : _parseId(value) ?? 0;
+  static int _toInt(dynamic value) =>
+      value is num ? value.toInt() : _parseId(value) ?? 0;
 
   static int? _parseId(dynamic value) {
     final text = value?.toString() ?? '';

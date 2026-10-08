@@ -205,4 +205,30 @@ class PlatformService {
     final res = await _api.get('/shipping/zones');
     return listJson(res, ['data', 'zones']);
   }
+
+  // ── Admin intelligence lists ─────────────────────────────────────────────
+  //
+  // Moved to `AdminIntelligenceService`: these routes are one feature area and
+  // keep their own file, so they no longer widen this shared service.
+  // See `lib/services/admin_intelligence_service.dart`.
+
+  /// Orders placed by the signed-in shopper.
+  ///
+  /// `GET /orders` is admin-only on the backend (`authorize('super_admin',
+  /// 'admin')`) and answers 403 to a shopper, so the shopper's own list lives at
+  /// `/orders/my-orders`, which is scoped to the bearer token.
+  Future<List<OrderRecord>> myOrders({int page = 1, int limit = 20}) async {
+    try {
+      final res = await _api.get(
+        '/orders/my-orders',
+        query: {'page': page, 'limit': limit},
+      );
+      return listJson(res, ['data', 'orders']).map(OrderRecord.fromJson).toList();
+    } on ApiException catch (e) {
+      if (e.statusCode == null || e.statusCode == 404 || e.statusCode == 501) {
+        return const [];
+      }
+      rethrow;
+    }
+  }
 }

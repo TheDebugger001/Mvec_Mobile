@@ -64,7 +64,11 @@ class _VendorShellState extends ConsumerState<VendorShell> {
     final name = user?.display ?? 'Vendor';
     return Scaffold(
       key: _drawerKey,
-      drawer: _buildDrawer(name, user?.email ?? ''),
+      drawer: _buildDrawer(
+        name,
+        user?.email ?? '',
+        isStaff: user?.vendorStaff == true,
+      ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
@@ -183,7 +187,7 @@ class _VendorShellState extends ConsumerState<VendorShell> {
   }
 
   // ─── DRAWER (grouped accordion) ─────────────────────────────────────────
-  Widget _buildDrawer(String name, String email) {
+  Widget _buildDrawer(String name, String email, {required bool isStaff}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final muted = isDark ? MvColors.darkMuted : MvColors.muted;
     return Drawer(
@@ -277,7 +281,18 @@ class _VendorShellState extends ConsumerState<VendorShell> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                 children: [
-                  for (final group in VendorNav.groups) _group(group, isDark),
+                  for (final group in VendorNav.groups)
+                    _group(
+                      isStaff
+                          ? NavGroup(
+                              group.label,
+                              group.items
+                                  .where((item) => item.path != '/vendor/team')
+                                  .toList(),
+                            )
+                          : group,
+                      isDark,
+                    ),
                 ],
               ),
             ),

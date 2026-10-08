@@ -1,30 +1,34 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/api_client.dart';
-import '../../../core/api_config.dart';
 import '../models/supplier_operations.dart';
-import 'mock_supplier_operations_service.dart';
+import 'empty_supplier_operations_service.dart';
 import 'supplier_operations_service.dart';
 
-/// Prefer the live supplier API and surface a real error instead of shipping demo
-/// content to the app.
+/// Runs every [SupplierOperationsService] call against the live API and degrades
+/// to [EmptySupplierOperationsService] when the route does not exist yet.
+///
+/// Mirrors `FallbackSupplierFinanceService`: the first unreachable response
+/// degrades the module for the rest of the session, so the pages do not probe a
+/// missing endpoint on every rebuild.
 class FallbackSupplierOperationsService implements SupplierOperationsService {
   FallbackSupplierOperationsService(
     ApiClient api, {
     SupplierOperationsService? fallback,
-    bool? forceDemo,
+    bool? forceEmpty,
   }) : _api = ApiSupplierOperationsService(api),
-       _fallback = fallback ?? MockSupplierOperationsService(),
-       _forceDemo = forceDemo ?? kDemoMode {
-    if (_forceDemo) {
+       _fallback = fallback ?? EmptySupplierOperationsService(),
+       _forceEmpty = forceEmpty ?? false {
+    if (_forceEmpty) {
       _degraded = true;
-      lastFallbackReason = 'Demo mode — using the bundled supplier dataset.';
+      lastFallbackReason =
+          'Supplier operations are not available yet — showing empty figures.';
     }
   }
 
   final ApiSupplierOperationsService _api;
   final SupplierOperationsService _fallback;
-  final bool _forceDemo;
+  final bool _forceEmpty;
   bool _degraded = false;
   String? lastFallbackReason;
 
@@ -90,8 +94,9 @@ class FallbackSupplierOperationsService implements SupplierOperationsService {
       if (_isUnreachable(error)) {
         _degraded = true;
         lastFallbackReason =
-            'MVEC does not serve supplier $source yet — the app cannot show demo data.';
-        rethrow;
+            'MVEC does not serve supplier $source yet — showing empty figures '
+            'until it does.';
+        return call(_fallback);
       }
       rethrow;
     }

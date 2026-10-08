@@ -12,6 +12,9 @@ class UserRecord {
     this.avatar,
     this.supplierId,
     this.staffRole,
+    this.vendorStaff = false,
+    this.vendorOwnerId,
+    this.vendorPermissions = const {},
     this.permissions = const [],
   });
 
@@ -39,6 +42,9 @@ class UserRecord {
   /// existing role check, [userType] and [roleHome] keep working. Null means
   /// this login *is* the account, not staff on it.
   String? staffRole;
+  bool vendorStaff;
+  String? vendorOwnerId;
+  Map<String, bool> vendorPermissions;
 
   /// Permissions granted by the API, when it puts them in the token.
   ///
@@ -60,6 +66,9 @@ class UserRecord {
     avatar: j['avatar'] ?? j['profileImage'],
     supplierId: j['supplierId'] ?? j['supplier_id'],
     staffRole: j['staffRole'] ?? j['staff_role'],
+    vendorStaff: j['vendorStaff'] == true || j['vendor_staff'] == true,
+    vendorOwnerId: j['vendorOwnerId'] ?? j['vendor_owner_id'],
+    vendorPermissions: _boolMap(j['vendorPermissions'] ?? j['vendor_permissions']),
     permissions: _strings(j['permissions']),
   );
 
@@ -74,6 +83,9 @@ class UserRecord {
     if (companyName != null) 'companyName': companyName,
     if (supplierId != null) 'supplierId': supplierId,
     if (staffRole != null) 'staffRole': staffRole,
+    if (vendorStaff) 'vendorStaff': vendorStaff,
+    if (vendorOwnerId != null) 'vendorOwnerId': vendorOwnerId,
+    if (vendorPermissions.isNotEmpty) 'vendorPermissions': vendorPermissions,
     if (permissions.isNotEmpty) 'permissions': permissions,
   };
 
@@ -82,6 +94,7 @@ class UserRecord {
   /// Normalised account type: vendor, supplier, affiliate, buyer, delivery
   /// or super_admin. Unknown values fall back to `buyer`.
   String get userType {
+    if (vendorStaff) return 'vendor';
     final r = (role ?? 'buyer').trim().toLowerCase();
     if (r == 'admin' || r == 'super_admin' || r == 'superadmin') {
       return 'super_admin';
@@ -115,6 +128,14 @@ List<String> _strings(dynamic value) {
     for (final entry in value)
       if (entry != null && '$entry'.trim().isNotEmpty) '$entry'.trim(),
   ];
+}
+
+Map<String, bool> _boolMap(dynamic value) {
+  if (value is! Map) return const {};
+  return {
+    for (final entry in value.entries)
+      if (entry.key is String) entry.key as String: entry.value == true,
+  };
 }
 
 DateTime? _dt(dynamic v) {

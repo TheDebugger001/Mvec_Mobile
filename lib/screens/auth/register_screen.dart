@@ -9,7 +9,14 @@ import 'auth_widgets.dart';
 /// Registration form supporting the four MVEC user types:
 /// buyer, vendor, supplier and affiliate.
 class RegisterScreen extends ConsumerStatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({
+    super.key,
+    this.staffInviteToken,
+    this.invitedEmail,
+  });
+
+  final String? staffInviteToken;
+  final String? invitedEmail;
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
@@ -27,6 +34,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscureConfirm = true;
   String _role = 'buyer';
   String? _gender;
+
+  @override
+  void initState() {
+    super.initState();
+    _email.text = widget.invitedEmail ?? '';
+  }
 
   static const _roles = <_RoleOption>[
     _RoleOption(
@@ -79,6 +92,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       role: _role,
       companyName: _companyName.text.trim().isEmpty ? null : _companyName.text.trim(),
       password: _password.text,
+      staffInviteToken: widget.staffInviteToken,
     );
     if (!mounted) return;
     if (ok) {
@@ -91,28 +105,44 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  String _loginLocation() {
+    if (widget.staffInviteToken == null) return '/login';
+    return Uri(
+      path: '/login',
+      queryParameters: {
+        'staffInviteToken': widget.staffInviteToken,
+        if (widget.invitedEmail != null) 'email': widget.invitedEmail,
+      },
+    ).toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     final loading = auth.loading;
     final needsCompany = _role == 'vendor' || _role == 'supplier';
     return AuthShell(
-      title: 'Create your account',
-      subtitle:
-          'Join MVEC with your phone number, then choose how you want to participate on the marketplace.',
+      title: widget.staffInviteToken == null
+          ? 'Create your account'
+          : 'Join a vendor team',
+      subtitle: widget.staffInviteToken == null
+          ? 'Join MVEC with your phone number, then choose how you want to participate on the marketplace.'
+          : 'Complete your account to accept the vendor team invitation.',
       topBar: Align(
         alignment: Alignment.centerLeft,
         child: IconButton(
           tooltip: 'Back',
-          onPressed: loading ? null : () => context.go('/login'),
+          onPressed: loading ? null : () => context.go(_loginLocation()),
           icon: const Icon(Icons.arrow_back_ios_new, size: 18),
         ),
       ),
       footer: authLinkFooter(
         context,
-        'Already have an account?',
+        widget.staffInviteToken == null
+            ? 'Already have an account?'
+            : 'Already registered? Sign in to accept the invitation.',
         'Log in',
-        () => context.go('/login'),
+        () => context.go(_loginLocation()),
       ),
       children: [
         if (auth.error != null) ...[
@@ -124,22 +154,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Choose your account type',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: .6,
-                  color: Theme.of(context).hintColor,
+              if (widget.staffInviteToken == null) ...[
+                Text(
+                  'Choose your account type',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .6,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              _RoleGrid(
-                roles: _roles,
-                selected: _role,
-                onSelected: (v) => setState(() => _role = v),
-              ),
-              const SizedBox(height: 18),
+                const SizedBox(height: 8),
+                _RoleGrid(
+                  roles: _roles,
+                  selected: _role,
+                  onSelected: (v) => setState(() => _role = v),
+                ),
+                const SizedBox(height: 18),
+              ],
               AuthField(
                 label: 'Full name',
                 controller: _fullName,
@@ -160,13 +192,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
               const SizedBox(height: 14),
               AuthField(
-                label: 'Email (optional)',
+                label: widget.staffInviteToken == null
+                    ? 'Email (optional)'
+                    : 'Invitation email',
                 controller: _email,
                 icon: Icons.mail_outline,
-                hint: 'you@example.com',
+                hint: widget.invitedEmail ?? 'you@example.com',
+                readOnly: widget.staffInviteToken != null,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                validator: validateEmail,
+                validator: (value) {
+                  if (widget.staffInviteToken != null &&
+                      (value == null || value.trim().isEmpty)) {
+                    return 'The invitation email is required';
+                  }
+                  return validateEmail(value);
+                },
               ),
               if (needsCompany) ...[
                 const SizedBox(height: 14),

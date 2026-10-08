@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'api_config.dart';
 import '../features/marketplace/presentation/Screens/main_navigation.dart';
 import '../widgets/common.dart';
 import '../features/affiliate/presentation/screens/affiliate_dashboard_screen.dart';
@@ -82,11 +81,11 @@ import '../screens/vendor/vendor_shell.dart';
 import '../screens/vendor/vendor_overview_screen.dart';
 import '../screens/vendor/vendor_products_screen.dart';
 import '../screens/vendor/vendor_profile_screen.dart';
-import '../screens/vendor/vendor_workspace_screen.dart';
 import '../features/vendor/screens/vendor_orders_screen.dart';
 import '../features/vendor/screens/vendor_sales_screen.dart';
 import '../features/vendor/screens/vendor_notifications_screen.dart';
 import '../features/vendor/screens/vendor_settings_screen.dart';
+import '../features/vendor/screens/vendor_team_screen.dart';
 
 /// A supplier portal destination the API does not serve yet.
 class _UnavailablePage {
@@ -99,7 +98,7 @@ class _UnavailablePage {
 }
 
 /// The remaining supplier destinations the backend does not serve. Team
-/// management is only available for vendor-owned stores through `/api/staff`;
+/// management is only available to vendor accounts through `/api/staff`;
 /// it is not a supplier team API.
 const _unavailableSupplierPages = <_UnavailablePage>[
   _UnavailablePage(
@@ -107,7 +106,7 @@ const _unavailableSupplierPages = <_UnavailablePage>[
     'Team / Staff',
     'users',
     'Supplier team management is not available yet. The backend staff API is '
-        'for vendor-owned stores only.',
+        'for vendor accounts only.',
   ),
 ];
 
@@ -177,7 +176,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         // A signed-in user should never sit on a public auth page.
         // Keep checkout registration on screen until RegisterScreen pops back
         // to the already-mounted checkout page.
-        if (loc == '/signup' && state.uri.queryParameters['returnTo'] == 'checkout') {
+        if (loc == '/signup' &&
+            state.uri.queryParameters['returnTo'] == 'checkout') {
+          return null;
+        }
+        if (isPublic && state.uri.queryParameters['staffInviteToken'] != null) {
           return null;
         }
         if (isPublic) return roleHome(user);
@@ -194,6 +197,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc.startsWith('/vendor') && user.userType != 'vendor') {
           return roleHome(user);
         }
+        if (loc == '/vendor/team' && user.vendorStaff) return '/vendor';
         // The supplier portal is exclusive to suppliers.
         if (loc.startsWith('/supplier') && user.userType != 'supplier') {
           return roleHome(user);
@@ -228,8 +232,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/home';
         },
       ),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/signup', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/login',
+        builder:
+            (_, state) => LoginScreen(
+              staffInviteToken: state.uri.queryParameters['staffInviteToken'],
+              invitedEmail: state.uri.queryParameters['email'],
+            ),
+      ),
+      GoRoute(
+        path: '/signup',
+        builder:
+            (_, state) => RegisterScreen(
+              staffInviteToken: state.uri.queryParameters['staffInviteToken'],
+              invitedEmail: state.uri.queryParameters['email'],
+            ),
+      ),
       GoRoute(
         path: '/forgot-password',
         builder: (_, __) => const ForgotPasswordScreen(),
@@ -245,9 +263,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/home', builder: (_, __) => const MainNavigationScreen()),
       GoRoute(
         path: '/orders/:orderId',
-        builder: (_, state) => BuyerOrderDetailScreen(
-          orderId: state.pathParameters['orderId']!,
-        ),
+        builder:
+            (_, state) => BuyerOrderDetailScreen(
+              orderId: state.pathParameters['orderId']!,
+            ),
       ),
       // Supplier portal. Deliberately outside /admin so the super-admin-only
       // guard below never bounces a supplier away from their own dashboard.
@@ -256,7 +275,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // and bottom bar are shared, mirroring the web's DashboardLayout. The
       // paths match `supplierNavGroups` in the frontend's src/data/navItems.js
       // exactly; pages without an API are routed to an explicit unavailable
-      // state instead of mock numbers.
+      // state instead of invented numbers.
       GoRoute(
         path: '/supplier',
         builder:
@@ -850,31 +869,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: VendorSettingsScreen(),
             ),
       ),
-      GoRoute(path: '/vendor/payouts', redirect: (_, __) => '/vendor/sales'),
       GoRoute(
-        path: '/vendor/transactions',
-        redirect: (_, __) => '/vendor/sales',
-      ),
-      GoRoute(
-        path: '/vendor/messages',
+        path: '/vendor/team',
         builder:
-            (context, state) => VendorShell(
-              path: '/vendor/messages',
-              child:
-                  kDemoMode
-                      ? const VendorWorkspaceScreen(path: '/vendor/messages')
-                      : const MessagesScreen(),
+            (context, state) => const VendorShell(
+              path: '/vendor/team',
+              child: VendorTeamScreen(),
             ),
       ),
-      for (final path in VendorWorkspaceScreen.paths)
-        GoRoute(
-          path: path,
-          builder:
-              (context, state) => VendorShell(
-                path: path,
-                child: VendorWorkspaceScreen(path: path),
-              ),
-        ),
     ],
   );
 });

@@ -30,21 +30,20 @@ enum SupplierPayoutMethod {
     SupplierPayoutMethod.bankTransfer => 'Bank transfer',
   };
 
-  /// Masked destination shown next to the method. Seeded from the demo supplier
-  /// profile (`+250 788 245 610`) so the payout form has a believable default.
+  /// Guidance for the destination format; actual account details are entered by
+  /// the supplier and are never prefilled with sample personal data.
   String get hint => switch (this) {
-    SupplierPayoutMethod.mtnMomo => 'MTN MoMo · +250 78••• 610',
-    SupplierPayoutMethod.airtelMoney => 'Airtel Money · +250 73••• 415',
-    SupplierPayoutMethod.bankTransfer => 'Equity Bank · ••••2088',
+    SupplierPayoutMethod.mtnMomo => 'Enter the MTN MoMo number to receive funds.',
+    SupplierPayoutMethod.airtelMoney => 'Enter the Airtel Money number to receive funds.',
+    SupplierPayoutMethod.bankTransfer => 'Enter the bank account to receive funds.',
   };
 
   /// Mobile money settles instantly, bank transfers take a day or two.
   String get settlementNote => switch (this) {
-    SupplierPayoutMethod.mtnMomo =>
-      'Arrives on your MoMo wallet within minutes.',
-    SupplierPayoutMethod.airtelMoney =>
-      'Arrives on your Airtel wallet within minutes.',
-    SupplierPayoutMethod.bankTransfer => 'Settles within 1–2 business days.',
+    SupplierPayoutMethod.mtnMomo ||
+    SupplierPayoutMethod.airtelMoney ||
+    SupplierPayoutMethod.bankTransfer =>
+      'MVEC will review and process this payout request.',
   };
 
   static SupplierPayoutMethod parse(String? raw) {
@@ -205,8 +204,8 @@ class SupplierFinanceSummary {
   /// Explains why gross sales exceed the withdrawable balance.
   num get totalHeld => escrowHeld + pendingPayouts;
 
-  /// Sanity invariant used by the demo dataset and asserted in tests: the net
-  /// figure must equal gross minus commission.
+  /// Sanity invariant asserted in tests: the net figure must equal gross minus
+  /// commission.
   bool get isConsistent => (netEarnings - (grossSales - commission)).abs() < 1;
 
   factory SupplierFinanceSummary.fromJson(

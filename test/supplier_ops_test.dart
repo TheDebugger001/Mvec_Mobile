@@ -17,13 +17,13 @@ import 'package:mvec_mobile/features/supplier/permissions.dart';
 import 'package:mvec_mobile/features/supplier/screens/supplier_delivery_screen.dart';
 import 'package:mvec_mobile/features/supplier/screens/supplier_supply_requests_screen.dart';
 import 'package:mvec_mobile/features/supplier/screens/supplier_team_screen.dart';
-import 'package:mvec_mobile/features/supplier/services/mock_supplier_finance_service.dart';
-import 'package:mvec_mobile/features/supplier/services/mock_supplier_operations_service.dart';
-import 'package:mvec_mobile/features/supplier/services/mock_supplier_team_service.dart';
 import 'package:mvec_mobile/features/supplier/widgets/supplier_ops_widgets.dart';
 import 'package:mvec_mobile/features/supplier/supplier_dependencies.dart';
 import 'package:mvec_mobile/models/user.dart';
 import 'package:mvec_mobile/providers/auth_provider.dart';
+
+import 'helpers/fake_supplier_finance.dart';
+import 'helpers/fake_supplier_ops.dart';
 
 /// Stands in for the login, so permission-gated screens can be driven without a
 /// real token or secure storage.
@@ -40,10 +40,10 @@ class _FixedAuth extends AuthController {
 void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
 
-  MockSupplierOperationsService ops() =>
-      MockSupplierOperationsService(delay: Duration.zero);
-  MockSupplierTeamService team() =>
-      MockSupplierTeamService(delay: Duration.zero);
+  FakeSupplierOperationsService ops() =>
+      FakeSupplierOperationsService(delay: Duration.zero).seed();
+  FakeSupplierTeamService team() =>
+      FakeSupplierTeamService(delay: Duration.zero).seed();
 
   group('rwandan phone numbers', () {
     test('accepts every prefix and format the same number is written in', () {
@@ -112,9 +112,9 @@ void main() {
   });
 
   group('delivery & settlement', () {
-    test('the demo module is the bundled dataset', () {
+    test('the module is never a demo dataset', () {
       final service = ops();
-      expect(service.isDemo, isTrue);
+      expect(service.isDemo, isFalse);
       expect(service.fallbackReason, isNull);
     });
 
@@ -124,7 +124,7 @@ void main() {
       final settlements = await service.settlements();
       final summary = await service.deliverySummary();
       final finance =
-          await MockSupplierFinanceService(delay: Duration.zero).summary();
+          await seededFinance().summary();
 
       expect(shipments, isNotEmpty);
       expect(settlements, isNotEmpty);
@@ -724,8 +724,8 @@ void main() {
   group('supplier operations screens', () {
     Widget wrap(
       Widget child, {
-      MockSupplierOperationsService? opsService,
-      MockSupplierTeamService? teamService,
+      FakeSupplierOperationsService? opsService,
+      FakeSupplierTeamService? teamService,
       UserRecord? asUser,
     }) => ProviderScope(
       overrides: [
