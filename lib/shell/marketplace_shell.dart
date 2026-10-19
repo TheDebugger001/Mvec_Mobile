@@ -43,7 +43,8 @@ int _activeIndex(Uri uri) {
   return -1;
 }
 
-const double _kTopBarHeight = 52 + 54;
+/// Row 1 (52) + search row (44 + 10 gap) + bottom border (1) + slack.
+const double _kTopBarHeight = 52 + 54 + 3;
 
 /// Storefront frame: top bar (menu, search, theme, wishlist, cart, account),
 /// left sidebar, and the five-item bottom navigation.
@@ -57,7 +58,11 @@ class MarketplaceShell extends ConsumerWidget {
     final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
     final cartNotice = ref.watch(cartProvider.select((c) => c.notice));
     return Scaffold(
-      appBar: const PreferredSize(preferredSize: Size.fromHeight(_kTopBarHeight), child: _TopBar()),
+      appBar: PreferredSize(
+        // The status-bar inset is added on top: the bar draws under it.
+        preferredSize: Size.fromHeight(_kTopBarHeight + MediaQuery.paddingOf(context).top),
+        child: const _TopBar(),
+      ),
       drawer: MarketplaceDrawer(location: uri),
       body: Column(
         children: [

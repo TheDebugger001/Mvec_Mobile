@@ -6,9 +6,20 @@ import 'core/nav_items.dart';
 import 'features/auth/forgot_password_page.dart';
 import 'features/auth/login_page.dart';
 import 'features/auth/signup_page.dart';
+import 'features/account/activity_pages.dart';
+import 'features/account/profile_page.dart';
 import 'features/common/coming_soon.dart';
+import 'features/common/dashboard_placeholder.dart';
+import 'features/marketplace/browse_pages.dart';
+import 'features/marketplace/cart_page.dart';
+import 'features/marketplace/checkout_page.dart';
 import 'features/marketplace/home_page.dart';
+import 'features/marketplace/order_detail_page.dart';
+import 'features/marketplace/orders_page.dart';
+import 'features/marketplace/payment_page.dart';
+import 'features/marketplace/product_page.dart';
 import 'features/marketplace/shop_page.dart';
+import 'features/marketplace/wishlist_page.dart';
 import 'shell/marketplace_shell.dart';
 import 'state/auth_state.dart';
 import 'widgets/common.dart';
@@ -37,6 +48,13 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/',
+    errorBuilder: (context, state) {
+      final path = state.uri.path;
+      if (_portalRoles.keys.any((p) => path == p || path.startsWith('$p/'))) {
+        return DashboardPlaceholderPage(location: path);
+      }
+      return Scaffold(body: ComingSoonPage(title: 'Page not found'));
+    },
     refreshListenable: gate,
     redirect: (context, state) {
       final auth = ref.read(authProvider);
@@ -73,18 +91,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, s) => LoginPage(next: s.uri.queryParameters['next'] ?? '', checkout: s.uri.queryParameters['checkout'] == '1')),
       GoRoute(path: '/signup', builder: (_, s) => SignupPage(role: s.uri.queryParameters['role'], next: s.uri.queryParameters['next'] ?? '')),
       GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordPage()),
+      // Full-screen pages (own back arrow, no marketplace bars).
+      GoRoute(path: '/product/:id', builder: (_, s) => ProductPage(id: s.pathParameters['id']!)),
+      GoRoute(
+        path: '/checkout',
+        builder: (_, s) => CheckoutPage(productId: s.uri.queryParameters['product'], qty: int.tryParse(s.uri.queryParameters['qty'] ?? '') ?? 1),
+      ),
+      GoRoute(path: '/payment/:id', builder: (_, s) => PaymentPage(orderId: s.pathParameters['id']!)),
+      GoRoute(path: '/orders/:id', builder: (_, s) => OrderDetailPage(id: s.pathParameters['id']!)),
+      GoRoute(path: '/buyer/messages/:id', builder: (_, s) => ChatPage(id: s.pathParameters['id']!)),
+      // Marketplace pages share the top bar, left sidebar and bottom bar.
       ShellRoute(
         builder: (context, state, child) => MarketplaceShell(uri: state.uri, child: child),
         routes: [
           GoRoute(path: '/', builder: (_, __) => const HomePage()),
           GoRoute(path: '/shop', builder: (_, s) => ShopPage(params: s.uri.queryParameters)),
-          GoRoute(path: '/buyer/recommendations', builder: (_, __) => const ComingSoonPage(title: 'Recommended for you')),
-          GoRoute(path: '/orders', builder: (_, __) => const ComingSoonPage(title: 'My orders')),
-          GoRoute(path: '/cart', builder: (_, __) => const ComingSoonPage(title: 'Your cart')),
-          GoRoute(path: '/wishlist', builder: (_, __) => const ComingSoonPage(title: 'Wishlist')),
-          GoRoute(path: '/vendors', builder: (_, __) => const ComingSoonPage(title: 'Stores')),
-          GoRoute(path: '/profile', builder: (_, __) => const ComingSoonPage(title: 'My account')),
-          GoRoute(path: '/buyer/support', builder: (_, __) => const ComingSoonPage(title: 'Help & Support')),
+          GoRoute(path: '/buyer/recommendations', builder: (_, __) => const RecommendationsPage()),
+          GoRoute(path: '/orders', builder: (_, __) => const OrdersPage()),
+          GoRoute(path: '/cart', builder: (_, __) => const CartPage()),
+          GoRoute(path: '/wishlist', builder: (_, __) => const WishlistPage()),
+          GoRoute(path: '/vendors', builder: (_, __) => const StoresPage()),
+          GoRoute(path: '/vendors/:id', builder: (_, s) => StoreDetailPage(id: s.pathParameters['id']!)),
+          GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
+          GoRoute(path: '/buyer/support', builder: (_, __) => const HelpPage()),
+          GoRoute(path: '/buyer/compare', builder: (_, __) => const ComparePage()),
+          GoRoute(path: '/buyer/refunds', builder: (_, __) => const RefundsPage()),
+          GoRoute(path: '/buyer/messages', builder: (_, __) => const MessagesPage()),
+          GoRoute(path: '/buyer/notifications', builder: (_, __) => const NotificationsPage()),
+          GoRoute(path: '/buyer/subscription', builder: (_, __) => const SubscriptionPage()),
         ],
       ),
     ],

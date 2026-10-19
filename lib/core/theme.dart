@@ -263,8 +263,8 @@ ThemeData buildAppTheme(Brightness brightness) {
     highlightColor: Colors.transparent,
     // Mobile-sized, light type: DM Sans at ~90% of the Material defaults.
     textTheme: GoogleFonts.dmSansTextTheme(
-      base.textTheme,
-    ).apply(bodyColor: text, displayColor: text, fontSizeFactor: .92),
+      Typography.englishLike2021.apply(fontSizeFactor: .92),
+    ).apply(bodyColor: text, displayColor: text),
     appBarTheme: AppBarTheme(
       backgroundColor: headerBg,
       elevation: 0,

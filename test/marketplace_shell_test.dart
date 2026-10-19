@@ -1,41 +1,52 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:mvec_mobile/core/theme.dart';
-import 'package:mvec_mobile/main.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> _pumpApp(WidgetTester tester) async {
-  GoogleFonts.config.allowRuntimeFetching = false;
-  SharedPreferences.setMockInitialValues({});
-  final prefs = await SharedPreferences.getInstance();
-  tester.view.physicalSize = const Size(390, 844);
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
-  await tester.pumpWidget(ProviderScope(
-    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-    child: const MvecApp(),
-  ));
-  await tester.pump(const Duration(milliseconds: 300));
-}
+import 'helpers/fake_backend.dart';
 
 void main() {
   testWidgets('bottom bar has exactly Home, Shop, For You, Deals, Orders', (tester) async {
-    await _pumpApp(tester);
+    await pumpApp(tester, FakeBackend(baseRoutes()));
     for (final label in ['Home', 'Shop', 'For You', 'Deals', 'Orders']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    // Cart, Wishlist and Account are in the top bar, not the bottom bar.
     expect(find.text('Cart'), findsNothing);
     expect(find.text('Wishlist'), findsNothing);
   });
 
-  testWidgets('hamburger opens the sidebar', (tester) async {
-    await _pumpApp(tester);
+  testWidgets('hamburger opens the sidebar from the left', (tester) async {
+    await pumpApp(tester, FakeBackend(baseRoutes()));
     await tester.tap(find.byTooltip('Open menu'));
-    await tester.pump(const Duration(milliseconds: 400));
+    await settle(tester);
     expect(find.text('MARKETPLACE'), findsOneWidget);
     expect(find.text('Sign in'), findsWidgets);
+    // The drawer's left edge sits at the left of the screen.
+    final drawer = tester.getRect(find.text('MARKETPLACE'));
+    expect(drawer.left, lessThan(200));
+  });
+
+  testWidgets('home shows products and the top bar has the required actions', (tester) async {
+    await pumpApp(tester, FakeBackend(baseRoutes()));
+    expect(find.text('Wireless Headphones'), findsWidgets);
+    expect(find.byTooltip('Open menu'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Search products')), findsOneWidget);
+    expect(find.bySemanticsLabel('Switch to dark mode'), findsOneWidget);
+    expect(find.byTooltip('Wishlist, 0 items'), findsOneWidget);
+    expect(find.byTooltip('Cart, 0 items'), findsOneWidget);
+    expect(find.byTooltip('Sign in or create an account'), findsOneWidget);
+  });
+
+  testWidgets('tapping Deals opens the sale-only shop', (tester) async {
+    await pumpApp(tester, FakeBackend(baseRoutes()));
+    await tester.tap(find.text('Deals'));
+    await settle(tester);
+    expect(find.text('Deals'), findsWidgets);
+    expect(find.text('Wireless Headphones'), findsWidgets);
+    expect(find.text('Phone Case'), findsNothing); // not on sale
+  });
+
+  testWidgets('dark mode toggle switches the theme', (tester) async {
+    await pumpApp(tester, FakeBackend(baseRoutes()));
+    await tester.tap(find.bySemanticsLabel('Switch to dark mode'));
+    await settle(tester);
+    expect(find.bySemanticsLabel('Switch to light mode'), findsOneWidget);
   });
 }

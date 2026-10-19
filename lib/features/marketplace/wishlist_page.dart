@@ -6,7 +6,6 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../state/cart_state.dart';
 import '../../widgets/common.dart';
-import '../common/page_frame.dart';
 
 /// `/wishlist` — saved products with live price and stock (`pages/Wishlist.jsx`).
 class WishlistPage extends ConsumerStatefulWidget {

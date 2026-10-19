@@ -6,7 +6,6 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../state/cart_state.dart';
 import '../../widgets/common.dart';
-import '../common/page_frame.dart';
 
 /// `/cart` — lines grouped by seller, quantity steppers, subtotal and the way
 /// to checkout (`pages/Cart.jsx`).
