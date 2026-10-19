@@ -1,212 +1,261 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'api_config.dart';
+import 'config.dart';
 
+/// A failed API call, with a message a person can act on.
 class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode});
+  ApiException(this.message, {this.statusCode, this.code, this.data});
+
   final String message;
   final int? statusCode;
+
+  /// Machine code from the server body (e.g. `ACCOUNT_BLOCKED`).
+  final String? code;
+  final dynamic data;
+
   @override
   String toString() => message;
 }
 
-class ApiClient {
-  ApiClient._() {
+/// The bearer token, kept in platform-secure storage and mirrored in memory.
+class TokenStore {
+  TokenStore._();
+  static final TokenStore instance = TokenStore._();
+
+  static const _storage = FlutterSecureStorage();
+  String? _cached;
+  bool _loaded = false;
+
+  Future<String?> read() async {
+    if (_loaded) return _cached;
+    try {
+      _cached = await _storage.read(key: kTokenKey);
+    } catch (_) {
+      // Secure storage is unavailable (some desktop/test hosts): in-memory only.
+    }
+    _loaded = true;
+    return _cached;
+  }
+
+  Future<void> write(String token) async {
+    _cached = token;
+    _loaded = true;
+    try {
+      await _storage.write(key: kTokenKey, value: token);
+    } catch (_) {}
+  }
+
+  Future<void> clear() async {
+    _cached = null;
+    _loaded = true;
+    try {
+      await _storage.delete(key: kTokenKey);
+    } catch (_) {}
+  }
+}
+
+/// Fired when the server says the session is over (401) or the account was
+/// blocked, so the app can sign out and send the person to log in.
+enum SessionEvent { expired, blocked }
+
+/// Thin wrapper over Dio that talks to the Ikiguzi REST API.
+///
+/// Mirrors the web client (`Mvec_frontend/src/API/client.jsx`): same base URL
+/// rules, `Authorization: Bearer <token>`, and the same plain-language error
+/// messages.
+class Api {
+  Api._() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: kApiBaseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 25),
-        headers: {'Content-Type': 'application/json'},
+        baseUrl: apiBaseUrl,
+        connectTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+        headers: {'Accept': 'application/json'},
       ),
     );
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await readToken();
+          final token = await TokenStore.instance.read();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
         },
-        // Dio's `handler.reject` only accepts a `DioException`, so this
-        // normaliser cannot throw the ApiException directly. It attaches one to
-        // `.error`, and [_guard] unwraps it at every public verb so callers
-        // only ever see ApiException.
-        onError: (e, handler) {
-          handler.reject(
-            DioException(
-              requestOptions: e.requestOptions,
-              response: e.response,
-              type: e.type,
-              error: ApiException(
-                _messageFrom(e),
-                statusCode: e.response?.statusCode,
-              ),
-            ),
-          );
+        onError: (e, handler) async {
+          final status = e.response?.statusCode;
+          final data = e.response?.data;
+          final blocked =
+              status == 403 && data is Map && data['code'] == 'ACCOUNT_BLOCKED';
+          final hadToken = (await TokenStore.instance.read())?.isNotEmpty ?? false;
+          if ((status == 401 || blocked) && hadToken) {
+            await TokenStore.instance.clear();
+            _events.add(blocked ? SessionEvent.blocked : SessionEvent.expired);
+          }
+          handler.next(e);
         },
       ),
     );
   }
 
-  static final ApiClient instance = ApiClient._();
+  static final Api instance = Api._();
   late final Dio _dio;
-  static const _storage = FlutterSecureStorage();
-  static const _tokenKey = 'mvec_admin_token';
+  final StreamController<SessionEvent> _events =
+      StreamController<SessionEvent>.broadcast();
 
+  Stream<SessionEvent> get sessionEvents => _events.stream;
   Dio get dio => _dio;
 
-  static Future<String?> readToken() => _storage.read(key: _tokenKey);
-  static Future<void> writeToken(String t) => _storage.write(key: _tokenKey, value: t);
-  static Future<void> clearToken() => _storage.delete(key: _tokenKey);
-
-  static String _messageFrom(DioException e) {
-    final data = e.response?.data;
-    if (data is Map && data['message'] is String) return data['message'] as String;
-    if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.connectionError) {
-      return 'Cannot reach the server at $kApiBaseUrl. '
-          'Check the backend is running and the URL matches your device '
-          '(emulator: 10.0.2.2, device: your LAN IP).';
-    }
-    if (e.response != null) return 'Request failed (${e.response!.statusCode})';
-    return e.message ?? 'Network error';
-  }
-
-  /// Every public verb funnels through here so callers only ever see
-  /// [ApiException].
-  ///
-  /// Dio's `handler.reject` is typed to a `DioException`, so the interceptor
-  /// above can only *carry* an [ApiException] in `.error` rather than throw it.
-  /// Left at that, a bare ApiException was never thrown and every
-  /// `on ApiException` guard in the app was dead code — which is how an
-  /// expected 403 from the admin-only `GET /orders` escaped and failed the
-  /// whole shared supplier provider, blanking every supplier page at once.
-  /// Nothing reads `.dio`, so unwrapping here is safe, and it also lets
-  /// `friendlyError` show the backend message instead of a raw Dio type dump.
-  Future<T> _guard<T>(Future<T> Function() run) async {
-    try {
-      return await run();
-    } on DioException catch (e) {
-      final normalised = e.error;
-      if (normalised is ApiException) throw normalised;
-      throw ApiException(
-        _messageFrom(e),
-        statusCode: e.response?.statusCode,
-      );
-    }
-  }
+  /// Base URL the client was built with (for diagnostics).
+  String get baseUrl => _dio.options.baseUrl;
 
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
-      _guard(() async => (await _dio.get(path, queryParameters: query)).data);
+      _run(() => _dio.get(path, queryParameters: _clean(query)));
 
   Future<dynamic> post(String path, {Object? body, Map<String, dynamic>? query}) =>
-      _guard(() async => (await _dio.post(path, data: body, queryParameters: query)).data);
+      _run(() => _dio.post(path, data: body, queryParameters: _clean(query)));
 
-  Future<dynamic> patch(String path, {Object? body, Map<String, dynamic>? query}) =>
-      _guard(() async => (await _dio.patch(path, data: body, queryParameters: query)).data);
+  Future<dynamic> put(String path, {Object? body}) =>
+      _run(() => _dio.put(path, data: body));
 
-  Future<dynamic> put(String path, {Object? body, Map<String, dynamic>? query}) =>
-      _guard(() async => (await _dio.put(path, data: body, queryParameters: query)).data);
+  Future<dynamic> patch(String path, {Object? body}) =>
+      _run(() => _dio.patch(path, data: body));
 
   Future<dynamic> delete(String path, {Object? body}) =>
-      _guard(() async => (await _dio.delete(path, data: body)).data);
-}
+      _run(() => _dio.delete(path, data: body));
 
-final apiProvider = Provider<ApiClient>((ref) => ApiClient.instance);
+  /// Multipart upload ([FormData] sets its own content type and boundary).
+  Future<dynamic> upload(String path, FormData form) =>
+      _run(() => _dio.post(path, data: form));
 
-/// The HTTP status behind a failed request, or `null` when the request never
-/// reached the server (timeout, DNS, socket) or the error is not an API error.
-///
-/// `ApiClient`'s error interceptor wraps every failure in a `DioException`
-/// whose `error` is the [ApiException] carrying the status, so callers that
-/// need to branch on a specific code (e.g. "this vendor has no store yet")
-/// read it through here instead of unwrapping Dio types by hand.
-int? statusCodeOf(Object error) {
-  if (error is ApiException) return error.statusCode;
-  if (error is DioException) {
-    final inner = error.error;
-    if (inner is ApiException) return inner.statusCode;
-    return error.response?.statusCode;
+  static Map<String, dynamic>? _clean(Map<String, dynamic>? q) {
+    if (q == null) return null;
+    final out = <String, dynamic>{};
+    q.forEach((k, v) {
+      if (v == null) return;
+      if (v is String && v.isEmpty) return;
+      out[k] = v;
+    });
+    return out;
   }
-  return null;
+
+  Future<dynamic> _run(Future<Response<dynamic>> Function() call) async {
+    try {
+      final res = await call();
+      return res.data;
+    } on DioException catch (e) {
+      throw describeError(e);
+    }
+  }
 }
 
-/// A page of list results, normalised across the backend's three envelopes:
-/// `{data, meta}`, `{success, data}` and bare `{orders}` / arrays.
-class Paged<T> {
-  Paged({required this.items, this.total, this.page, this.pages, this.pageSize});
+/// Turns a transport failure into an [ApiException] the UI can show as is.
+/// (Same rules as `extractErrorMessage` in the web client.)
+ApiException describeError(DioException e, {String? fallback}) {
+  final res = e.response;
+  final data = res?.data;
+  final status = res?.statusCode;
 
-  final List<T> items;
-  final int? total;
-  final int? page;
-  final int? pages;
-  final int? pageSize;
+  String serverMessage = '';
+  String? code;
+  if (data is String && data.length < 300 && !data.trim().startsWith('<')) {
+    serverMessage = data;
+  } else if (data is Map) {
+    code = data['code']?.toString();
+    final m = data['message'];
+    final err = data['error'];
+    if (m is String && m.isNotEmpty) {
+      serverMessage = m;
+    } else if (err is Map && err['message'] is String) {
+      serverMessage = err['message'] as String;
+    } else if (err is String) {
+      serverMessage = err;
+    } else if (data['errors'] is List) {
+      serverMessage = (data['errors'] as List)
+          .map((x) => x is Map ? (x['msg'] ?? x['message'] ?? '') : x)
+          .where((x) => x.toString().isNotEmpty)
+          .join(' ');
+    }
+  }
 
-  factory Paged.parse(dynamic json, T Function(Map<String, dynamic>) map) {
-    List<dynamic> raw = [];
-    int? total, page, pages, pageSize;
+  if (res == null) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      return ApiException(
+        'The server took too long to answer. Check your connection and try again; if you were paying, check My orders before paying again.',
+      );
+    }
+    if (e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.unknown) {
+      return ApiException(
+        "We can't reach MVEC right now. Check your internet connection and try again in a moment.",
+      );
+    }
+    return ApiException(fallback ?? e.message ?? 'Something went wrong. Please try again.');
+  }
 
-    if (json is List) {
-      raw = json;
-    } else if (json is Map) {
-      final data = json['data'] ?? json['orders'] ?? json['products'] ?? json['entries'] ?? json['categories'] ?? json['cases'] ?? json['conversations'] ?? json['notifications'];
-      if (data is List) raw = data;
-      final meta = json['meta'];
-      if (meta is Map) {
-        total = _int(meta['total'] ?? meta['count']);
-        page = _int(meta['page'] ?? meta['currentPage']);
-        pages = _int(meta['pages'] ?? meta['totalPages'] ?? meta['pageCount']);
-        pageSize = _int(meta['limit'] ?? meta['pageSize']);
-      }
-      total ??= _int(json['total']);
-      page ??= _int(json['page']);
-      pages ??= _int(json['totalPages']);
-      if (raw.isEmpty) {
-        for (final k in ['items', 'commissions', 'payouts', 'reports', 'reviews', 'rows', 'rules', 'subs']) {
-          if (json[k] is List) {
-            raw = json[k] as List;
-            break;
-          }
+  String message;
+  switch (status) {
+    case 401:
+      message = serverMessage.isEmpty ||
+              RegExp(r'not authori[sz]ed|token|session', caseSensitive: false)
+                  .hasMatch(serverMessage)
+          ? 'Your session has ended. Please sign in again.'
+          : serverMessage;
+      break;
+    case 403:
+      message = serverMessage.isNotEmpty
+          ? serverMessage
+          : "Your account isn't allowed to do this.";
+      break;
+    case 404:
+      message = serverMessage.isNotEmpty
+          ? serverMessage
+          : "We couldn't find what you were looking for. It may have been removed.";
+      break;
+    case 413:
+      message = 'That file is too large. Choose a smaller one and try again.';
+      break;
+    case 429:
+      message = serverMessage.isNotEmpty
+          ? serverMessage
+          : 'Too many attempts. Wait a minute and try again.';
+      break;
+    default:
+      if ((status ?? 0) >= 500) {
+        final generic = serverMessage.isEmpty ||
+            RegExp(r'^(internal )?server error$', caseSensitive: false)
+                .hasMatch(serverMessage);
+        message = generic
+            ? (fallback ??
+                'Something went wrong on our side, not yours. Please try again in a moment; if it keeps happening, contact MVEC support.')
+            : serverMessage;
+        final ref = data is Map ? data['reference']?.toString() : null;
+        if (ref != null && ref.isNotEmpty && !message.contains(ref)) {
+          message = '${message.replaceFirst(RegExp(r'\.$'), '')} (reference $ref).';
         }
+      } else {
+        message = serverMessage.isNotEmpty
+            ? serverMessage
+            : (fallback ?? 'Something went wrong. Please try again.');
       }
-    }
-
-    return Paged(
-      items: raw.map((e) => map(Map<String, dynamic>.from(e as Map))).toList(),
-      total: total,
-      page: page,
-      pages: pages,
-      pageSize: pageSize,
-    );
   }
-
-  static int? _int(dynamic v) => v is int ? v : (v is num ? v.toInt() : (v is String ? int.tryParse(v) : null));
+  return ApiException(message, statusCode: status, code: code, data: data);
 }
 
-/// Extracts a single object from common single-item envelopes.
-Map<String, dynamic> singleJson(dynamic json, List<String> keys) {
-  if (json is Map) {
-    for (final k in keys) {
-      final v = json[k];
-      if (v is Map) return Map<String, dynamic>.from(v);
-    }
-    return Map<String, dynamic>.from(json);
-  }
-  return <String, dynamic>{};
+/// Message for any thrown object, for showing in the UI.
+String errorText(Object error, [String? fallback]) {
+  if (error is ApiException) return error.message;
+  if (error is DioException) return describeError(error, fallback: fallback).message;
+  if (kDebugMode) debugPrint('Unexpected error: $error');
+  return fallback ?? 'Something went wrong. Please try again.';
 }
 
-List<Map<String, dynamic>> listJson(dynamic json, List<String> keys) {
-  if (json is List) return json.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-  if (json is Map) {
-    for (final k in [...keys, 'data', 'items', 'results']) {
-      final v = json[k];
-      if (v is List) return v.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    }
-  }
-  return [];
-}
+/// HTTP status behind a failure, or null when the request never reached the server.
+int? statusOf(Object error) => error is ApiException ? error.statusCode : null;

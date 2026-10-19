@@ -1,7 +1,10 @@
+import '../models/user.dart';
+
+/// One sidebar link: `[href, label, icon]` in the web app.
 class NavItem {
-  const NavItem(this.label, this.path, this.icon);
+  const NavItem(this.href, this.label, this.icon);
+  final String href;
   final String label;
-  final String path;
   final String icon;
 }
 
@@ -11,227 +14,235 @@ class NavGroup {
   final List<NavItem> items;
 }
 
-/// Full admin navigation. Groups mirror the frontend `adminNavGroups`
-/// (accordion sidebar), plus the two dedicated management features
-/// (Buyers, Account) the admin console requires.
-class AdminNav {
-  AdminNav._();
+/// Where each role lands, and what its dashboard is called.
+const Map<String, String> roleHome = {
+  'vendor': '/vendor',
+  'affiliate': '/affiliate',
+  'delivery': '/delivery',
+  'super_admin': '/admin',
+};
 
-  static const groups = <NavGroup>[
-    NavGroup('Overview', [NavItem('Overview', '/admin', 'grid')]),
-    NavGroup('Insights', [
-      NavItem('Analytics', '/admin/analytics', 'chart'),
-      NavItem('Reports', '/admin/reports', 'chart'),
-      NavItem('Recommendations', '/admin/recommendations', 'chart'),
-      NavItem('Supplier Matching', '/admin/matching', 'users'),
-      NavItem('Trust Scores', '/admin/trust', 'chart'),
-      NavItem('Reviews', '/admin/reviews', 'chart'),
-    ]),
-    NavGroup('People & Stores', [
-      NavItem('Users', '/admin/users', 'users'),
-      NavItem('Vendors', '/admin/vendors', 'shop'),
-      NavItem('Suppliers', '/admin/suppliers', 'shop'),
-      NavItem('Affiliates', '/admin/affiliates', 'users'),
-      NavItem('Buyers', '/admin/buyers', 'users'),
-      NavItem('Supplier Acquisition', '/admin/supplier-acquisition', 'users'),
-      NavItem('Vendor Acquisition', '/admin/vendor-acquisition', 'users'),
-    ]),
-    NavGroup('Catalog', [
-      NavItem('Products', '/admin/products', 'box'),
-      NavItem('Categories', '/admin/categories', 'tag'),
-    ]),
-    NavGroup('Orders & Payments', [
-      NavItem('Orders', '/admin/orders', 'cart'),
-      NavItem('Payments', '/admin/payments', 'wallet'),
-      NavItem('Transactions', '/admin/transactions', 'wallet'),
-      NavItem('Commissions', '/admin/commissions', 'wallet'),
-      NavItem('Commission Rules', '/admin/commission-rules', 'wallet'),
-      NavItem('Financial Ledger', '/admin/ledger', 'wallet'),
-      NavItem('Deliveries', '/admin/deliveries', 'box'),
-      NavItem('Refunds', '/admin/refunds', 'wallet'),
-      NavItem('Disputes', '/admin/disputes', 'bell'),
-    ]),
-    NavGroup('Growth', [
-      NavItem('Advertising', '/admin/advertising', 'tag'),
-      NavItem('Subscriptions', '/admin/subscriptions', 'wallet'),
-    ]),
-    NavGroup('Platform', [
-      NavItem('Languages', '/admin/languages', 'grid'),
-      NavItem('Locations', '/admin/locations', 'shop'),
-      NavItem('Audit Logs', '/admin/audit-logs', 'box'),
-      NavItem('Security', '/admin/security', 'settings'),
-      NavItem('System Administration', '/admin/system', 'settings'),
-      NavItem('Settings', '/admin/settings', 'settings'),
-      NavItem('Fraud & Risk', '/admin/risk', 'bell'),
-      NavItem('Account', '/admin/account', 'user'),
-    ]),
-    NavGroup('Communication', [
-      NavItem('Messages', '/admin/messages', 'users'),
-      NavItem('Notifications', '/admin/notifications', 'bell'),
-      NavItem('MVEC Support', '/admin/support', 'bell'),
-    ]),
-  ];
+/// Roles that have a mobile dashboard. (Supplier is not implemented yet.)
+bool hasDashboard(String? role) => roleHome.containsKey(role);
 
-  static List<NavItem> get all => [for (final g in groups) ...g.items];
+// The groups below are the web app's `*NavGroups` from `src/data/navItems.js`,
+// with identical hrefs, labels and icons.
 
-  /// Primary items shown directly in the mobile bottom bar (frontend
-  /// `mobilePrimaryByRole.super_admin`) + a "More" entry that opens the
-  /// grouped drawer.
-  static const bottomNav = <NavItem>[
-    NavItem('Overview', '/admin', 'grid'),
-    NavItem('Vendors', '/admin/vendors', 'shop'),
-    NavItem('Orders', '/admin/orders', 'cart'),
-    NavItem('Ledger', '/admin/ledger', 'wallet'),
-  ];
+const adminNavGroups = <NavGroup>[
+  NavGroup('Overview', [
+    NavItem('/admin', 'Overview', 'grid'),
+    NavItem('/admin/become-seller', 'Become a Seller', 'shop'),
+  ]),
+  NavGroup('People & Stores', [
+    NavItem('/admin/vendors', 'Sellers', 'shop'),
+    NavItem('/admin/affiliates', 'Affiliates', 'users'),
+    NavItem('/admin/users', 'Users', 'users'),
+  ]),
+  NavGroup('Orders', [
+    NavItem('/admin/orders', 'Orders', 'cart'),
+    NavItem('/admin/deliveries', 'Deliveries', 'box'),
+    NavItem('/admin/disputes', 'Disputes', 'bell'),
+  ]),
+  NavGroup('Money', [
+    NavItem('/admin/payments', 'Payments', 'wallet'),
+    NavItem('/admin/vendor-payouts', 'Seller Payouts', 'wallet'),
+    NavItem('/admin/transfers', 'Refunds & Withdrawals', 'wallet'),
+    NavItem('/admin/commissions', 'MVEC Earnings', 'wallet'),
+    NavItem('/admin/commission-rules', 'Commission Rules', 'tag'),
+    NavItem('/admin/ledger', 'Financial Ledger', 'wallet'),
+  ]),
+  NavGroup('Catalog', [
+    NavItem('/admin/products', 'Products', 'box'),
+    NavItem('/admin/categories', 'Categories', 'tag'),
+  ]),
+  NavGroup('Growth', [
+    NavItem('/admin/advertising', 'Advertising', 'tag'),
+    NavItem('/admin/subscriptions', 'Subscriptions', 'wallet'),
+  ]),
+  NavGroup('Insights', [
+    NavItem('/admin/analytics', 'Analytics', 'chart'),
+    NavItem('/admin/trust', 'Trust Scores', 'chart'),
+    NavItem('/admin/risk', 'Fraud & Risk', 'bell'),
+  ]),
+  NavGroup('Platform', [
+    NavItem('/admin/settings', 'Settings', 'settings'),
+    NavItem('/admin/audit-logs', 'Audit Log', 'box'),
+  ]),
+  NavGroup('Communication', [
+    NavItem('/admin/messages', 'Messages', 'users'),
+    NavItem('/admin/notifications', 'Notifications', 'bell'),
+    NavItem('/admin/support', 'Support Inbox', 'bell'),
+  ]),
+];
 
-  /// Find the group containing a path (used to auto-open the drawer group).
-  static String? groupFor(String path) {
-    for (final g in groups) {
-      if (g.items.any(
-        (i) =>
-            i.path == path || (path.startsWith(i.path) && i.path != '/admin'),
-      )) {
-        return g.label;
-      }
-    }
-    return null;
+const sellerNavGroups = <NavGroup>[
+  NavGroup('Overview', [NavItem('/vendor', 'Dashboard', 'grid')]),
+  NavGroup('Store', [
+    NavItem('/vendor/stores', 'My Stores', 'shop'),
+    NavItem('/vendor/products', 'Products', 'box'),
+    NavItem('/vendor/categories', 'Categories', 'tag'),
+    NavItem('/vendor/inventory', 'Inventory', 'grid'),
+    NavItem('/vendor/shipping', 'Shipping', 'shop'),
+  ]),
+  NavGroup('Orders & Customers', [
+    NavItem('/vendor/orders', 'Orders', 'cart'),
+    NavItem('/vendor/purchases', 'Purchases', 'receipt'),
+    NavItem('/vendor/quotes', 'Quote Requests', 'receipt'),
+    NavItem('/vendor/customers', 'Customers', 'users'),
+    NavItem('/vendor/delivery', 'Delivery & Settlement', 'box'),
+    NavItem('/vendor/refunds', 'Refunds', 'wallet'),
+  ]),
+  NavGroup('Finance', [
+    NavItem('/vendor/payouts', 'Payouts', 'wallet'),
+    NavItem('/vendor/transactions', 'Transactions', 'wallet'),
+    NavItem('/vendor/subscription', 'Subscription', 'wallet'),
+  ]),
+  NavGroup('Growth', [
+    NavItem('/vendor/suppliers', 'Find Suppliers', 'shop'),
+    NavItem('/vendor/affiliates', 'Affiliate Marketing', 'users'),
+    NavItem('/vendor/advertisements', 'Advertisements', 'tag'),
+    NavItem('/vendor/promotions', 'Promotions', 'tag'),
+    NavItem('/vendor/reviews', 'Reviews', 'heart'),
+    NavItem('/vendor/reports', 'Reports', 'chart'),
+    NavItem('/vendor/analytics', 'Analytics', 'chart'),
+  ]),
+  NavGroup('Team & Settings', [
+    NavItem('/vendor/team', 'Team / Staff', 'users'),
+    NavItem('/vendor/settings', 'Settings', 'settings'),
+  ]),
+  NavGroup('Support', [
+    NavItem('/vendor/messages', 'Messages', 'users'),
+    NavItem('/vendor/notifications', 'Notifications', 'bell'),
+    NavItem('/vendor/support', 'MVEC Support', 'bell'),
+  ]),
+];
+
+const affiliateNavGroups = <NavGroup>[
+  NavGroup('Overview', [NavItem('/affiliate', 'Dashboard', 'grid')]),
+  NavGroup('Promotion', [
+    NavItem('/affiliate/products', 'Promote Products', 'box'),
+    NavItem('/affiliate/links', 'My Links', 'tag'),
+  ]),
+  NavGroup('Earnings', [
+    NavItem('/affiliate/commissions', 'Commissions', 'chart'),
+    NavItem('/affiliate/wallet', 'Wallet', 'wallet'),
+    NavItem('/affiliate/withdrawals', 'Withdrawals', 'wallet'),
+  ]),
+  NavGroup('Account', [NavItem('/affiliate/profile', 'Profile', 'user')]),
+  NavGroup('Support', [
+    NavItem('/affiliate/messages', 'Messages', 'users'),
+    NavItem('/affiliate/notifications', 'Notifications', 'bell'),
+    NavItem('/affiliate/support', 'MVEC Support', 'bell'),
+  ]),
+];
+
+const deliveryNavGroups = <NavGroup>[
+  NavGroup('Overview', [NavItem('/delivery', 'Dashboard', 'grid')]),
+  NavGroup('Work', [
+    NavItem('/delivery/deliveries', 'My Deliveries', 'box'),
+    NavItem('/delivery/history', 'Delivered', 'chart'),
+  ]),
+  NavGroup('Support', [
+    NavItem('/delivery/messages', 'Messages', 'users'),
+    NavItem('/delivery/support', 'MVEC Support', 'bell'),
+    NavItem('/profile', 'My Account', 'user'),
+  ]),
+];
+
+/// Mobile bottom-bar items per role (the web's `mobilePrimaryByRole`). Admin
+/// follows the product owner's brief — Overview, Sales, Wallet, Users — mapped
+/// onto the admin pages that really exist: Orders (sales), MVEC Earnings
+/// (the MVEC wallet) and Users.
+const Map<String, List<String>> mobilePrimaryByRole = {
+  'vendor': ['/vendor', '/vendor/products', '/vendor/orders', '/vendor/payouts'],
+  'super_admin': ['/admin', '/admin/orders', '/admin/commissions', '/admin/users'],
+  'affiliate': ['/affiliate', '/affiliate/links', '/affiliate/wallet', '/affiliate/withdrawals'],
+  'delivery': ['/delivery', '/delivery/deliveries', '/delivery/history', '/delivery/messages'],
+};
+
+/// Short bottom-bar labels (the sidebar labels are too long for 5 slots).
+const Map<String, String> bottomLabel = {
+  '/admin': 'Overview',
+  '/admin/orders': 'Sales',
+  '/admin/commissions': 'Wallet',
+  '/admin/users': 'Users',
+};
+
+// ─── Permission-aware navigation (mirrors the web sidebar) ───────────────────
+
+const _vendorStaffPermission = <String, String>{
+  '/vendor/products': 'canManageProducts',
+  '/vendor/inventory': 'canManageProducts',
+  '/vendor/categories': 'canManageProducts',
+  '/vendor/promotions': 'canManageMarketing',
+  '/vendor/purchases': 'canManageProducts',
+  '/vendor/suppliers': 'canManageProducts',
+  '/vendor/orders': 'canManageOrders',
+  '/vendor/quotes': 'canManageOrders',
+  '/vendor/customers': 'canManageOrders',
+  '/vendor/refunds': 'canManageOrders',
+  '/vendor/delivery': 'canManageOrders',
+  '/vendor/payouts': 'canManagePayouts',
+  '/vendor/transactions': 'canManagePayouts',
+  '/vendor/subscription': 'canManagePayouts',
+  '/vendor/affiliates': 'canManageMarketing',
+  '/vendor/advertisements': 'canManageMarketing',
+  '/vendor/reviews': 'canManageMarketing',
+  '/vendor/analytics': 'canViewAnalytics',
+  '/vendor/reports': 'canViewAnalytics',
+  '/vendor/team': 'canManageStaff',
+  '/vendor/stores': 'canManageSettings',
+  '/vendor/shipping': 'canManageSettings',
+  '/vendor/settings': 'canManageSettings',
+};
+
+String? permissionForPath(String path) {
+  for (final e in _vendorStaffPermission.entries) {
+    if (path == e.key || path.startsWith('${e.key}/')) return e.value;
   }
+  return null;
 }
 
-/// Supplier portal navigation.
-///
-/// Mirrors the web app's `supplierNavGroups` in `src/data/navItems.jsx`
-/// group-for-group and item-for-item, so the mobile portal presents the same
-/// information architecture as the website. Every path stays under `/supplier`
-/// so the supplier-only guard in `router.dart` applies.
-class SupplierNav {
-  SupplierNav._();
-
-  static const groups = <NavGroup>[
-    NavGroup('Overview', [NavItem('Dashboard', '/supplier', 'grid')]),
-    NavGroup('Catalog & Orders', [
-      NavItem('Wholesale Products', '/supplier/products', 'box'),
-      NavItem('Inventory', '/supplier/inventory', 'grid'),
-      NavItem('Vendor Orders', '/supplier/orders', 'cart'),
-      NavItem('Supply Requests', '/supplier/supply-requests', 'cart'),
-      NavItem('Delivery & Settlement', '/supplier/delivery', 'box'),
-    ]),
-    NavGroup('Finance & Insights', [
-      NavItem('Payments', '/supplier/payments', 'wallet'),
-      NavItem('Transactions', '/supplier/transactions', 'wallet'),
-      NavItem('Analytics', '/supplier/analytics', 'chart'),
-      NavItem('Reports', '/supplier/reports', 'chart'),
-      NavItem('Reviews', '/supplier/reviews', 'heart'),
-    ]),
-    NavGroup('Team & Settings', [
-      NavItem('Team / Staff', '/supplier/team', 'users'),
-      NavItem('Settings', '/supplier/settings', 'settings'),
-    ]),
-    NavGroup('Support', [
-      NavItem('Messages', '/supplier/messages', 'users'),
-      NavItem('Notifications', '/supplier/notifications', 'bell'),
-      NavItem('MVEC Support', '/supplier/support', 'bell'),
-    ]),
-  ];
-
-  static List<NavItem> get all => [for (final g in groups) ...g.items];
-
-  /// The four primary items pinned to the mobile bottom bar, plus "More"
-  /// (the drawer) — the same split the web uses in `MobileBottomNav.jsx`.
-  static const bottomNav = <NavItem>[
-    NavItem('Dashboard', '/supplier', 'grid'),
-    NavItem('Products', '/supplier/products', 'box'),
-    NavItem('Orders', '/supplier/orders', 'cart'),
-    NavItem('Payments', '/supplier/payments', 'wallet'),
-  ];
-
-  /// Find the group containing a path (used to auto-open the drawer group).
-  static String? groupFor(String path) {
-    for (final g in groups) {
-      if (g.items.any(
-        (i) =>
-            i.path == path ||
-            (path.startsWith(i.path) && i.path != '/supplier'),
-      )) {
-        return g.label;
-      }
-    }
-    return null;
-  }
+/// Owners can open everything; staff only what their role allows.
+bool staffCan(AppUser? user, String path) {
+  if (user == null || !user.isStaff) return true;
+  final key = permissionForPath(path);
+  return key == null || user.permissionsMap[key] == true;
 }
 
-/// Vendor portal navigation.
-///
-/// Same shape as [AdminNav] (accordion groups + mobile bottom bar) so the
-/// vendor shell can be a drop-in mirror of the admin shell, with every path
-/// rooted at `/vendor`.
-class VendorNav {
-  VendorNav._();
+const staffRoleLabel = {
+  'STORE_MANAGER': 'Store manager',
+  'ORDER_MANAGER': 'Order manager',
+  'CATALOG_MANAGER': 'Catalog manager',
+  'MARKETING_MANAGER': 'Marketing manager',
+  'FINANCE_MANAGER': 'Finance manager',
+};
 
-  static const root = '/vendor';
-
-  static const groups = <NavGroup>[
-    NavGroup('Overview', [NavItem('Overview', '/vendor', 'grid')]),
-    NavGroup('Store', [
-      NavItem('Products', '/vendor/products', 'box'),
-      NavItem('Categories', '/vendor/categories', 'tag'),
-      NavItem('Inventory', '/vendor/inventory', 'grid'),
-      NavItem('Shipping', '/vendor/shipping', 'shop'),
-      NavItem('Store Profile', '/vendor/profile', 'user'),
-    ]),
-    NavGroup('Orders & customers', [
-      NavItem('Orders', '/vendor/orders', 'cart'),
-      NavItem('Purchases', '/vendor/purchases', 'cart'),
-      NavItem('Customers', '/vendor/customers', 'users'),
-      NavItem('Delivery & settlement', '/vendor/delivery', 'box'),
-      NavItem('Refunds', '/vendor/refunds', 'wallet'),
-    ]),
-    NavGroup('Finance', [
-      NavItem('Payouts', '/vendor/payouts', 'wallet'),
-      NavItem('Transactions', '/vendor/transactions', 'wallet'),
-      NavItem('Sales & earnings', '/vendor/sales', 'chart'),
-      NavItem('Subscription', '/vendor/subscription', 'wallet'),
-    ]),
-    NavGroup('Growth', [
-      NavItem('Find suppliers', '/vendor/suppliers', 'shop'),
-      NavItem('Affiliate marketing', '/vendor/affiliates', 'users'),
-      NavItem('Advertisements', '/vendor/advertisements', 'tag'),
-      NavItem('Promotions', '/vendor/promotions', 'tag'),
-      NavItem('Reviews', '/vendor/reviews', 'heart'),
-      NavItem('Reports', '/vendor/reports', 'chart'),
-      NavItem('Analytics', '/vendor/analytics', 'chart'),
-    ]),
-    NavGroup('Team & settings', [
-      NavItem('Team / staff', '/vendor/team', 'users'),
-      NavItem('Settings', '/vendor/settings', 'settings'),
-    ]),
-    NavGroup('Support', [
-      NavItem('Messages', '/vendor/messages', 'users'),
-      NavItem('Notifications', '/vendor/notifications', 'bell'),
-      NavItem('MVEC support', '/vendor/support', 'bell'),
-    ]),
-  ];
-
-  static List<NavItem> get all => [for (final g in groups) ...g.items];
-
-  /// Primary items for the mobile bottom bar, plus a "More" entry that opens
-  /// the grouped drawer (added by the shell).
-  static const bottomNav = <NavItem>[
-    NavItem('Overview', '/vendor', 'grid'),
-    NavItem('Orders', '/vendor/orders', 'cart'),
-    NavItem('Sales', '/vendor/sales', 'wallet'),
-    NavItem('Settings', '/vendor/settings', 'settings'),
-  ];
-
-  /// The drawer group containing a path, used to auto-open the right accordion.
-  static String? groupFor(String path) {
-    for (final g in groups) {
-      if (g.items.any(
-        (i) => i.path == path || (path.startsWith(i.path) && i.path != root),
-      )) {
-        return g.label;
-      }
-    }
-    return null;
+/// Sidebar groups for [role], with links a staff member can't use removed.
+List<NavGroup> navGroupsFor(String? role, AppUser? user) {
+  final groups = switch (role) {
+    'super_admin' => adminNavGroups,
+    'affiliate' => affiliateNavGroups,
+    'delivery' => deliveryNavGroups,
+    _ => sellerNavGroups,
+  };
+  if (role == 'super_admin') return groups;
+  final out = <NavGroup>[];
+  for (final g in groups) {
+    final items = g.items.where((i) => staffCan(user, i.href)).toList();
+    if (items.isNotEmpty) out.add(NavGroup(g.label, items));
   }
+  return out;
 }
+
+List<NavItem> flatNav(String? role, AppUser? user) => [
+      for (final g in navGroupsFor(role, user)) ...g.items,
+    ];
+
+/// Account-settings route for a role (`PORTAL_PROFILE` in the web app).
+const Map<String, String> portalProfile = {
+  'vendor': '/vendor/profile',
+  'super_admin': '/admin/profile',
+  'affiliate': '/affiliate/profile',
+  'delivery': '/delivery/profile',
+};

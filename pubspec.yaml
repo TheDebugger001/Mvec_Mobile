@@ -48,6 +48,8 @@ dependencies:
   image_picker: ^1.2.3           # Picking a product photo from the phone gallery
   file_selector: ^1.1.0          # Picking a product photo from device files
   path_provider: ^2.1.6          # Where picked photos are copied so they survive a restart
+  url_launcher: ^6.3.1           # Opens the card-payment page and external links
+  http_parser: ^4.1.0            # MIME types for multipart image uploads
 
 dev_dependencies:
   flutter_test:
