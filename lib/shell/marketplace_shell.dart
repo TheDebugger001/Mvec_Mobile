@@ -13,6 +13,8 @@ import '../state/cart_state.dart';
 import '../state/catalog_state.dart';
 import '../state/notifications_state.dart';
 import '../widgets/common.dart';
+import '../widgets/mv_icon.dart';
+import '../widgets/theme_switch.dart';
 
 /// The five primary marketplace destinations, in the required order.
 /// (The web storefront's `main-nav-links`: Home, Shop, For You, Deals, Orders.)
@@ -41,6 +43,8 @@ int _activeIndex(Uri uri) {
   return -1;
 }
 
+const double _kTopBarHeight = 52 + 54;
+
 /// Storefront frame: top bar (menu, search, theme, wishlist, cart, account),
 /// left sidebar, and the five-item bottom navigation.
 class MarketplaceShell extends ConsumerWidget {
@@ -53,7 +57,7 @@ class MarketplaceShell extends ConsumerWidget {
     final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
     final cartNotice = ref.watch(cartProvider.select((c) => c.notice));
     return Scaffold(
-      appBar: const PreferredSize(preferredSize: Size.fromHeight(60), child: _TopBar()),
+      appBar: const PreferredSize(preferredSize: Size.fromHeight(_kTopBarHeight), child: _TopBar()),
       drawer: MarketplaceDrawer(location: uri),
       body: Column(
         children: [
@@ -90,42 +94,38 @@ class _TopBar extends ConsumerWidget {
         decoration: BoxDecoration(border: Border(bottom: BorderSide(color: mv.border))),
         child: SafeArea(
           bottom: false,
-          child: SizedBox(
-            height: 60,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  Builder(
-                    builder: (ctx) => _BarIcon(
-                      icon: Icons.menu_rounded,
-                      tooltip: 'Open menu',
-                      onTap: () => Scaffold.of(ctx).openDrawer(),
-                    ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Row 1: menu on the left; theme, wishlist, cart and account on the right.
+              SizedBox(
+                height: 52,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Row(
+                    children: [
+                      Builder(
+                        builder: (ctx) => _BarIcon(
+                          name: 'menu',
+                          tooltip: 'Open menu',
+                          onTap: () => Scaffold.of(ctx).openDrawer(),
+                        ),
+                      ),
+                      const Spacer(),
+                      const ThemeSwitch(),
+                      _BarIcon(name: 'heart', tooltip: 'Wishlist, $wishCount items', badge: wishCount, onTap: () => context.go('/wishlist')),
+                      _BarIcon(name: 'cart', tooltip: 'Cart, $cartCount items', badge: cartCount, onTap: () => context.go('/cart')),
+                      _AccountMenu(user: user),
+                    ],
                   ),
-                  const Expanded(child: _SearchPill()),
-                  const SizedBox(width: 2),
-                  _BarIcon(
-                    icon: dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                    tooltip: dark ? 'Switch to light mode' : 'Switch to dark mode',
-                    onTap: () => ref.read(themeModeProvider.notifier).set(dark ? ThemeMode.light : ThemeMode.dark),
-                  ),
-                  _BarIcon(
-                    icon: Icons.favorite_border_rounded,
-                    tooltip: 'Wishlist, $wishCount items',
-                    badge: wishCount,
-                    onTap: () => context.go('/wishlist'),
-                  ),
-                  _BarIcon(
-                    icon: Icons.shopping_cart_outlined,
-                    tooltip: 'Cart, $cartCount items',
-                    badge: cartCount,
-                    onTap: () => context.go('/cart'),
-                  ),
-                  _AccountMenu(user: user),
-                ],
+                ),
               ),
-            ),
+              // Row 2: search.
+              const Padding(
+                padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
+                child: SizedBox(height: 44, child: _SearchPill()),
+              ),
+            ],
           ),
         ),
       ),
@@ -134,8 +134,8 @@ class _TopBar extends ConsumerWidget {
 }
 
 class _BarIcon extends StatelessWidget {
-  const _BarIcon({required this.icon, required this.tooltip, required this.onTap, this.badge = 0});
-  final IconData icon;
+  const _BarIcon({required this.name, required this.tooltip, required this.onTap, this.badge = 0});
+  final String name;
   final String tooltip;
   final VoidCallback onTap;
   final int badge;
@@ -149,28 +149,28 @@ class _BarIcon extends StatelessWidget {
         onTap: onTap,
         radius: 22,
         child: SizedBox(
-          width: 38,
+          width: 40,
           height: 44,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(icon, size: 23, color: mv.text),
+              MvIcon(name, size: 21, color: mv.text, strokeWidth: 1.4),
               if (badge > 0)
                 Positioned(
-                  right: 1,
-                  top: 4,
+                  right: 3,
+                  top: 6,
                   child: Container(
-                    constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
+                    padding: const EdgeInsets.symmetric(horizontal: 3.5),
                     decoration: BoxDecoration(
                       color: MvColors.skyBlue,
-                      borderRadius: BorderRadius.circular(9),
-                      border: Border.all(color: mv.surface, width: 1.5),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: mv.surface, width: 1.2),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       badge > 99 ? '99+' : '$badge',
-                      style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800, height: 1),
+                      style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w700, height: 1),
                     ),
                   ),
                 ),
@@ -189,7 +189,7 @@ class _SearchPill extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mv = context.mv;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: EdgeInsets.zero,
       child: Semantics(
         button: true,
         label: 'Search products',
@@ -202,8 +202,8 @@ class _SearchPill extends ConsumerWidget {
             }
           },
           child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               color: mv.surfaceMuted,
               borderRadius: BorderRadius.circular(22),
@@ -211,10 +211,10 @@ class _SearchPill extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.search_rounded, size: 19, color: mv.textMuted),
-                const SizedBox(width: 6),
+                MvIcon('search', size: 18, color: mv.textMuted),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Search products…', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.textMuted, fontSize: 13.5)),
+                  child: Text('Search for products, brands and more…', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.textMuted, fontSize: 13)),
                 ),
               ],
             ),
@@ -236,7 +236,7 @@ class _AccountMenu extends ConsumerWidget {
     if (u == null) {
       return PopupMenuButton<String>(
         tooltip: 'Sign in or create an account',
-        icon: Icon(Icons.person_outline_rounded, size: 24, color: context.mv.text),
+        icon: MvIcon('user', size: 21, color: context.mv.text, strokeWidth: 1.4),
         padding: EdgeInsets.zero,
         onSelected: (v) {
           if (v == 'login') {
@@ -256,7 +256,7 @@ class _AccountMenu extends ConsumerWidget {
       tooltip: 'Account',
       padding: EdgeInsets.zero,
       offset: const Offset(0, 46),
-      icon: Avatar(name: u.fullName, url: u.avatarUrl, radius: 14),
+      icon: Avatar(name: u.fullName, url: u.avatarUrl, radius: 13),
       onSelected: (v) async {
         switch (v) {
           case 'profile':
@@ -273,7 +273,7 @@ class _AccountMenu extends ConsumerWidget {
         }
       },
       itemBuilder: (_) => [
-        PopupMenuItem(enabled: false, child: Text(u.fullName.isEmpty ? 'My account' : u.fullName, style: const TextStyle(fontWeight: FontWeight.w800))),
+        PopupMenuItem(enabled: false, child: Text(u.fullName.isEmpty ? 'My account' : u.fullName, style: const TextStyle(fontWeight: FontWeight.w700))),
         const PopupMenuItem(value: 'profile', child: Text('My account')),
         const PopupMenuItem(value: 'orders', child: Text('My orders')),
         const PopupMenuItem(value: 'notifications', child: Text('Notifications')),
@@ -354,14 +354,14 @@ class _BarItem extends StatelessWidget {
                 color: active ? mv.soft : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(mvIcon(dest.icon), size: 22, color: color),
+              child: MvIcon(dest.icon, size: 21, color: color, strokeWidth: active ? 1.7 : 1.4),
             ),
             const SizedBox(height: 2),
             Text(
               dest.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10.5, fontWeight: active ? FontWeight.w800 : FontWeight.w700, color: color),
+              style: TextStyle(fontSize: 10.5, fontWeight: active ? FontWeight.w700 : FontWeight.w700, color: color),
             ),
           ],
         ),
@@ -401,6 +401,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
     Widget link(String label, String icon, String location, {bool selected = false, int badge = 0}) => _DrawerLink(
           label: label,
           icon: mvIcon(icon),
+          svg: icon,
           selected: selected,
           badge: badge,
           onTap: () => _go(location),
@@ -419,7 +420,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
                   const MvLogo(size: 30),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text('MARKETPLACE', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.dmSans(fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: 1.4, color: mv.textMuted)),
+                    child: Text('MARKETPLACE', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.dmSans(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 1.4, color: mv.textMuted)),
                   ),
                   IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close_rounded), tooltip: 'Close menu'),
                 ],
@@ -440,7 +441,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(user.fullName.isEmpty ? 'MVEC user' : user.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w800, color: mv.text, fontSize: 14)),
+                            Text(user.fullName.isEmpty ? 'MVEC user' : user.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, color: mv.text, fontSize: 14)),
                             Text(_roleLabel(user.role), style: TextStyle(color: mv.textMuted, fontSize: 11.5)),
                           ],
                         ),
@@ -523,6 +524,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
                   ? _DrawerLink(
                       label: 'Become a vendor',
                       icon: mvIcon('shop'),
+                      svg: 'shop',
                       onTap: () {
                         Navigator.of(context).pop();
                         context.push('/signup?role=vendor');
@@ -531,6 +533,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
                   : _DrawerLink(
                       label: 'Sign out',
                       icon: mvIcon('logout'),
+                      svg: 'logout',
                       onTap: () async {
                         Navigator.of(context).pop();
                         await ref.read(authProvider.notifier).logout();
@@ -562,7 +565,7 @@ class _DrawerHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(10, 14, 10, 4),
-        child: Text(text.toUpperCase(), style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1.4, color: context.mv.textMuted)),
+        child: Text(text.toUpperCase(), style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.4, color: context.mv.textMuted)),
       );
 }
 
@@ -575,9 +578,11 @@ class _DrawerLink extends StatelessWidget {
     this.badge = 0,
     this.trailing,
     this.dense = false,
+    this.svg,
   });
   final String label;
   final IconData icon;
+  final String? svg;
   final VoidCallback onTap;
   final bool selected;
   final int badge;
@@ -599,14 +604,16 @@ class _DrawerLink extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 10, vertical: dense ? 8 : 11),
           child: Row(
             children: [
-              Icon(icon, size: dense ? 17 : 20, color: selected ? color : mv.textMuted),
+              svg != null
+                  ? MvIcon(svg!, size: 19, color: selected ? color : mv.textMuted, strokeWidth: 1.5)
+                  : Icon(icon, size: dense ? 17 : 20, color: selected ? color : mv.textMuted),
               const SizedBox(width: 12),
-              Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: dense ? 13 : 14, fontWeight: selected ? FontWeight.w800 : FontWeight.w600, color: color))),
+              Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: dense ? 13 : 14, fontWeight: selected ? FontWeight.w700 : FontWeight.w600, color: color))),
               if (badge > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: MvColors.skyBlue, borderRadius: BorderRadius.circular(9)),
-                  child: Text(badge > 99 ? '99+' : '$badge', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800)),
+                  child: Text(badge > 99 ? '99+' : '$badge', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700)),
                 ),
               if (trailing != null) trailing!,
             ],
@@ -695,7 +702,7 @@ class ProductSearchDelegate extends SearchDelegate<String?> {
           Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('No matching products or stores', style: TextStyle(color: mv.textMuted)))),
         ListTile(
           leading: Icon(Icons.search_rounded, color: mv.accentDeep),
-          title: Text('View all results for “${query.trim()}”', style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w800)),
+          title: Text('View all results for “${query.trim()}”', style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700)),
           onTap: () => close(context, query),
         ),
       ],

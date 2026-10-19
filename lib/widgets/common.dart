@@ -22,7 +22,7 @@ class MvLogo extends StatelessWidget {
         'MVEC',
         style: GoogleFonts.manrope(
           fontSize: size,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
           letterSpacing: -1,
           color: Colors.white,
         ),
@@ -80,7 +80,7 @@ class Avatar extends StatelessWidget {
       foregroundImage: u.isEmpty ? null : CachedNetworkImageProvider(u),
       child: Text(
         name.trim().isEmpty ? 'M' : name.trim()[0].toUpperCase(),
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: radius * .9),
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: radius * .9),
       ),
     );
   }
@@ -130,8 +130,8 @@ class GradientButton extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: compact ? 12.5 : 14,
+              fontWeight: FontWeight.w700,
+              fontSize: compact ? 12.5 : 13.5,
             ),
           ),
         ),
@@ -217,7 +217,7 @@ class OutlineBtn extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: compact ? 12.5 : 14),
+                    style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: compact ? 12.5 : 14),
                   ),
                 ),
               ],
@@ -278,7 +278,7 @@ class SolidButton extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: compact ? 12.5 : 14),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: compact ? 12.5 : 14),
                   ),
                 ),
               ],
@@ -339,7 +339,7 @@ class PageTitle extends StatelessWidget {
                 if (eyebrow != null)
                   Text(eyebrow!.toUpperCase(), style: context.mvEyebrow.copyWith(fontSize: 11, letterSpacing: 1.6)),
                 if (eyebrow != null) const SizedBox(height: 4),
-                Text(title, style: context.mvH1.copyWith(fontSize: 24)),
+                Text(title, style: context.mvH1.copyWith(fontSize: 20)),
                 if (subtitle != null && subtitle!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(subtitle!, style: TextStyle(color: mv.textMuted, fontSize: 13, height: 1.4)),
@@ -375,7 +375,7 @@ class SectionHeading extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (eyebrow != null) Text(eyebrow!, style: context.mvEyebrow.copyWith(fontSize: 10.5, letterSpacing: 1.6)),
-                Text(title, style: GoogleFonts.manrope(fontSize: 19, fontWeight: FontWeight.w800, color: mv.text)),
+                Text(title, style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: mv.text)),
               ],
             ),
           ),
@@ -383,7 +383,7 @@ class SectionHeading extends StatelessWidget {
             TextButton(
               onPressed: onAction,
               style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 32)),
-              child: Text(actionLabel!, style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w800, fontSize: 12.5)),
+              child: Text(actionLabel!, style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700, fontSize: 12.5)),
             ),
         ],
       ),
@@ -414,7 +414,7 @@ class EmptyState extends StatelessWidget {
               child: Icon(icon, color: mv.accentDeep, size: 28),
             ),
             const SizedBox(height: 14),
-            Text(title, textAlign: TextAlign.center, style: GoogleFonts.manrope(fontSize: 17, fontWeight: FontWeight.w800, color: mv.text)),
+            Text(title, textAlign: TextAlign.center, style: GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w600, color: mv.text)),
             if (message != null && message!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(message!, textAlign: TextAlign.center, style: TextStyle(color: mv.textMuted, fontSize: 13, height: 1.4)),
@@ -569,7 +569,7 @@ class InfoBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontWeight: FontWeight.w800, color: context.mv.text, fontSize: 14)),
+          Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: context.mv.text, fontSize: 14)),
           const SizedBox(height: 4),
           Text(text, style: TextStyle(color: dark ? MvColors.darkMuted : MvColors.infoBoxText, fontSize: 12.5, height: 1.4)),
           if (child != null) ...[const SizedBox(height: 10), child!],
@@ -607,7 +607,7 @@ class StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(color: fg, fontSize: 10.5, fontWeight: FontWeight.w900)),
+      child: Text(label, style: TextStyle(color: fg, fontSize: 10.5, fontWeight: FontWeight.w700)),
     );
   }
 }
@@ -646,7 +646,7 @@ class MetricCard extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text(value, style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w800, color: mv.text)),
+                  child: Text(value, style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: mv.text)),
                 ),
                 if (sub != null) Text(sub!, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: mv.textMuted)),
               ],
@@ -693,12 +693,12 @@ class SummaryRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: TextStyle(color: bold ? mv.text : mv.textMuted, fontWeight: bold ? FontWeight.w800 : FontWeight.w500, fontSize: bold ? 15 : 13))),
+          Expanded(child: Text(label, style: TextStyle(color: bold ? mv.text : mv.textMuted, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, fontSize: bold ? 15 : 13))),
           const SizedBox(width: 8),
           Flexible(
             child: Text(value,
                 textAlign: TextAlign.right,
-                style: TextStyle(fontWeight: FontWeight.w800, color: valueColor ?? mv.text, fontSize: bold ? 17 : 13.5, )),
+                style: TextStyle(fontWeight: FontWeight.w700, color: valueColor ?? mv.text, fontSize: bold ? 17 : 13.5, )),
           ),
         ],
       ),
@@ -737,7 +737,7 @@ class QtyStepper extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           btn(Icons.remove_rounded, value > min, () => onChanged(value - 1), 'Decrease quantity'),
-          SizedBox(width: 30, child: Center(child: Text('$value', style: TextStyle(fontWeight: FontWeight.w800, color: mv.text)))),
+          SizedBox(width: 30, child: Center(child: Text('$value', style: TextStyle(fontWeight: FontWeight.w700, color: mv.text)))),
           btn(Icons.add_rounded, value < max, () => onChanged(value + 1), 'Increase quantity'),
         ],
       ),
@@ -817,7 +817,7 @@ Future<bool> confirmDialog(BuildContext context, String message, {String confirm
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
-          child: Text(confirm, style: TextStyle(color: danger ? MvColors.errorText : MvColors.skyBlue, fontWeight: FontWeight.w800)),
+          child: Text(confirm, style: TextStyle(color: danger ? MvColors.errorText : MvColors.skyBlue, fontWeight: FontWeight.w700)),
         ),
       ],
     ),
@@ -841,7 +841,7 @@ Future<String?> promptDialog(BuildContext context, String title, {String? hint, 
             if (required && t.isEmpty) return;
             Navigator.pop(ctx, t);
           },
-          child: Text(confirm, style: const TextStyle(fontWeight: FontWeight.w800)),
+          child: Text(confirm, style: const TextStyle(fontWeight: FontWeight.w700)),
         ),
       ],
     ),

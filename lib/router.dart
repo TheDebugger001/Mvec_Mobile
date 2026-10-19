@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/nav_items.dart';
+import 'features/auth/forgot_password_page.dart';
 import 'features/auth/login_page.dart';
+import 'features/auth/signup_page.dart';
 import 'features/common/coming_soon.dart';
 import 'features/marketplace/home_page.dart';
 import 'features/marketplace/shop_page.dart';
@@ -53,7 +55,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return _needsLogin(path) ? '/login?next=${Uri.encodeQueryComponent(here)}' : null;
       }
       // Signed in people never sit on the sign-in pages.
-      if (path == '/login') {
+      if (path == '/login' || path == '/signup') {
         final next = state.uri.queryParameters['next'] ?? '';
         return next.isNotEmpty && next.startsWith('/') && !next.startsWith('//') ? next : (roleHome[user.role] ?? '/');
       }
@@ -68,9 +70,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/boot', builder: (_, __) => const Scaffold(body: Center(child: LoadingState(label: 'Loading MVEC…')))),
-      GoRoute(path: '/login', builder: (_, s) => LoginPage(next: s.uri.queryParameters['next'] ?? '')),
-      GoRoute(path: '/signup', builder: (_, __) => const Scaffold(body: ComingSoonPage(title: 'Create account'))),
-      GoRoute(path: '/forgot-password', builder: (_, __) => const Scaffold(body: ComingSoonPage(title: 'Forgot password'))),
+      GoRoute(path: '/login', builder: (_, s) => LoginPage(next: s.uri.queryParameters['next'] ?? '', checkout: s.uri.queryParameters['checkout'] == '1')),
+      GoRoute(path: '/signup', builder: (_, s) => SignupPage(role: s.uri.queryParameters['role'], next: s.uri.queryParameters['next'] ?? '')),
+      GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordPage()),
       ShellRoute(
         builder: (context, state, child) => MarketplaceShell(uri: state.uri, child: child),
         routes: [

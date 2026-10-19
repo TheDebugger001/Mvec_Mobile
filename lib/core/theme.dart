@@ -261,9 +261,10 @@ ThemeData buildAppTheme(Brightness brightness) {
     dividerColor: border,
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
+    // Mobile-sized, light type: DM Sans at ~90% of the Material defaults.
     textTheme: GoogleFonts.dmSansTextTheme(
       base.textTheme,
-    ).apply(bodyColor: text, displayColor: text),
+    ).apply(bodyColor: text, displayColor: text, fontSizeFactor: .92),
     appBarTheme: AppBarTheme(
       backgroundColor: headerBg,
       elevation: 0,
@@ -271,8 +272,8 @@ ThemeData buildAppTheme(Brightness brightness) {
       centerTitle: false,
       iconTheme: IconThemeData(color: text),
       titleTextStyle: GoogleFonts.manrope(
-        fontSize: 17,
-        fontWeight: FontWeight.w800,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
         color: text,
       ),
     ),
@@ -293,10 +294,10 @@ ThemeData buildAppTheme(Brightness brightness) {
       filled: true,
       fillColor: surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      hintStyle: GoogleFonts.dmSans(fontSize: 13, color: muted),
+      hintStyle: GoogleFonts.dmSans(fontSize: 13, color: muted, fontWeight: FontWeight.w400),
       labelStyle: GoogleFonts.dmSans(
-        fontSize: 12,
-        fontWeight: FontWeight.w800,
+        fontSize: 12.5,
+        fontWeight: FontWeight.w500,
         color: muted,
       ),
       border: OutlineInputBorder(
@@ -322,7 +323,7 @@ ThemeData buildAppTheme(Brightness brightness) {
         backgroundColor: MvColors.skyBlue,
         foregroundColor: Colors.white,
         elevation: 0,
-        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
       ),
@@ -331,7 +332,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       style: FilledButton.styleFrom(
         backgroundColor: MvColors.skyBlue,
         foregroundColor: Colors.white,
-        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
       ),
@@ -341,7 +342,7 @@ ThemeData buildAppTheme(Brightness brightness) {
         foregroundColor: text,
         side: BorderSide(color: border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     ),
@@ -353,7 +354,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       unselectedLabelColor: muted,
       indicatorColor: MvColors.skyBlue,
       indicatorSize: TabBarIndicatorSize.label,
-      labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+      labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: text,
@@ -379,21 +380,21 @@ ThemeData buildAppTheme(Brightness brightness) {
     badgeTheme: BadgeThemeData(
       backgroundColor: MvColors.skyBlue,
       textColor: Colors.white,
-      textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+      textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
     ),
   );
 }
 
 extension MvHeadingX on BuildContext {
   TextStyle get mvH1 => GoogleFonts.manrope(
-    fontSize: 28,
-    fontWeight: FontWeight.w800,
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
     color: Theme.of(this).colorScheme.onSurface,
   );
   TextStyle get mvEyebrow => GoogleFonts.dmSans(
-    fontSize: 12,
-    fontWeight: FontWeight.w800,
-    letterSpacing: 2,
+    fontSize: 10.5,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 1.4,
     color: mv.accentDeep,
   );
 }

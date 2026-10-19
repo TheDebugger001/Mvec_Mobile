@@ -48,6 +48,7 @@ dependencies:
   image_picker: ^1.2.3           # Picking a product photo from the phone gallery
   file_selector: ^1.1.0          # Picking a product photo from device files
   path_provider: ^2.1.6          # Where picked photos are copied so they survive a restart
+  flutter_svg: ^2.0.10+1         # The web app's thin line icons (same SVG paths)
   url_launcher: ^6.3.1           # Opens the card-payment page and external links
   http_parser: ^4.1.0            # MIME types for multipart image uploads
 
@@ -75,6 +76,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - .env
+    - assets/images/
 
   fonts:
     - family: Roboto
