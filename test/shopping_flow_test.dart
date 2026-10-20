@@ -49,7 +49,7 @@ void main() {
     final backend = FakeBackend({
       ...baseRoutes(),
       'POST /shipping/quote': (_) => (200, {'deliverable': true, 'shippingFee': 0, 'groups': [{'storeName': 'Kigali Gadgets', 'pickup': {'address': 'KN 4 Ave'}}]}),
-      'POST /auth/guest/send-code': (_) => (200, {'devCode': '123456'}),
+      'POST /auth/guest/send-code': (_) => (200, {'message': 'We emailed a 6-digit code to gu•••@example.com.'}),
       'POST /auth/guest/verify': (_) => (200, {'token': 'guest-jwt', 'user': userJson('buyer'), 'guest': true}),
       'POST /orders/direct-checkout': (_) => (201, {'order': orderJson()}),
       'GET /auth/me': (_) => (200, {'user': userJson('buyer')}),

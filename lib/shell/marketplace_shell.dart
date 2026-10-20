@@ -11,6 +11,7 @@ import '../models/user.dart';
 import '../state/auth_state.dart';
 import '../state/cart_state.dart';
 import '../state/catalog_state.dart';
+import '../state/compare_state.dart';
 import '../state/notifications_state.dart';
 import '../widgets/common.dart';
 import '../widgets/mv_icon.dart';
@@ -87,8 +88,6 @@ class _TopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mv = context.mv;
-    final cartCount = ref.watch(cartProvider.select((c) => c.count));
-    final wishCount = ref.watch(wishlistProvider.select((w) => w.length));
     final user = ref.watch(authProvider.select((a) => a.user));
     final dark = context.isDarkMode;
 
@@ -118,8 +117,7 @@ class _TopBar extends ConsumerWidget {
                       ),
                       const Spacer(),
                       const ThemeSwitch(),
-                      _BarIcon(name: 'heart', tooltip: 'Wishlist, $wishCount items', badge: wishCount, onTap: () => context.go('/wishlist')),
-                      _BarIcon(name: 'cart', tooltip: 'Cart, $cartCount items', badge: cartCount, onTap: () => context.go('/cart')),
+                      const ShopShortcuts(),
                       _AccountMenu(user: user),
                     ],
                   ),
@@ -134,6 +132,27 @@ class _TopBar extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Compare, wishlist and cart, with counts. On the storefront top bar and on
+/// every full-screen shopping page, so they are always one tap away.
+class ShopShortcuts extends ConsumerWidget {
+  const ShopShortcuts({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cartCount = ref.watch(cartProvider.select((c) => c.count));
+    final wishCount = ref.watch(wishlistProvider.select((w) => w.length));
+    final compareCount = ref.watch(compareProvider.select((c) => c.length));
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _BarIcon(name: 'compare', tooltip: 'Compare, $compareCount products', badge: compareCount, onTap: () => context.go('/buyer/compare')),
+        _BarIcon(name: 'heart', tooltip: 'Wishlist, $wishCount items', badge: wishCount, onTap: () => context.go('/wishlist')),
+        _BarIcon(name: 'cart', tooltip: 'Cart, $cartCount items', badge: cartCount, onTap: () => context.go('/cart')),
+      ],
     );
   }
 }
@@ -513,7 +532,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
                     if (user.role == 'buyer') link('Subscription', 'wallet', '/buyer/subscription', selected: path == '/buyer/subscription'),
                     link('My account', 'user', '/profile', selected: path == '/profile'),
                   ],
-                  link('Compare', 'chart', '/buyer/compare', selected: path == '/buyer/compare'),
+                  link('Compare', 'compare', '/buyer/compare', selected: path == '/buyer/compare'),
                   link('Help & Support', 'bell', '/buyer/support', selected: path == '/buyer/support'),
                   if (dashboard != null) ...[
                     const _DrawerHeading('Workspace'),

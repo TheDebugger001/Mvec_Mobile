@@ -5,11 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../api/auth_api.dart';
 import '../../core/api_client.dart';
 import '../../core/redirect.dart';
+import '../../core/theme.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
 import 'auth_scaffold.dart';
 
-/// `/login` — email or phone plus password, or a code texted to the phone for
+/// `/login` — email or phone plus password, or a one-time code to the phone for
 /// people who ordered as a guest (`pages/Login.jsx`).
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key, this.next = '', this.checkout = false});
@@ -29,7 +30,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   String _error = '';
   bool _codeMode = false;
   bool _codeSent = false;
-  String _devCode = '';
+  String _sentTo = '';
 
   @override
   void dispose() {
@@ -69,7 +70,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         if (_phone.text.trim().isEmpty) throw ApiException('Enter your phone number.');
         try {
           final res = await AuthApi.guestSendCode(_phone.text.trim());
-          if (mounted) setState(() => _devCode = '${res['devCode'] ?? ''}');
+          if (mounted) setState(() => _sentTo = '${res['message'] ?? ''}');
         } on ApiException catch (e) {
           // A code sent less than a minute ago is still valid.
           if (e.statusCode != 429) rethrow;
@@ -148,9 +149,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               decoration: const InputDecoration(labelText: '6-digit code', counterText: ''),
             ),
           ],
-          if (_devCode.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Development code: $_devCode', style: const TextStyle(fontSize: 12))),
+          if (_codeSent && _sentTo.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_sentTo, style: TextStyle(fontSize: 12, color: context.mv.textMuted))),
           const SizedBox(height: 14),
-          GradientButton(label: _codeSent ? 'Log in' : 'Text me a code', expand: true, loading: _busy, onPressed: _codeSent ? _verifyCode : _sendCode),
+          GradientButton(label: _codeSent ? 'Log in' : 'Send me a code', expand: true, loading: _busy, onPressed: _codeSent ? _verifyCode : _sendCode),
           TextButton(
             onPressed: () => setState(() {
               _codeMode = false;

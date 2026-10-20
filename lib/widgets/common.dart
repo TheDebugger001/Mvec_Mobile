@@ -7,6 +7,7 @@ import '../core/api_client.dart';
 import '../core/format.dart';
 import '../core/icons.dart';
 import '../core/theme.dart';
+import 'theme_switch.dart';
 
 /// "MVEC" wordmark with the brand gradient.
 class MvLogo extends StatelessWidget {
@@ -783,19 +784,13 @@ class PaginationBar extends StatelessWidget {
   }
 }
 
-/// Dark mode switch for the top bars.
-class ThemeToggleButton extends ConsumerWidget {
+/// Dark mode switch for the dashboard top bars: the same sun/moon switch as
+/// the storefront, so it looks the same everywhere.
+class ThemeToggleButton extends StatelessWidget {
   const ThemeToggleButton({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final dark = context.isDarkMode;
-    return IconButton(
-      tooltip: dark ? 'Switch to light mode' : 'Switch to dark mode',
-      onPressed: () => ref.read(themeModeProvider.notifier).set(dark ? ThemeMode.light : ThemeMode.dark),
-      icon: Icon(dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined, size: 22),
-    );
-  }
+  Widget build(BuildContext context) => const ThemeSwitch();
 }
 
 /// Shows a floating message at the bottom of the screen.

@@ -24,7 +24,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   String _resetToken = '';
   String _message = '';
   String _error = '';
-  String _devCode = '';
   bool _busy = false;
 
   @override
@@ -56,7 +55,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         }
         final res = await AuthApi.forgotPassword(_identity.text);
         setState(() {
-          _devCode = '${res['devCode'] ?? ''}';
           _code.clear();
           _step = 2;
           _message = '${res['message'] ?? 'If an account uses ${_identity.text.trim()}, we sent it a 6-digit code.'}';
@@ -112,7 +110,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             decoration: const InputDecoration(labelText: '6-digit code', counterText: ''),
             onSubmitted: (_) => _verify(),
           ),
-          if (_devCode.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Development code: $_devCode', style: const TextStyle(fontSize: 12))),
           const SizedBox(height: 14),
           GradientButton(label: 'Verify code', expand: true, loading: _busy, onPressed: _verify),
           TextButton(onPressed: _busy ? null : _sendCode, child: const Text('Send a new code')),
