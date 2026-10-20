@@ -565,6 +565,28 @@ class HelpPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
+                'Contact MVEC',
+                style: TextStyle(fontWeight: FontWeight.w600, color: mv.text),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Questions about a payment, a delivery or your account? Send MVEC a request and follow the replies here.',
+                style: TextStyle(color: mv.textMuted, fontSize: 12.5),
+              ),
+              const SizedBox(height: 10),
+              OutlineBtn(
+                label: 'Send a request',
+                compact: true,
+                onPressed: () => context.push('/buyer/support/requests'),
+              ),
+            ],
+          ),
+        ),
+        DataCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
                 'Common questions',
                 style: TextStyle(fontWeight: FontWeight.w600, color: mv.text),
               ),

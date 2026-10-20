@@ -17,12 +17,13 @@ class NavGroup {
 /// Where each role lands, and what its dashboard is called.
 const Map<String, String> roleHome = {
   'vendor': '/vendor',
+  'supplier': '/supplier',
   'affiliate': '/affiliate',
   'delivery': '/delivery',
   'super_admin': '/admin',
 };
 
-/// Roles that have a mobile dashboard. (Supplier is not implemented yet.)
+/// Roles that have a dashboard.
 bool hasDashboard(String? role) => roleHome.containsKey(role);
 
 // The groups below are the web app's `*NavGroups` from `src/data/navItems.js`,
@@ -35,6 +36,7 @@ const adminNavGroups = <NavGroup>[
   ]),
   NavGroup('People & Stores', [
     NavItem('/admin/vendors', 'Sellers', 'shop'),
+    NavItem('/admin/suppliers', 'Suppliers', 'shop'),
     NavItem('/admin/affiliates', 'Affiliates', 'users'),
     NavItem('/admin/users', 'Users', 'users'),
   ]),
@@ -117,6 +119,33 @@ const sellerNavGroups = <NavGroup>[
   ]),
 ];
 
+const supplierNavGroups = <NavGroup>[
+  NavGroup('Overview', [NavItem('/supplier', 'Dashboard', 'grid')]),
+  NavGroup('Catalog & Orders', [
+    NavItem('/supplier/products', 'Wholesale Products', 'box'),
+    NavItem('/supplier/inventory', 'Inventory', 'grid'),
+    NavItem('/supplier/orders', 'Orders', 'cart'),
+    NavItem('/supplier/quotes', 'Quote Requests', 'receipt'),
+  ]),
+  NavGroup('Finance & Insights', [
+    NavItem('/supplier/payments', 'Payments', 'wallet'),
+    NavItem('/supplier/transactions', 'Transactions', 'wallet'),
+    NavItem('/supplier/analytics', 'Analytics', 'chart'),
+    NavItem('/supplier/reports', 'Reports', 'chart'),
+    NavItem('/supplier/reviews', 'Reviews', 'heart'),
+    NavItem('/supplier/subscription', 'Subscription', 'tag'),
+  ]),
+  NavGroup('Team & Settings', [
+    NavItem('/supplier/team', 'Team / Staff', 'users'),
+    NavItem('/supplier/settings', 'Settings', 'settings'),
+  ]),
+  NavGroup('Support', [
+    NavItem('/supplier/messages', 'Messages', 'users'),
+    NavItem('/supplier/notifications', 'Notifications', 'bell'),
+    NavItem('/supplier/support', 'MVEC Support', 'bell'),
+  ]),
+];
+
 const affiliateNavGroups = <NavGroup>[
   NavGroup('Overview', [NavItem('/affiliate', 'Dashboard', 'grid')]),
   NavGroup('Promotion', [
@@ -155,6 +184,7 @@ const deliveryNavGroups = <NavGroup>[
 /// (the MVEC wallet) and Users.
 const Map<String, List<String>> mobilePrimaryByRole = {
   'vendor': ['/vendor', '/vendor/products', '/vendor/orders', '/vendor/payouts'],
+  'supplier': ['/supplier', '/supplier/products', '/supplier/orders', '/supplier/payments'],
   'super_admin': ['/admin', '/admin/orders', '/admin/commissions', '/admin/users'],
   'affiliate': ['/affiliate', '/affiliate/links', '/affiliate/wallet', '/affiliate/withdrawals'],
   'delivery': ['/delivery', '/delivery/deliveries', '/delivery/history', '/delivery/messages'],
@@ -174,26 +204,23 @@ const _vendorStaffPermission = <String, String>{
   '/vendor/products': 'canManageProducts',
   '/vendor/inventory': 'canManageProducts',
   '/vendor/categories': 'canManageProducts',
-  '/vendor/promotions': 'canManageMarketing',
-  '/vendor/purchases': 'canManageProducts',
-  '/vendor/suppliers': 'canManageProducts',
+  '/vendor/promotions': 'canManageProducts',
   '/vendor/orders': 'canManageOrders',
+  '/vendor/purchases': 'canManageOrders',
   '/vendor/quotes': 'canManageOrders',
   '/vendor/customers': 'canManageOrders',
   '/vendor/refunds': 'canManageOrders',
   '/vendor/delivery': 'canManageOrders',
   '/vendor/payouts': 'canManagePayouts',
   '/vendor/transactions': 'canManagePayouts',
-  '/vendor/subscription': 'canManagePayouts',
-  '/vendor/affiliates': 'canManageMarketing',
-  '/vendor/advertisements': 'canManageMarketing',
-  '/vendor/reviews': 'canManageMarketing',
   '/vendor/analytics': 'canViewAnalytics',
   '/vendor/reports': 'canViewAnalytics',
   '/vendor/team': 'canManageStaff',
   '/vendor/stores': 'canManageSettings',
   '/vendor/shipping': 'canManageSettings',
   '/vendor/settings': 'canManageSettings',
+  '/vendor/advertisements': 'canManageSettings',
+  '/vendor/subscription': 'canManageSettings',
 };
 
 String? permissionForPath(String path) {
@@ -222,6 +249,7 @@ const staffRoleLabel = {
 List<NavGroup> navGroupsFor(String? role, AppUser? user) {
   final groups = switch (role) {
     'super_admin' => adminNavGroups,
+    'supplier' => supplierNavGroups,
     'affiliate' => affiliateNavGroups,
     'delivery' => deliveryNavGroups,
     _ => sellerNavGroups,
@@ -242,6 +270,7 @@ List<NavItem> flatNav(String? role, AppUser? user) => [
 /// Account-settings route for a role (`PORTAL_PROFILE` in the web app).
 const Map<String, String> portalProfile = {
   'vendor': '/vendor/profile',
+  'supplier': '/supplier/profile',
   'super_admin': '/admin/profile',
   'affiliate': '/affiliate/profile',
   'delivery': '/delivery/profile',

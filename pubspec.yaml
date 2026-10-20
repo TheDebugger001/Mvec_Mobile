@@ -51,6 +51,7 @@ dependencies:
   flutter_svg: ^2.0.10+1         # The web app's thin line icons (same SVG paths)
   url_launcher: ^6.3.1           # Opens the card-payment page and external links
   http_parser: ^4.1.0            # MIME types for multipart image uploads
+  share_plus: ^12.0.2            # Shares affiliate links through the phone share sheet
 
 dev_dependencies:
   flutter_test:

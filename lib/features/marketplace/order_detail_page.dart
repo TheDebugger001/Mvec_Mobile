@@ -12,6 +12,7 @@ import '../../core/order_rules.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../common/page_frame.dart';
+import '../../portal/shared_pages.dart';
 
 const _steps = <({String label, String by, List<String> statuses, String text})>[
   (label: 'Order placed', by: 'You', statuses: ['PENDING'], text: 'The items are reserved for you for 30 minutes while you pay.'),
@@ -59,6 +60,10 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   final _description = TextEditingController();
   bool _reportBusy = false;
 
+  /// This order's latest problem report, shown as a live case.
+  String? _caseId;
+  bool _caseOpen = false;
+
   String _reviewProduct = '';
   int _rating = 5;
   final _reviewText = TextEditingController();
@@ -69,6 +74,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   void initState() {
     super.initState();
     _load();
+    _findCase();
     _clock = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && _order != null && paidCancelRemaining(_order!, _now) > Duration.zero) setState(() => _now = DateTime.now());
     });
@@ -90,6 +96,23 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       if (mounted) setState(() => _loadError = errorText(e));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  static const _closedCase = ['RESOLVED_BUYER_REFUNDED', 'RESOLVED_VENDOR_RELEASED', 'RESOLVED_SPLIT', 'REJECTED', 'WITHDRAWN'];
+
+  Future<void> _findCase() async {
+    try {
+      final mine = (await DisputesApi.mine()).where((d) => idOf(d['order']) == widget.id || strOf(d['order']) == widget.id).toList()
+        ..sort((a, b) => (parseDate(b['createdAt']) ?? DateTime(2000)).compareTo(parseDate(a['createdAt']) ?? DateTime(2000)));
+      if (mine.isNotEmpty && mounted) {
+        setState(() {
+          _caseId = idOf(mine.first);
+          _caseOpen = !_closedCase.contains(mine.first['status']);
+        });
+      }
+    } catch (_) {
+      // The order page still works without the case.
     }
   }
 
@@ -135,8 +158,9 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       await DisputesApi.open(orderId: strOf(o['id']), reason: _reason, description: _description.text.trim(), amount: numOf(o['totalAmount']));
       setState(() {
         _order = {...o, 'paymentStatus': 'DISPUTED'};
-        _notice = (ok: true, text: "Your problem was reported. MVEC support will review the order, and the seller's payment is on hold meanwhile.");
+        _notice = (ok: true, text: 'Your problem was reported. The seller and MVEC have been told, and the payment is on hold meanwhile.');
       });
+      await _findCase();
     } catch (e) {
       setState(() => _notice = (ok: false, text: errorText(e)));
     } finally {
@@ -345,7 +369,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                 ],
               ),
             ),
-          if (o['paymentStatus'] == 'PAID' && !cancelled)
+          if (o['paymentStatus'] == 'PAID' && !cancelled && !_caseOpen)
             DataCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,7 +392,12 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                 ],
               ),
             ),
-          if (o['paymentStatus'] == 'DISPUTED')
+          if (_caseId != null)
+            DataCard(child: DisputeCaseView(key: ValueKey(_caseId), caseId: _caseId!, onChanged: () {
+              _findCase();
+              _load();
+            }))
+          else if (o['paymentStatus'] == 'DISPUTED')
             InfoBox(title: 'Problem reported', text: 'MVEC support is reviewing this order. You can follow it under Refunds.', child: Align(alignment: Alignment.centerLeft, child: OutlineBtn(label: 'Open refunds', compact: true, onPressed: () => context.push('/buyer/refunds')))),
         ],
       ),

@@ -14,6 +14,7 @@ import '../../state/auth_state.dart';
 import '../../state/notifications_state.dart';
 import '../../widgets/common.dart';
 import '../common/page_frame.dart';
+import '../../portal/shared_pages.dart';
 
 /// `/buyer/notifications` — the account's notifications (`NotificationPanel`).
 class NotificationsPage extends ConsumerStatefulWidget {
@@ -99,7 +100,11 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(color: n['isRead'] == true ? mv.surface : mv.soft, border: Border.all(color: mv.border), borderRadius: BorderRadius.circular(12)),
               child: ListTile(
-                onTap: () => _markRead(n),
+                onTap: () {
+                  _markRead(n);
+                  final link = strOf(n['link']);
+                  if (link.startsWith('/') && !link.startsWith('//')) context.push(link);
+                },
                 dense: true,
                 leading: Icon(n['isRead'] == true ? Icons.notifications_none_rounded : Icons.notifications_active_outlined, color: mv.accentDeep, size: 22),
                 title: Text(strOf(n['title'], 'Notification'), style: TextStyle(fontWeight: n['isRead'] == true ? FontWeight.w500 : FontWeight.w700, fontSize: 13)),
@@ -462,7 +467,10 @@ class _RefundsPageState extends State<RefundsPage> {
           if (_error.isNotEmpty) ErrorState(error: _error, onRetry: _load),
           if (!_loading && _error.isEmpty && _rows.isEmpty) const EmptyState(title: 'No refund requests yet'),
           for (final r in _rows)
-            Container(
+            InkWell(
+              onTap: () => openDisputeCase(context, idOf(r), onChanged: _load),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: mv.surface, border: Border.all(color: mv.border), borderRadius: BorderRadius.circular(12)),
@@ -472,7 +480,9 @@ class _RefundsPageState extends State<RefundsPage> {
                 Text('Order ${strOf(asMap(r['order'])['orderNumber'], '—')} · ${_disputeReason[r['reason']] ?? statusLabel(r['reason'])}', style: TextStyle(color: mv.textMuted, fontSize: 12)),
                 Text('${money(r['disputedAmount'])} · ${formatDate(r['createdAt'])}', style: TextStyle(color: mv.textMuted, fontSize: 12)),
                 if (strOf(asMap(r['arbitrationDecision'])['decision']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('MVEC decision: ${statusLabel(asMap(r['arbitrationDecision'])['decision'])}', style: const TextStyle(fontSize: 12.5))),
+                Padding(padding: const EdgeInsets.only(top: 6), child: Text('Open the case', style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700, fontSize: 12.5))),
               ]),
+            ),
             ),
         ],
       ),

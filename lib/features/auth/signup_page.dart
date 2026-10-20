@@ -10,10 +10,11 @@ import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
 import 'auth_scaffold.dart';
 
-/// Account types offered on mobile. (Supplier is not implemented yet.)
+/// Account types (same as the web's Signup).
 const _roles = <String, (String, String)>{
   'buyer': ('Buyer account', 'Browse products, place orders and manage your purchases.'),
   'vendor': ('Vendor account', 'Create a store, sell products and reach customers.'),
+  'supplier': ('Supplier account', 'List wholesale products and reach customers.'),
   'affiliate': ('Affiliate account', 'Promote products and earn commission on qualifying sales.'),
 };
 
@@ -51,7 +52,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     if (_name.text.trim().length < 2) return 'Please enter your full name.';
     if (!isRwandanPhone(_phone.text)) return 'Enter a Rwandan mobile number, for example 0788 123 456.';
     if (_email.text.trim().isNotEmpty && !isEmail(_email.text)) return 'Enter a valid email address or leave it empty.';
-    if (_role == 'vendor' && _company.text.trim().isEmpty) return 'Please enter your business name.';
+    if ((_role == 'vendor' || _role == 'supplier') && _company.text.trim().isEmpty) return 'Please enter your business name.';
     if (_password.text.length < 8) return 'Your password must be at least 8 characters.';
     if (_password.text != _confirm.text) return 'Passwords do not match';
     return null;
@@ -125,6 +126,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           items: const [
             DropdownMenuItem(value: 'buyer', child: Text('Buyer')),
             DropdownMenuItem(value: 'vendor', child: Text('Vendor')),
+            DropdownMenuItem(value: 'supplier', child: Text('Supplier')),
             DropdownMenuItem(value: 'affiliate', child: Text('Affiliate marketer')),
           ],
           onChanged: (v) => setState(() => _role = v ?? 'buyer'),
@@ -141,12 +143,12 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           ],
           onChanged: (v) => setState(() => _gender = v ?? ''),
         ),
-        if (_role == 'vendor') ...[
+        if (_role == 'vendor' || _role == 'supplier') ...[
           const SizedBox(height: 12),
           TextField(
             controller: _company,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(labelText: 'Store / company name', hintText: 'Enter business name'),
+            decoration: InputDecoration(labelText: _role == 'supplier' ? 'Business name' : 'Store / company name', hintText: 'Enter business name'),
           ),
         ],
         const SizedBox(height: 12),

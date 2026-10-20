@@ -66,7 +66,8 @@ void main() {
     await tester.enterText(field('Password'), 'Vendor@123');
     await tester.tap(find.text('Log in').last);
     await settle(tester, frames: 20);
-    expect(find.text('Dashboard coming next'), findsOneWidget);
+    expect(find.text('SELLER PLATFORM'), findsOneWidget);
+    expect(find.text('Products'), findsWidgets); // dashboard bottom bar
   });
 
   testWidgets('sign-up validates, then registers with the backend payload', (tester) async {

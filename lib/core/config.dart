@@ -34,3 +34,20 @@ String get apiOrigin => apiBaseUrl.replaceFirst(RegExp(r'/api$'), '');
 
 /// Key the session token is stored under.
 const String kTokenKey = 'huska_token';
+
+/// Where the MVEC website lives, for links people share (payment links,
+/// affiliate links). `--dart-define=WEB_URL=...`, then `WEB_URL` in `.env`;
+/// otherwise the local web dev server next to the API.
+String get webOrigin {
+  const defined = String.fromEnvironment('WEB_URL');
+  var url = defined.trim();
+  if (url.isEmpty) {
+    try {
+      url = (dotenv.maybeGet('WEB_URL') ?? '').trim();
+    } catch (_) {
+      // dotenv not loaded (tests).
+    }
+  }
+  if (url.isEmpty) url = apiOrigin.replaceFirst(RegExp(r':4000$'), ':5173');
+  return url.replaceAll(RegExp(r'/+$'), '');
+}

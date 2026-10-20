@@ -137,7 +137,7 @@ class GradientButton extends StatelessWidget {
         ),
       ],
     );
-    return Opacity(
+    final button = Opacity(
       opacity: enabled ? 1 : .55,
       child: Material(
         color: Colors.transparent,
@@ -159,6 +159,7 @@ class GradientButton extends StatelessWidget {
         ),
       ),
     );
+    return Semantics(container: true, button: true, enabled: enabled, child: button);
   }
 }
 
@@ -188,7 +189,7 @@ class OutlineBtn extends StatelessWidget {
     final mv = context.mv;
     final color = danger ? MvColors.dangerBtn : mv.accentDeep;
     final enabled = onPressed != null && !loading;
-    return Opacity(
+    final button = Opacity(
       opacity: enabled ? 1 : .55,
       child: Material(
         color: mv.surface,
@@ -226,6 +227,7 @@ class OutlineBtn extends StatelessWidget {
         ),
       ),
     );
+    return Semantics(container: true, button: true, enabled: enabled, child: button);
   }
 }
 
@@ -253,7 +255,7 @@ class SolidButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !loading;
-    return Opacity(
+    final button = Opacity(
       opacity: enabled ? 1 : .55,
       child: Material(
         color: color ?? const Color(0xFF172B34),
@@ -287,6 +289,7 @@ class SolidButton extends StatelessWidget {
         ),
       ),
     );
+    return Semantics(container: true, button: true, enabled: enabled, child: button);
   }
 }
 
