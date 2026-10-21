@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../widgets/motion.dart' show MvPageTransitionsBuilder;
+
 /// Design tokens lifted from MVEC frontend `src/styles.css`.
 class MvColors {
   MvColors._();
@@ -24,12 +26,19 @@ class MvColors {
     colors: [accentLight, primary, primaryDark],
   );
 
-  static const ink = Color(0xFF16252D);
-  static const muted = Color(0xFF71808A);
-  static const border = Color(0xFFE4EDF1);
-  static const soft = Color(0xFFEEFAFF);
-  static const page = Color(0xFFF7FBFD);
-  static const surface2 = Color(0xFFF7FAFB);
+  static const ink = Color(0xFF173448);
+  static const navy = ink;
+  static const muted = Color(0xFF64748B);
+  static const border = Color(0xFFE1EAF0);
+  static const soft = Color(0xFFEAF8FE);
+  static const page = Color(0xFFF5F9FC);
+  static const surface2 = Color(0xFFF0F5F9);
+
+  // Small supporting accents: never for large areas or body text.
+  static const pink = Color(0xFFF5E8F2);
+  static const mint = Color(0xFFE5F7EE);
+  /// Saved-heart colour (readable on white and on [pink]).
+  static const rose = Color(0xFFE0457B);
   static const tableHeaderBg = Color(0xFFEEFAFF);
   static const rowHover = Color(0x0A25ADDB); // rgba(37,173,219,.035~0.04)
 
@@ -261,6 +270,15 @@ ThemeData buildAppTheme(Brightness brightness) {
     dividerColor: border,
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
+    // Short fade-and-slide between screens; iOS keeps its swipe-back transition.
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {
+      TargetPlatform.android: MvPageTransitionsBuilder(),
+      TargetPlatform.fuchsia: MvPageTransitionsBuilder(),
+      TargetPlatform.linux: MvPageTransitionsBuilder(),
+      TargetPlatform.windows: MvPageTransitionsBuilder(),
+      TargetPlatform.macOS: MvPageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+    }),
     // Mobile-sized, light type: DM Sans at ~90% of the Material defaults.
     textTheme: GoogleFonts.dmSansTextTheme(
       Typography.englishLike2021.apply(fontSizeFactor: .92),
@@ -278,15 +296,24 @@ ThemeData buildAppTheme(Brightness brightness) {
       ),
     ),
     drawerTheme: DrawerThemeData(backgroundColor: surface),
-    bottomSheetTheme: BottomSheetThemeData(backgroundColor: surface),
-    dialogTheme: DialogThemeData(backgroundColor: surface),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: surface,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      dragHandleColor: border,
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.sheet)),
+    ),
     cardTheme: CardThemeData(
       color: surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(MvRadius.card),
         side: BorderSide(color: border),
       ),
     ),
@@ -301,19 +328,19 @@ ThemeData buildAppTheme(Brightness brightness) {
         color: muted,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(MvRadius.input),
         borderSide: BorderSide(color: border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(MvRadius.input),
         borderSide: BorderSide(color: border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(MvRadius.input),
         borderSide: const BorderSide(color: MvColors.skyBlue, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(MvRadius.input),
         borderSide: const BorderSide(color: MvColors.errorText),
       ),
     ),
@@ -324,7 +351,7 @@ ThemeData buildAppTheme(Brightness brightness) {
         foregroundColor: Colors.white,
         elevation: 0,
         textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.button)),
         padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
       ),
     ),
@@ -333,7 +360,7 @@ ThemeData buildAppTheme(Brightness brightness) {
         backgroundColor: MvColors.skyBlue,
         foregroundColor: Colors.white,
         textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.button)),
         padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
       ),
     ),
@@ -341,7 +368,7 @@ ThemeData buildAppTheme(Brightness brightness) {
       style: OutlinedButton.styleFrom(
         foregroundColor: text,
         side: BorderSide(color: border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.button)),
         textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
@@ -358,14 +385,15 @@ ThemeData buildAppTheme(Brightness brightness) {
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: text,
-      contentTextStyle: GoogleFonts.dmSans(color: page),
+      contentTextStyle: GoogleFonts.dmSans(color: page, fontWeight: FontWeight.w500),
       behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.button)),
     ),
     tooltipTheme: const TooltipThemeData(),
     // Active category filters fill with the sky-blue accent.
     chipTheme: base.chipTheme.copyWith(
       backgroundColor: surface2,
-      selectedColor: MvColors.skyBlue,
+      selectedColor: isDark ? MvColors.primaryDark : MvColors.navy,
       checkmarkColor: Colors.white,
       labelStyle: GoogleFonts.dmSans(fontSize: 12, color: text),
       secondaryLabelStyle: GoogleFonts.dmSans(
@@ -373,7 +401,7 @@ ThemeData buildAppTheme(Brightness brightness) {
         fontWeight: FontWeight.w700,
         color: Colors.white,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      shape: const StadiumBorder(),
       side: BorderSide(color: border),
     ),
     // Count badges pinned to top-bar icons are sky blue, not the M3 error red.
@@ -385,12 +413,40 @@ ThemeData buildAppTheme(Brightness brightness) {
   );
 }
 
+/// Corner radii: one value per kind of surface, used everywhere.
+class MvRadius {
+  MvRadius._();
+  static const double chip = 999;
+  static const double input = 12;
+  static const double button = 14;
+  static const double card = 16;
+  static const double image = 14;
+  static const double sheet = 20;
+}
+
+/// Spacing scale (4-point).
+class MvSpace {
+  MvSpace._();
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 24;
+}
+
 extension MvHeadingX on BuildContext {
   TextStyle get mvH1 => GoogleFonts.manrope(
     fontSize: 22,
-    fontWeight: FontWeight.w700,
-    color: Theme.of(this).colorScheme.onSurface,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -.4,
+    color: mv.text,
   );
+  /// Section headings on a page ("Popular products").
+  TextStyle get mvSection => GoogleFonts.manrope(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -.2, color: mv.text);
+
+  /// Prices on cards and summaries.
+  TextStyle get mvPrice => GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -.2, color: mv.text);
+
   TextStyle get mvEyebrow => GoogleFonts.dmSans(
     fontSize: 10.5,
     fontWeight: FontWeight.w600,

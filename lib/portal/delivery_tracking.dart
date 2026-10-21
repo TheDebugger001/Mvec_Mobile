@@ -360,7 +360,7 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
                   ),
                 ),
                 if (!_wholesaleRole)
-                  const InfoBox(title: '🔒 Protected funds', text: "Only enter the buyer's code once they have the items in hand. Never accept the code over the phone before delivery."),
+                  const InfoBox(title: 'Protected funds', text: "Only enter the buyer's code once they have the items in hand. Never accept the code over the phone before delivery."),
                 TabChips(
                   tabs: [if (widget.role == 'admin') ('attention', 'Needs attention'), ('active', 'In progress'), ('done', 'Delivered'), ('all', 'All')],
                   value: _tab,

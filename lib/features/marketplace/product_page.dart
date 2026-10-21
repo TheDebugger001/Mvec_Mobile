@@ -11,6 +11,7 @@ import '../../state/auth_state.dart';
 import '../../state/cart_state.dart';
 import '../../state/compare_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../../widgets/mv_icon.dart';
 import '../common/page_frame.dart';
 import 'product_card.dart';
@@ -34,6 +35,8 @@ class _ProductPageState extends ConsumerState<ProductPage> {
   List<Map<String, dynamic>> _reviews = const [];
   ({bool ok, String message})? _feedback;
   bool _adding = false;
+  // True for a moment after the cart confirms an add: the button shows a check.
+  bool _added = false;
 
   @override
   void initState() {
@@ -97,10 +100,11 @@ class _ProductPageState extends ConsumerState<ProductPage> {
         children: [
           Expanded(
             child: GradientButton(
-              label: _adding ? 'Adding…' : 'Add to cart',
+              label: _added ? 'Added' : (_adding ? 'Adding…' : 'Add to cart'),
               icon: Icons.shopping_cart_outlined,
               onPressed: p.soldOut ? null : _addToCart,
               loading: _adding,
+              success: _added,
             ),
           ),
           const SizedBox(width: 10),
@@ -110,7 +114,64 @@ class _ProductPageState extends ConsumerState<ProductPage> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          AspectRatio(aspectRatio: 1.1, child: ProductImage(src: _image.isEmpty ? p.image : _image, fit: BoxFit.contain)),
+          // Main image on a soft panel; swipe sideways for the next photo.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+            child: GestureDetector(
+              onHorizontalDragEnd: images.length < 2
+                  ? null
+                  : (d) {
+                      final v = d.primaryVelocity ?? 0;
+                      if (v.abs() < 200) return;
+                      final i = images.indexOf(_image.isEmpty ? p.image : _image);
+                      setState(() => _image = images[(i + (v < 0 ? 1 : -1)) % images.length]);
+                    },
+              child: Container(
+                decoration: BoxDecoration(color: mv.surfaceMuted, borderRadius: BorderRadius.circular(24)),
+                clipBehavior: Clip.antiAlias,
+                child: AspectRatio(
+                  aspectRatio: 1.05,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      AnimatedSwitcher(
+                        duration: Motion.reduced(context) ? Duration.zero : Motion.base,
+                        switchInCurve: Motion.out,
+                        transitionBuilder: (child, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween<double>(begin: .97, end: 1).animate(a), child: child)),
+                        child: Padding(
+                          key: ValueKey(_image),
+                          padding: const EdgeInsets.all(12),
+                          child: ProductImage(src: _image.isEmpty ? p.image : _image, fit: BoxFit.contain, radius: 16),
+                        ),
+                      ),
+                      if (p.onSale) Positioned(left: 14, top: 14, child: DiscountChip(p.percentOff)),
+                      Positioned(right: 12, top: 12, child: WishHeart(product: p, size: 18)),
+                      if (images.length > 1)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 12,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              for (final img in images)
+                                AnimatedContainer(
+                                  duration: Motion.base,
+                                  curve: Motion.out,
+                                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                                  width: img == (_image.isEmpty ? p.image : _image) ? 18 : 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(color: img == (_image.isEmpty ? p.image : _image) ? MvColors.primaryDark : mv.border, borderRadius: BorderRadius.circular(3)),
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           if (images.length > 1)
             SizedBox(
               height: 62,
@@ -121,10 +182,11 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (_, i) => GestureDetector(
                   onTap: () => setState(() => _image = images[i]),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: Motion.quick,
                     width: 50,
-                    decoration: BoxDecoration(border: Border.all(color: images[i] == _image ? mv.accentDeep : mv.border, width: images[i] == _image ? 1.6 : 1), borderRadius: BorderRadius.circular(8)),
-                    child: ProductImage(src: images[i], radius: 7),
+                    decoration: BoxDecoration(border: Border.all(color: images[i] == _image ? MvColors.primaryDark : mv.border, width: images[i] == _image ? 2 : 1), borderRadius: BorderRadius.circular(12)),
+                    child: ProductImage(src: images[i], radius: 10),
                   ),
                 ),
               ),
@@ -138,15 +200,21 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                 const SizedBox(height: 4),
                 Text(p.name, style: context.mvH1.copyWith(fontSize: 19, height: 1.25)),
                 const SizedBox(height: 6),
-                Text('★ ${ratingLabel(p.rating)}  ·  ${_reviews.length} review${_reviews.length == 1 ? '' : 's'}', style: TextStyle(color: mv.textMuted, fontSize: 12.5)),
+                if (_reviews.isNotEmpty)
+                  Row(children: [
+                    const Icon(Icons.star_rounded, size: 17, color: Color(0xFFF2B01E)),
+                    const SizedBox(width: 3),
+                    Text('${ratingLabel(p.rating)}  ·  ${_reviews.length} review${_reviews.length == 1 ? '' : 's'}', style: TextStyle(color: mv.textMuted, fontSize: 12.5, fontWeight: FontWeight.w500)),
+                  ])
+                else
+                  Text('No reviews yet', style: TextStyle(color: mv.textMuted, fontSize: 12.5)),
                 const SizedBox(height: 10),
                 Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.end,
                   spacing: 10,
                   children: [
-                    Text(money(p.price), style: context.mvH1.copyWith(fontSize: 21, color: mv.accentDeep)),
-                    if (p.onSale) Text(money(p.oldPrice), style: TextStyle(color: mv.textMuted, decoration: TextDecoration.lineThrough, fontSize: 13)),
-                    if (p.onSale) DiscountChip(p.percentOff),
+                    Text(money(p.price), style: context.mvPrice.copyWith(fontSize: 24)),
+                    if (p.onSale) Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(money(p.oldPrice), style: TextStyle(color: mv.textMuted, decoration: TextDecoration.lineThrough, fontSize: 13))),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -175,7 +243,7 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                       for (final a in attrs)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(color: mv.soft, borderRadius: BorderRadius.circular(8)),
+                          decoration: BoxDecoration(color: mv.surfaceMuted, borderRadius: BorderRadius.circular(MvRadius.chip)),
                           child: Text.rich(TextSpan(children: [TextSpan(text: '${a.key}: ', style: TextStyle(color: mv.textMuted)), TextSpan(text: a.value, style: const TextStyle(fontWeight: FontWeight.w600))]), style: const TextStyle(fontSize: 12)),
                         ),
                     ],
@@ -197,8 +265,6 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                 Row(
                   children: [
                     QtyStepper(value: _qty, max: maxQty, onChanged: p.soldOut ? (_) {} : (v) => setState(() => _qty = v)),
-                    const SizedBox(width: 10),
-                    WishHeart(product: p, size: 18),
                     const SizedBox(width: 10),
                     Expanded(
                       child: OutlineBtn(
@@ -244,6 +310,12 @@ class _ProductPageState extends ConsumerState<ProductPage> {
       setState(() {
         _adding = false;
         _feedback = r;
+        _added = r.ok;
+      });
+    }
+    if (r.ok) {
+      Future.delayed(const Duration(milliseconds: 1600), () {
+        if (mounted) setState(() => _added = false);
       });
     }
   }

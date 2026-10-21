@@ -44,7 +44,7 @@ class ShopPage extends ConsumerWidget {
 
     final catalog = ref.watch(catalogProvider);
     return catalog.when(
-      loading: () => const LoadingState(label: 'Loading products…'),
+      loading: () => const SingleChildScrollView(padding: EdgeInsets.all(16), child: ProductGridSkeleton(count: 6)),
       error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(catalogProvider)),
       data: (c) {
         final needle = q.trim().toLowerCase();

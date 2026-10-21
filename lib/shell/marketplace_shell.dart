@@ -14,6 +14,7 @@ import '../state/catalog_state.dart';
 import '../state/compare_state.dart';
 import '../state/notifications_state.dart';
 import '../widgets/common.dart';
+import '../widgets/motion.dart';
 import '../widgets/mv_icon.dart';
 import '../widgets/theme_switch.dart';
 
@@ -169,7 +170,9 @@ class _BarIcon extends StatelessWidget {
     final mv = context.mv;
     return Tooltip(
       message: tooltip,
-      child: InkResponse(
+      child: Pressable(
+        scale: .88,
+        child: InkResponse(
         onTap: onTap,
         radius: 22,
         child: SizedBox(
@@ -178,16 +181,17 @@ class _BarIcon extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              MvIcon(name, size: 21, color: mv.text, strokeWidth: 1.4),
+              MvIcon(name, size: 21, color: mv.text, strokeWidth: 1.5),
               if (badge > 0)
                 Positioned(
                   right: 3,
                   top: 6,
-                  child: Container(
+                  // Bounces when something is added.
+                  child: BumpOnIncrease(value: badge, child: Container(
                     constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
                     padding: const EdgeInsets.symmetric(horizontal: 3.5),
                     decoration: BoxDecoration(
-                      color: MvColors.skyBlue,
+                      color: MvColors.primaryDark,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: mv.surface, width: 1.2),
                     ),
@@ -196,11 +200,12 @@ class _BarIcon extends StatelessWidget {
                       badge > 99 ? '99+' : '$badge',
                       style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w700, height: 1),
                     ),
-                  ),
+                  )),
                 ),
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -230,8 +235,7 @@ class _SearchPill extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               color: mv.surfaceMuted,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: mv.border),
+              borderRadius: BorderRadius.circular(MvRadius.button),
             ),
             child: Row(
               children: [
@@ -332,19 +336,35 @@ class MarketBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 62,
-          child: Row(
-            children: [
-              for (var i = 0; i < _destinations.length; i++)
-                Expanded(
-                  child: _BarItem(
-                    dest: _destinations[i],
-                    active: i == activeIndex,
-                    onTap: () => context.go(_destinations[i].location),
+          height: 64,
+          child: LayoutBuilder(builder: (context, c) {
+            final slot = c.maxWidth / _destinations.length;
+            return Stack(
+              children: [
+                // The pill glides to the tab you pick.
+                if (activeIndex >= 0)
+                  AnimatedPositioned(
+                    duration: Motion.reduced(context) ? Duration.zero : Motion.base,
+                    curve: Motion.spring,
+                    left: slot * activeIndex + (slot - 52) / 2,
+                    top: 9,
+                    child: Container(width: 52, height: 30, decoration: BoxDecoration(color: mv.soft, borderRadius: BorderRadius.circular(MvRadius.chip))),
                   ),
+                Row(
+                  children: [
+                    for (var i = 0; i < _destinations.length; i++)
+                      Expanded(
+                        child: _BarItem(
+                          dest: _destinations[i],
+                          active: i == activeIndex,
+                          onTap: () => context.go(_destinations[i].location),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
-          ),
+              ],
+            );
+          }),
         ),
       ),
     );
@@ -365,29 +385,33 @@ class _BarItem extends StatelessWidget {
       button: true,
       selected: active,
       label: dest.label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-              decoration: BoxDecoration(
-                color: active ? mv.soft : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
+      child: Pressable(
+        scale: .9,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                height: 30,
+                child: Center(
+                  child: AnimatedScale(
+                    scale: active ? 1.08 : 1,
+                    duration: Motion.quick,
+                    curve: Motion.spring,
+                    child: MvIcon(dest.icon, size: 21, color: color, strokeWidth: active ? 1.8 : 1.4),
+                  ),
+                ),
               ),
-              child: MvIcon(dest.icon, size: 21, color: color, strokeWidth: active ? 1.7 : 1.4),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              dest.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10.5, fontWeight: active ? FontWeight.w700 : FontWeight.w700, color: color),
-            ),
-          ],
+              const SizedBox(height: 2),
+              AnimatedDefaultTextStyle(
+                duration: Motion.quick,
+                style: TextStyle(fontSize: 10.5, fontWeight: active ? FontWeight.w800 : FontWeight.w600, color: color),
+                child: Text(dest.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
         ),
       ),
     );
