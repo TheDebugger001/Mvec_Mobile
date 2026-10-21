@@ -1,7 +1,8 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../core/format.dart';
 import '../core/icons.dart';
@@ -44,38 +45,71 @@ int _activeIndex(Uri uri) {
   return -1;
 }
 
-/// Row 1 (52) + search row (44 + 10 gap) + bottom border (1) + slack.
-const double _kTopBarHeight = 52 + 54 + 3;
+/// Row 1 (52) + search row (46 + 12 gap) + bottom border (1) + slack.
+const double _kTopBarHeight = 52 + 58 + 2;
 
-/// Storefront frame: top bar (menu, search, theme, wishlist, cart, account),
-/// left sidebar, and the five-item bottom navigation.
-class MarketplaceShell extends ConsumerWidget {
+/// Storefront frame: top bar (menu, logo, search, theme, compare, wishlist,
+/// cart, account), the blurred left sidebar, and the five-item floating
+/// bottom navigation.
+class MarketplaceShell extends ConsumerStatefulWidget {
   const MarketplaceShell({super.key, required this.child, required this.uri});
   final Widget child;
   final Uri uri;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MarketplaceShell> createState() => _MarketplaceShellState();
+}
+
+class _MarketplaceShellState extends ConsumerState<MarketplaceShell> with SingleTickerProviderStateMixin {
+  /// 0 = sidebar closed, 1 = fully open. Drives the slide and the blur together.
+  late final AnimationController _drawer = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+
+  @override
+  void dispose() {
+    _drawer.dispose();
+    super.dispose();
+  }
+
+  void _open() => _drawer.fling(velocity: 2.2);
+  void _close() => _drawer.fling(velocity: -2.2);
+
+  @override
+  Widget build(BuildContext context) {
     final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
     final cartNotice = ref.watch(cartProvider.select((c) => c.notice));
-    return Scaffold(
-      appBar: PreferredSize(
-        // The status-bar inset is added on top: the bar draws under it.
-        preferredSize: Size.fromHeight(_kTopBarHeight + MediaQuery.paddingOf(context).top),
-        child: const _TopBar(),
+    return AnimatedBuilder(
+      animation: _drawer,
+      // While the sidebar is open the system back gesture closes it first.
+      builder: (context, shell) => PopScope(
+        canPop: _drawer.value == 0,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _close();
+        },
+        child: shell!,
       ),
-      drawer: MarketplaceDrawer(location: uri),
-      body: Column(
+      child: Stack(
         children: [
-          if (cartNotice.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-              child: Notice(text: cartNotice, onClose: () => ref.read(cartProvider.notifier).dismissNotice()),
+          Scaffold(
+            appBar: PreferredSize(
+              // The status-bar inset is added on top: the bar draws under it.
+              preferredSize: Size.fromHeight(_kTopBarHeight + MediaQuery.paddingOf(context).top),
+              child: _TopBar(onMenu: _open),
             ),
-          Expanded(child: child),
+            body: Column(
+              children: [
+                if (cartNotice.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                    child: Notice(text: cartNotice, onClose: () => ref.read(cartProvider.notifier).dismissNotice()),
+                  ),
+                Expanded(child: widget.child),
+              ],
+            ),
+            bottomNavigationBar: keyboard ? null : MarketBottomBar(activeIndex: _activeIndex(widget.uri)),
+          ),
+          _SidebarLayer(controller: _drawer, location: widget.uri, onClose: _close),
         ],
       ),
-      bottomNavigationBar: keyboard ? null : MarketBottomBar(activeIndex: _activeIndex(uri)),
     );
   }
 }
@@ -83,7 +117,8 @@ class MarketplaceShell extends ConsumerWidget {
 // ─── Top bar ─────────────────────────────────────────────────────────────────
 
 class _TopBar extends ConsumerWidget {
-  const _TopBar();
+  const _TopBar({required this.onMenu});
+  final VoidCallback onMenu;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -101,22 +136,22 @@ class _TopBar extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Row 1: menu on the left; theme, wishlist, cart and account on the right.
+              // Row 1: menu and logo on the left; theme, compare, wishlist, cart and account on the right.
               SizedBox(
                 height: 52,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: Row(
                     children: [
-                      Builder(
-                        builder: (ctx) => _BarIcon(
-                          name: 'menu',
-                          tooltip: 'Open menu',
-                          onTap: () => Scaffold.of(ctx).openDrawer(),
+                      _BarIcon(name: 'menu', tooltip: 'Open menu', onTap: onMenu),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: GestureDetector(onTap: () => context.go('/'), child: const MvLogo(size: 26))),
                         ),
                       ),
-                      const Spacer(),
-                      const ThemeSwitch(),
+                      const ThemeSwitch(compact: true),
                       const ShopShortcuts(),
                       _AccountMenu(user: user),
                     ],
@@ -125,8 +160,8 @@ class _TopBar extends ConsumerWidget {
               ),
               // Row 2: search.
               const Padding(
-                padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
-                child: SizedBox(height: 44, child: _SearchPill()),
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: SizedBox(height: 46, child: _SearchPill()),
               ),
             ],
           ),
@@ -178,23 +213,23 @@ class _BarIcon extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              MvIcon(name, size: 21, color: mv.text, strokeWidth: 1.4),
+              MvIcon(name, size: 22, color: mv.text, strokeWidth: 1.5),
               if (badge > 0)
                 Positioned(
-                  right: 3,
-                  top: 6,
+                  right: 2,
+                  top: 5,
                   child: Container(
-                    constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
-                    padding: const EdgeInsets.symmetric(horizontal: 3.5),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: MvColors.skyBlue,
+                      color: mv.accent,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: mv.surface, width: 1.2),
+                      border: Border.all(color: mv.surface, width: 1.5),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       badge > 99 ? '99+' : '$badge',
-                      style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w700, height: 1),
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, height: 1),
                     ),
                   ),
                 ),
@@ -212,36 +247,46 @@ class _SearchPill extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mv = context.mv;
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: Semantics(
-        button: true,
-        label: 'Search products',
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: () async {
-            final q = await showSearch<String?>(context: context, delegate: ProductSearchDelegate(ref));
-            if (q != null && q.trim().isNotEmpty && context.mounted) {
-              context.go('/shop?q=${Uri.encodeQueryComponent(q.trim())}');
-            }
-          },
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: mv.surfaceMuted,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: mv.border),
-            ),
-            child: Row(
-              children: [
-                MvIcon('search', size: 18, color: mv.textMuted),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Search for products, brands and more…', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.textMuted, fontSize: 13)),
+    return Semantics(
+      button: true,
+      label: 'Search products',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(MvRadius.card),
+        onTap: () async {
+          final q = await showSearch<String?>(context: context, delegate: ProductSearchDelegate(ref));
+          if (q != null && q.trim().isNotEmpty && context.mounted) {
+            context.go('/shop?q=${Uri.encodeQueryComponent(q.trim())}');
+          }
+        },
+        child: Container(
+          height: 46,
+          padding: const EdgeInsets.fromLTRB(14, 0, 5, 0),
+          decoration: BoxDecoration(
+            color: mv.surfaceMuted,
+            borderRadius: BorderRadius.circular(MvRadius.card),
+            border: Border.all(color: mv.border),
+          ),
+          child: Row(
+            children: [
+              MvIcon('search', size: 19, color: mv.textMuted),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('Search for products, brands and more…', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.textMuted, fontSize: 13)),
+              ),
+              // Filters live on the Shop page (on sale, in stock, sort, categories).
+              Tooltip(
+                message: 'Filters',
+                child: Material(
+                  color: mv.accent,
+                  borderRadius: BorderRadius.circular(MvRadius.field),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(MvRadius.field),
+                    onTap: () => context.go('/shop'),
+                    child: const SizedBox(width: 38, height: 36, child: Icon(Icons.tune_rounded, size: 18, color: Colors.white)),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -260,7 +305,7 @@ class _AccountMenu extends ConsumerWidget {
     if (u == null) {
       return PopupMenuButton<String>(
         tooltip: 'Sign in or create an account',
-        icon: MvIcon('user', size: 21, color: context.mv.text, strokeWidth: 1.4),
+        icon: MvIcon('user', size: 22, color: context.mv.text, strokeWidth: 1.5),
         padding: EdgeInsets.zero,
         onSelected: (v) {
           if (v == 'login') {
@@ -280,7 +325,7 @@ class _AccountMenu extends ConsumerWidget {
       tooltip: 'Account',
       padding: EdgeInsets.zero,
       offset: const Offset(0, 46),
-      icon: Avatar(name: u.fullName, url: u.avatarUrl, radius: 13),
+      icon: Avatar(name: u.fullName, url: u.avatarUrl, radius: 14),
       onSelected: (v) async {
         switch (v) {
           case 'profile':
@@ -316,6 +361,8 @@ String _here(BuildContext context) {
 
 // ─── Bottom navigation ───────────────────────────────────────────────────────
 
+/// A floating rounded bar: the active destination gets a filled teal badge
+/// behind its icon (the Furniture Store design), labels stay visible.
 class MarketBottomBar extends StatelessWidget {
   const MarketBottomBar({super.key, required this.activeIndex});
   final int activeIndex;
@@ -323,16 +370,18 @@ class MarketBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    return Container(
-      decoration: BoxDecoration(
-        color: mv.surface,
-        border: Border(top: BorderSide(color: mv.border)),
-        boxShadow: [BoxShadow(color: mv.shadow, blurRadius: 14, offset: const Offset(0, -2))],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 62,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+        child: Container(
+          height: 66,
+          decoration: BoxDecoration(
+            color: mv.surface,
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: mv.border),
+            boxShadow: [BoxShadow(color: mv.shadow, blurRadius: 22, offset: const Offset(0, 8))],
+          ),
           child: Row(
             children: [
               for (var i = 0; i < _destinations.length; i++)
@@ -365,27 +414,31 @@ class _BarItem extends StatelessWidget {
       button: true,
       selected: active,
       label: dest.label,
+      excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(26),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              width: 46,
+              height: 30,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: active ? mv.soft : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
+                color: active ? mv.accent : Colors.transparent,
+                borderRadius: BorderRadius.circular(15),
               ),
-              child: MvIcon(dest.icon, size: 21, color: color, strokeWidth: active ? 1.7 : 1.4),
+              child: MvIcon(dest.icon, size: 20, color: active ? Colors.white : mv.textMuted, strokeWidth: active ? 1.7 : 1.5),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               dest.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10.5, fontWeight: active ? FontWeight.w700 : FontWeight.w700, color: color),
+              style: TextStyle(fontSize: 10.5, fontWeight: active ? FontWeight.w800 : FontWeight.w600, color: color),
             ),
           ],
         ),
@@ -396,9 +449,99 @@ class _BarItem extends StatelessWidget {
 
 // ─── Left sidebar ────────────────────────────────────────────────────────────
 
-class MarketplaceDrawer extends ConsumerStatefulWidget {
-  const MarketplaceDrawer({super.key, required this.location});
+/// The sidebar and the frosted backdrop behind it. One controller drives both:
+/// the white panel slides in from the left while the page behind it blurs and
+/// dims, and a drag from the left edge (or on the panel / backdrop) moves it.
+class _SidebarLayer extends StatelessWidget {
+  const _SidebarLayer({required this.controller, required this.location, required this.onClose});
+  final AnimationController controller;
   final Uri location;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final panelWidth = (size.width * .8).clamp(260.0, 330.0);
+    final edge = 20.0 + MediaQuery.systemGestureInsetsOf(context).left;
+
+    void drag(DragUpdateDetails d) => controller.value = (controller.value + d.delta.dx / panelWidth).clamp(0.0, 1.0);
+    void settle(DragEndDetails d) {
+      final v = d.velocity.pixelsPerSecond.dx;
+      if (v.abs() > 500) {
+        controller.fling(velocity: v > 0 ? 2.2 : -2.2);
+      } else {
+        controller.fling(velocity: controller.value > .5 ? 2.2 : -2.2);
+      }
+    }
+
+    return Positioned.fill(
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          final v = Curves.easeOutCubic.transform(controller.value);
+          if (controller.value == 0) {
+            // Closed: only the thin strip on the left edge that pulls the sidebar out.
+            return Stack(
+              children: [
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: edge,
+                  child: GestureDetector(behavior: HitTestBehavior.translucent, onHorizontalDragUpdate: drag, onHorizontalDragEnd: settle),
+                ),
+              ],
+            );
+          }
+          return Stack(
+            children: [
+              // Frosted backdrop: blurs and dims the page; tapping it closes the sidebar.
+              Positioned.fill(
+                child: Semantics(
+                  button: true,
+                  label: 'Close menu',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onClose,
+                    onHorizontalDragUpdate: drag,
+                    onHorizontalDragEnd: settle,
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 7 * v, sigmaY: 7 * v),
+                        child: ColoredBox(color: Colors.black.withValues(alpha: .28 * v)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: panelWidth,
+                child: FractionalTranslation(
+                  translation: Offset(-(1 - controller.value), 0),
+                  child: GestureDetector(
+                    onHorizontalDragUpdate: drag,
+                    onHorizontalDragEnd: settle,
+                    child: MarketplaceDrawer(location: location, onClose: onClose),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The sidebar panel: white, rounded on the right, with soft grey rows
+/// (the Landing page sidebar design).
+class MarketplaceDrawer extends ConsumerStatefulWidget {
+  const MarketplaceDrawer({super.key, required this.location, required this.onClose});
+  final Uri location;
+  final VoidCallback onClose;
 
   @override
   ConsumerState<MarketplaceDrawer> createState() => _MarketplaceDrawerState();
@@ -408,8 +551,13 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
   bool _categoriesOpen = false;
 
   void _go(String location) {
-    Navigator.of(context).pop();
+    widget.onClose();
     context.go(location);
+  }
+
+  void _push(String location) {
+    widget.onClose();
+    context.push(location);
   }
 
   @override
@@ -431,141 +579,156 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
           onTap: () => _go(location),
         );
 
-    return Drawer(
-      width: 304,
-      backgroundColor: mv.surface,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 8, 6),
-              child: Row(
-                children: [
-                  const MvLogo(size: 30),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text('MARKETPLACE', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.dmSans(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 1.4, color: mv.textMuted)),
-                  ),
-                  IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close_rounded), tooltip: 'Close menu'),
-                ],
+    return Semantics(
+      scopesRoute: true,
+      explicitChildNodes: true,
+      namesRoute: true,
+      label: 'Menu',
+      child: Material(
+        color: mv.surface,
+        elevation: 16,
+        shadowColor: Colors.black54,
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(MvRadius.sheet + 4)),
+        clipBehavior: Clip.antiAlias,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 16, 4),
+                child: Row(
+                  children: [
+                    Tooltip(
+                      message: 'Close menu',
+                      child: InkResponse(
+                        onTap: widget.onClose,
+                        radius: 24,
+                        child: SizedBox(width: 44, height: 44, child: Center(child: MvIcon('menu', size: 22, color: mv.text, strokeWidth: 1.6))),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Expanded(child: Align(alignment: Alignment.centerLeft, child: FittedBox(fit: BoxFit.scaleDown, child: MvLogo(size: 28)))),
+                  ],
+                ),
               ),
-            ),
-            if (user != null)
-              InkWell(
-                onTap: () => _go('/profile'),
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: mv.soft, borderRadius: BorderRadius.circular(12)),
-                  child: Row(
-                    children: [
-                      Avatar(name: user.fullName, url: user.avatarUrl, radius: 19),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              if (user != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                  child: Material(
+                    color: mv.surfaceMuted,
+                    borderRadius: BorderRadius.circular(MvRadius.card),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(MvRadius.card),
+                      onTap: () => _go('/profile'),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Row(
                           children: [
-                            Text(user.fullName.isEmpty ? 'MVEC user' : user.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, color: mv.text, fontSize: 14)),
-                            Text(_roleLabel(user.role), style: TextStyle(color: mv.textMuted, fontSize: 11.5)),
+                            Avatar(name: user.fullName, url: user.avatarUrl, radius: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(user.fullName.isEmpty ? 'MVEC user' : user.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, color: mv.text, fontSize: 14)),
+                                  Text(_roleLabel(user.role), style: TextStyle(color: mv.textMuted, fontSize: 11.5)),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded, color: mv.textMuted),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right_rounded, color: mv.textMuted),
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                  child: Row(
+                    children: [
+                      Expanded(child: GradientButton(label: 'Sign in', compact: true, onPressed: () => _push('/login'))),
+                      const SizedBox(width: 8),
+                      Expanded(child: OutlineBtn(label: 'Sign up', compact: true, onPressed: () => _push('/signup'))),
                     ],
                   ),
                 ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Row(
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
                   children: [
-                    Expanded(child: GradientButton(label: 'Sign in', compact: true, onPressed: () { Navigator.of(context).pop(); context.push('/login'); })),
-                    const SizedBox(width: 8),
-                    Expanded(child: OutlineBtn(label: 'Sign up', compact: true, onPressed: () { Navigator.of(context).pop(); context.push('/signup'); })),
+                    const _DrawerHeading('Shop'),
+                    link('Home', 'home', '/', selected: active == 0),
+                    link('Shop', 'shop', '/shop', selected: active == 1),
+                    link('For You', 'heart', '/buyer/recommendations', selected: active == 2),
+                    link('Deals', 'tag', '/shop?deal=true', selected: active == 3),
+                    link('Stores', 'users', '/vendors', selected: path.startsWith('/vendors')),
+                    _DrawerLink(
+                      label: 'Categories',
+                      icon: Icons.category_outlined,
+                      selected: false,
+                      trailing: Icon(_categoriesOpen ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: mv.textMuted),
+                      onTap: () => setState(() => _categoriesOpen = !_categoriesOpen),
+                    ),
+                    if (_categoriesOpen)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16),
+                        child: Column(
+                          children: [
+                            if (catalog == null || catalog.categories.isEmpty)
+                              Padding(padding: const EdgeInsets.all(10), child: Text('No categories yet', style: TextStyle(color: mv.textMuted, fontSize: 12.5)))
+                            else
+                              for (final c in catalog.categories)
+                                _DrawerLink(
+                                  label: c.name,
+                                  icon: Icons.chevron_right_rounded,
+                                  dense: true,
+                                  onTap: () => _go('/shop?category=${Uri.encodeQueryComponent(c.name)}'),
+                                ),
+                          ],
+                        ),
+                      ),
+                    const _DrawerHeading('My MVEC'),
+                    link('Orders', 'box', '/orders', selected: active == 4),
+                    link('Wishlist', 'heart', '/wishlist', selected: path == '/wishlist'),
+                    link('Cart', 'cart', '/cart', selected: path == '/cart'),
+                    if (user != null) ...[
+                      link('Notifications', 'bell', '/buyer/notifications', selected: path == '/buyer/notifications', badge: unread),
+                      link('Messages', 'users', '/buyer/messages', selected: path == '/buyer/messages'),
+                      link('Refunds', 'wallet', '/buyer/refunds', selected: path == '/buyer/refunds'),
+                      if (user.role == 'buyer') link('Subscription', 'wallet', '/buyer/subscription', selected: path == '/buyer/subscription'),
+                      link('My account', 'user', '/profile', selected: path == '/profile'),
+                    ],
+                    link('Compare', 'compare', '/buyer/compare', selected: path == '/buyer/compare'),
+                    link('Help & Support', 'bell', '/buyer/support', selected: path == '/buyer/support'),
+                    if (dashboard != null) ...[
+                      const _DrawerHeading('Workspace'),
+                      link('Dashboard', 'grid', dashboard),
+                    ],
                   ],
                 ),
               ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
-                children: [
-                  const _DrawerHeading('Shop'),
-                  link('Home', 'home', '/', selected: active == 0),
-                  link('Shop', 'shop', '/shop', selected: active == 1),
-                  link('For You', 'heart', '/buyer/recommendations', selected: active == 2),
-                  link('Deals', 'tag', '/shop?deal=true', selected: active == 3),
-                  link('Stores', 'users', '/vendors', selected: path.startsWith('/vendors')),
-                  _DrawerLink(
-                    label: 'Categories',
-                    icon: Icons.category_outlined,
-                    selected: false,
-                    trailing: Icon(_categoriesOpen ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: mv.textMuted),
-                    onTap: () => setState(() => _categoriesOpen = !_categoriesOpen),
-                  ),
-                  if (_categoriesOpen)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 18),
-                      child: Column(
-                        children: [
-                          if (catalog == null || catalog.categories.isEmpty)
-                            Padding(padding: const EdgeInsets.all(10), child: Text('No categories yet', style: TextStyle(color: mv.textMuted, fontSize: 12.5)))
-                          else
-                            for (final c in catalog.categories)
-                              _DrawerLink(
-                                label: c.name,
-                                icon: Icons.chevron_right_rounded,
-                                dense: true,
-                                onTap: () => _go('/shop?category=${Uri.encodeQueryComponent(c.name)}'),
-                              ),
-                        ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+                child: user == null
+                    ? _DrawerLink(
+                        label: 'Become a vendor',
+                        icon: mvIcon('shop'),
+                        svg: 'shop',
+                        onTap: () => _push('/signup?role=vendor'),
+                      )
+                    : _DrawerLink(
+                        label: 'Sign out',
+                        icon: mvIcon('logout'),
+                        svg: 'logout',
+                        onTap: () async {
+                          widget.onClose();
+                          await ref.read(authProvider.notifier).logout();
+                          if (context.mounted) context.go('/');
+                        },
                       ),
-                    ),
-                  const _DrawerHeading('My MVEC'),
-                  link('Orders', 'box', '/orders', selected: active == 4),
-                  link('Wishlist', 'heart', '/wishlist', selected: path == '/wishlist'),
-                  link('Cart', 'cart', '/cart', selected: path == '/cart'),
-                  if (user != null) ...[
-                    link('Notifications', 'bell', '/buyer/notifications', selected: path == '/buyer/notifications', badge: unread),
-                    link('Messages', 'users', '/buyer/messages', selected: path == '/buyer/messages'),
-                    link('Refunds', 'wallet', '/buyer/refunds', selected: path == '/buyer/refunds'),
-                    if (user.role == 'buyer') link('Subscription', 'wallet', '/buyer/subscription', selected: path == '/buyer/subscription'),
-                    link('My account', 'user', '/profile', selected: path == '/profile'),
-                  ],
-                  link('Compare', 'compare', '/buyer/compare', selected: path == '/buyer/compare'),
-                  link('Help & Support', 'bell', '/buyer/support', selected: path == '/buyer/support'),
-                  if (dashboard != null) ...[
-                    const _DrawerHeading('Workspace'),
-                    link('Dashboard', 'grid', dashboard),
-                  ],
-                ],
               ),
-            ),
-            Container(
-              decoration: BoxDecoration(border: Border(top: BorderSide(color: mv.border))),
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
-              child: user == null
-                  ? _DrawerLink(
-                      label: 'Become a vendor',
-                      icon: mvIcon('shop'),
-                      svg: 'shop',
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        context.push('/signup?role=vendor');
-                      },
-                    )
-                  : _DrawerLink(
-                      label: 'Sign out',
-                      icon: mvIcon('logout'),
-                      svg: 'logout',
-                      onTap: () async {
-                        Navigator.of(context).pop();
-                        await ref.read(authProvider.notifier).logout();
-                        if (context.mounted) context.go('/');
-                      },
-                    ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -588,11 +751,12 @@ class _DrawerHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(10, 14, 10, 4),
+        padding: const EdgeInsets.fromLTRB(6, 16, 6, 6),
         child: Text(text.toUpperCase(), style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.4, color: context.mv.textMuted)),
       );
 }
 
+/// A soft grey pill row. The selected row turns teal-tinted.
 class _DrawerLink extends StatelessWidget {
   const _DrawerLink({
     required this.label,
@@ -616,31 +780,33 @@ class _DrawerLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    final dark = context.isDarkMode;
-    final color = selected ? (dark ? MvColors.accentLight : mv.accentDeep) : mv.text;
-    return Material(
-      color: selected ? (dark ? const Color(0xFF123C4C) : mv.soft) : Colors.transparent,
-      borderRadius: BorderRadius.circular(9),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(9),
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: dense ? 8 : 11),
-          child: Row(
-            children: [
-              svg != null
-                  ? MvIcon(svg!, size: 19, color: selected ? color : mv.textMuted, strokeWidth: 1.5)
-                  : Icon(icon, size: dense ? 17 : 20, color: selected ? color : mv.textMuted),
-              const SizedBox(width: 12),
-              Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: dense ? 13 : 14, fontWeight: selected ? FontWeight.w700 : FontWeight.w600, color: color))),
-              if (badge > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: MvColors.skyBlue, borderRadius: BorderRadius.circular(9)),
-                  child: Text(badge > 99 ? '99+' : '$badge', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700)),
-                ),
-              if (trailing != null) trailing!,
-            ],
+    final color = selected ? mv.accentDeep : mv.text;
+    final iconColor = selected ? mv.accentDeep : mv.textMuted;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: selected ? mv.soft : (dense ? Colors.transparent : mv.surfaceMuted),
+        borderRadius: BorderRadius.circular(MvRadius.card),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(MvRadius.card),
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: dense ? 9 : 13),
+            child: Row(
+              children: [
+                svg != null ? MvIcon(svg!, size: 19, color: iconColor, strokeWidth: 1.6) : Icon(icon, size: dense ? 17 : 20, color: iconColor),
+                const SizedBox(width: 12),
+                Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: dense ? 13 : 14, fontWeight: selected ? FontWeight.w800 : FontWeight.w600, color: color))),
+                if (badge > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(color: mv.accent, borderRadius: BorderRadius.circular(9)),
+                    child: Text(badge > 99 ? '99+' : '$badge', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                  ),
+                if (selected && badge == 0 && trailing == null) Container(width: 7, height: 7, decoration: BoxDecoration(color: mv.accent, shape: BoxShape.circle)),
+                if (trailing != null) trailing!,
+              ],
+            ),
           ),
         ),
       ),

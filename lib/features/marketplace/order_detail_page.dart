@@ -200,10 +200,10 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    if (_loading) return const PageFrame(title: 'Order', fallback: '/orders', shopping: true, body: LoadingState(label: 'Loading order…'));
+    if (_loading) return const PageFrame(title: 'Order', fallback: '/orders', shopping: true, storefront: true, body: LoadingState(label: 'Loading order…'));
     final o = _order;
     if (o == null) {
-      return PageFrame(title: 'Order', fallback: '/orders', shopping: true, body: PageList(children: [Notice(text: _loadError.isEmpty ? 'Order not found.' : _loadError), OutlineBtn(label: 'Back to orders', onPressed: () => context.go('/orders'))]));
+      return PageFrame(title: 'Order', fallback: '/orders', shopping: true, storefront: true, body: PageList(children: [Notice(text: _loadError.isEmpty ? 'Order not found.' : _loadError), OutlineBtn(label: 'Back to orders', onPressed: () => context.go('/orders'))]));
     }
     final items = asMaps(o['items']);
     final cancelled = ['CANCELLED', 'REFUNDED'].contains(o['orderStatus']);
@@ -225,6 +225,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       title: 'Order details',
       fallback: '/orders',
       shopping: true,
+      storefront: true,
       body: PageList(
         onRefresh: _load,
         children: [
@@ -332,8 +333,8 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Column(children: [
-                            Container(width: 14, height: 14, decoration: BoxDecoration(shape: BoxShape.circle, color: i <= idx ? MvColors.skyBlue : Colors.transparent, border: Border.all(color: i <= idx ? MvColors.skyBlue : mv.border, width: 1.5))),
-                            if (i < _steps.length - 1) Expanded(child: Container(width: 1.5, color: i < idx ? MvColors.skyBlue : mv.border)),
+                            Container(width: 14, height: 14, decoration: BoxDecoration(shape: BoxShape.circle, color: i <= idx ? MvColors.brand : Colors.transparent, border: Border.all(color: i <= idx ? MvColors.brand : mv.border, width: 1.5))),
+                            if (i < _steps.length - 1) Expanded(child: Container(width: 1.5, color: i < idx ? MvColors.brand : mv.border)),
                           ]),
                           const SizedBox(width: 10),
                           Expanded(

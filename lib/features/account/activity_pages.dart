@@ -205,7 +205,7 @@ class _MessagesPageState extends ConsumerState<MessagesPage> {
                   leading: Avatar(name: _personName(other), url: strOf(other['logoUrl'])),
                   title: Text(_personName(other), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
                   subtitle: Text(strOf(c['lastMessage'], 'Say hello…'), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5)),
-                  trailing: unread > 0 ? CircleAvatar(radius: 10, backgroundColor: MvColors.skyBlue, child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 10))) : Text(formatDate(c['lastMessageAt']), style: TextStyle(color: mv.textMuted, fontSize: 10.5)),
+                  trailing: unread > 0 ? CircleAvatar(radius: 10, backgroundColor: MvColors.brand, child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 10))) : Text(formatDate(c['lastMessageAt']), style: TextStyle(color: mv.textMuted, fontSize: 10.5)),
                 ),
               );
             }),
@@ -354,6 +354,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return PageFrame(
       title: 'Conversation',
       fallback: '/buyer/messages',
+      storefront: true,
       body: Column(
         children: [
           Expanded(
@@ -377,7 +378,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .75),
-                                  decoration: BoxDecoration(color: mine ? MvColors.skyBlue : mv.surfaceMuted, borderRadius: BorderRadius.circular(14)),
+                                  decoration: BoxDecoration(color: mine ? MvColors.brand : mv.surfaceMuted, borderRadius: BorderRadius.circular(14)),
                                   child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                                     Text(strOf(m['content']), style: TextStyle(color: mine ? Colors.white : mv.text, fontSize: 13)),
                                     Text(formatDateTime(m['createdAt']), style: TextStyle(color: mine ? Colors.white70 : mv.textMuted, fontSize: 9.5)),

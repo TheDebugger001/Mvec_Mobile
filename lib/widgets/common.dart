@@ -9,24 +9,23 @@ import '../core/icons.dart';
 import '../core/theme.dart';
 import 'theme_switch.dart';
 
-/// "MVEC" wordmark with the brand gradient.
+/// "Ikiguzi" brush-script wordmark, as on the Landing page design.
 class MvLogo extends StatelessWidget {
-  const MvLogo({super.key, this.size = 26});
+  const MvLogo({super.key, this.size = 26, this.color});
   final double size;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (r) => MvColors.gradient.createShader(r),
-      blendMode: BlendMode.srcIn,
-      child: Text(
-        'MVEC',
-        style: GoogleFonts.manrope(
-          fontSize: size,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -1,
-          color: Colors.white,
-        ),
+    return Text(
+      'Ikiguzi',
+      maxLines: 1,
+      softWrap: false,
+      style: GoogleFonts.kaushanScript(
+        fontSize: size * 1.05,
+        fontWeight: FontWeight.w400,
+        color: color ?? context.mv.accentDeep,
+        height: 1.1,
       ),
     );
   }
@@ -77,7 +76,7 @@ class Avatar extends StatelessWidget {
     final u = resolveImageUrl(url);
     return CircleAvatar(
       radius: radius,
-      backgroundColor: MvColors.skyBlue,
+      backgroundColor: MvColors.brand,
       foregroundImage: u.isEmpty ? null : CachedNetworkImageProvider(u),
       child: Text(
         name.trim().isEmpty ? 'M' : name.trim()[0].toUpperCase(),
@@ -89,7 +88,7 @@ class Avatar extends StatelessWidget {
 
 // ─── Buttons ─────────────────────────────────────────────────────────────────
 
-/// Sky-blue gradient call to action (`.gradient-btn`).
+/// Brand-teal call to action (`.gradient-btn`).
 class GradientButton extends StatelessWidget {
   const GradientButton({
     super.key,
@@ -144,16 +143,16 @@ class GradientButton extends StatelessWidget {
         color: Colors.transparent,
         child: Ink(
           decoration: BoxDecoration(
-            gradient: MvColors.gradient,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [BoxShadow(color: Color(0x2E25ADDB), blurRadius: 14, offset: Offset(0, 6))],
+            gradient: context.isDarkMode ? MvColors.gradientDark : MvColors.gradient,
+            borderRadius: BorderRadius.circular(MvRadius.button),
+            boxShadow: const [BoxShadow(color: Color(0x2E064F65), blurRadius: 14, offset: Offset(0, 6))],
           ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(MvRadius.button),
             onTap: enabled ? onPressed : null,
             child: Container(
-              constraints: BoxConstraints(minHeight: compact ? 38 : 46),
-              padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20, vertical: compact ? 8 : 12),
+              constraints: BoxConstraints(minHeight: compact ? 40 : 48),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 20, vertical: compact ? 8 : 12),
               child: child,
             ),
           ),
@@ -194,16 +193,16 @@ class OutlineBtn extends StatelessWidget {
       opacity: enabled ? 1 : .55,
       child: Material(
         color: mv.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(MvRadius.button),
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(MvRadius.button),
           onTap: enabled ? onPressed : null,
           child: Container(
-            constraints: BoxConstraints(minHeight: compact ? 38 : 46),
-            padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 18, vertical: compact ? 8 : 12),
+            constraints: BoxConstraints(minHeight: compact ? 40 : 48),
+            padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 18, vertical: compact ? 8 : 12),
             decoration: BoxDecoration(
-              border: Border.all(color: danger ? color : (context.isDarkMode ? const Color(0xFF396273) : const Color(0xFFB8DCE8))),
-              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: danger ? color : (context.isDarkMode ? const Color(0xFF396273) : const Color(0xFFB5D2DB))),
+              borderRadius: BorderRadius.circular(MvRadius.button),
             ),
             child: Row(
               mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
@@ -260,13 +259,13 @@ class SolidButton extends StatelessWidget {
       opacity: enabled ? 1 : .55,
       child: Material(
         color: color ?? const Color(0xFF172B34),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(MvRadius.button),
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(MvRadius.button),
           onTap: enabled ? onPressed : null,
           child: Container(
-            constraints: BoxConstraints(minHeight: compact ? 38 : 46),
-            padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 18, vertical: compact ? 8 : 12),
+            constraints: BoxConstraints(minHeight: compact ? 40 : 48),
+            padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 18, vertical: compact ? 8 : 12),
             child: Row(
               mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -294,6 +293,54 @@ class SolidButton extends StatelessWidget {
   }
 }
 
+/// White button for use on a brand-teal panel (the cart and checkout totals).
+class OnBrandButton extends StatelessWidget {
+  const OnBrandButton({super.key, required this.label, required this.onPressed, this.loading = false, this.icon});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null && !loading;
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: enabled,
+      child: Opacity(
+        opacity: enabled ? 1 : .6,
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(MvRadius.button),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(MvRadius.button),
+            onTap: enabled ? onPressed : null,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 50),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (loading)
+                    const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: MvColors.brand))
+                  else if (icon != null)
+                    Icon(icon, size: 18, color: MvColors.brand),
+                  if (loading || icon != null) const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: MvColors.brand, fontWeight: FontWeight.w800, fontSize: 14.5)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Cards, headings, states ─────────────────────────────────────────────────
 
 /// White bordered panel (`.data-card`).
@@ -312,8 +359,9 @@ class DataCard extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: mv.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(MvRadius.card),
         border: Border.all(color: mv.border),
+        boxShadow: context.mvCardShadow,
       ),
       child: child,
     );
@@ -370,24 +418,37 @@ class SectionHeading extends StatelessWidget {
   Widget build(BuildContext context) {
     final mv = context.mv;
     return Padding(
-      padding: const EdgeInsets.only(top: 6, bottom: 12),
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (eyebrow != null) Text(eyebrow!, style: context.mvEyebrow.copyWith(fontSize: 10.5, letterSpacing: 1.6)),
-                Text(title, style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: mv.text)),
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w800, color: mv.text)),
               ],
             ),
           ),
           if (actionLabel != null)
-            TextButton(
-              onPressed: onAction,
-              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 32)),
-              child: Text(actionLabel!, style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700, fontSize: 12.5)),
+            InkWell(
+              onTap: onAction,
+              borderRadius: BorderRadius.circular(10),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 40),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(actionLabel!.replaceAll(RegExp(r'\s*→\s*$'), ''), style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700, fontSize: 13)),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_rounded, size: 16, color: mv.accentDeep),
+                    ],
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -443,7 +504,7 @@ class LoadingState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5, color: MvColors.skyBlue)),
+            SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5, color: context.mv.accent)),
             if (label != null) ...[
               const SizedBox(height: 12),
               Text(label!, style: TextStyle(color: context.mv.textMuted, fontSize: 13)),
@@ -710,7 +771,7 @@ class SummaryRow extends StatelessWidget {
   }
 }
 
-/// − 1 + stepper (`.qty`).
+/// − 1 + stepper (`.qty`): a soft pill with round buttons.
 class QtyStepper extends StatelessWidget {
   const QtyStepper({super.key, required this.value, required this.onChanged, this.min = 1, this.max = 100, this.busy = false});
   final int value;
@@ -725,23 +786,23 @@ class QtyStepper extends StatelessWidget {
     Widget btn(IconData icon, bool enabled, VoidCallback tap, String label) => Semantics(
           button: true,
           label: label,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
+          child: InkResponse(
+            radius: 22,
             onTap: enabled && !busy ? tap : null,
             child: SizedBox(
               width: 38,
               height: 38,
-              child: Icon(icon, size: 18, color: enabled && !busy ? mv.text : mv.textMuted.withValues(alpha: .5)),
+              child: Icon(icon, size: 18, color: enabled && !busy ? mv.accentDeep : mv.textMuted.withValues(alpha: .45)),
             ),
           ),
         );
     return Container(
-      decoration: BoxDecoration(border: Border.all(color: mv.border), borderRadius: BorderRadius.circular(10), color: mv.surface),
+      decoration: BoxDecoration(color: mv.surfaceMuted, borderRadius: BorderRadius.circular(999), border: Border.all(color: mv.border)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           btn(Icons.remove_rounded, value > min, () => onChanged(value - 1), 'Decrease quantity'),
-          SizedBox(width: 30, child: Center(child: Text('$value', style: TextStyle(fontWeight: FontWeight.w700, color: mv.text)))),
+          SizedBox(width: 28, child: Center(child: Text('$value', style: TextStyle(fontWeight: FontWeight.w800, color: mv.text, fontSize: 14)))),
           btn(Icons.add_rounded, value < max, () => onChanged(value + 1), 'Increase quantity'),
         ],
       ),
@@ -815,7 +876,7 @@ Future<bool> confirmDialog(BuildContext context, String message, {String confirm
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
-          child: Text(confirm, style: TextStyle(color: danger ? MvColors.errorText : MvColors.skyBlue, fontWeight: FontWeight.w700)),
+          child: Text(confirm, style: TextStyle(color: danger ? MvColors.errorText : ctx.mv.accentDeep, fontWeight: FontWeight.w700)),
         ),
       ],
     ),
