@@ -26,7 +26,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
       onRefresh: () => ref.read(wishlistProvider.notifier).refresh(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [
           const PageTitle(eyebrow: 'Saved items', title: 'Wishlist', subtitle: 'Products you saved. Your list follows you on every device and prices update automatically.'),
           if (_notice != null) Notice(text: _notice!.text, ok: _notice!.ok, onClose: () => setState(() => _notice = null)),
@@ -39,22 +39,22 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
             ),
           for (final w in items)
             Container(
-              margin: const EdgeInsets.only(bottom: 8),
+              margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: mv.surface, border: Border.all(color: mv.border), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: mv.surface, border: Border.all(color: mv.border), borderRadius: BorderRadius.circular(MvRadius.card), boxShadow: context.mvCardShadow),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GestureDetector(onTap: () => context.push('/product/${w.id}'), child: SizedBox(width: 72, height: 72, child: ProductImage(src: w.image, radius: 10))),
+                  GestureDetector(onTap: () => context.push('/product/${w.id}'), child: Container(width: 84, height: 84, decoration: BoxDecoration(color: mv.surfaceMuted, borderRadius: BorderRadius.circular(14)), clipBehavior: Clip.antiAlias, child: ProductImage(src: w.image))),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(w.vendor, style: TextStyle(color: mv.textMuted, fontSize: 11)),
-                        GestureDetector(onTap: () => context.push('/product/${w.id}'), child: Text(w.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.text, fontWeight: FontWeight.w500, fontSize: 13))),
+                        GestureDetector(onTap: () => context.push('/product/${w.id}'), child: Text(w.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 13.5))),
                         const SizedBox(height: 2),
-                        Text(money(w.price), style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700, fontSize: 13)),
+                        Text(money(w.price), style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w800, fontSize: 14)),
                         if (w.priceDropped) Text('↓ ${money(w.savedPrice - w.price)} cheaper than when you saved it', style: const TextStyle(color: MvColors.successText, fontSize: 11)),
                         if (w.unavailable) const Text('No longer available', style: TextStyle(color: MvColors.errorText, fontSize: 11.5)),
                         if (w.soldOut) const Text('Out of stock', style: TextStyle(color: MvColors.errorText, fontSize: 11.5)),

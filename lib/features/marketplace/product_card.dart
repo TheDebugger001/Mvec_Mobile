@@ -25,8 +25,10 @@ class WishHeart extends ConsumerWidget {
       button: true,
       label: wished ? 'Remove from wishlist' : 'Save to wishlist',
       child: Material(
-        color: mv.surface.withValues(alpha: .94),
+        color: mv.surface.withValues(alpha: .96),
         shape: const CircleBorder(),
+        elevation: 1.5,
+        shadowColor: mv.shadow,
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: () async {
@@ -74,14 +76,19 @@ class DiscountChip extends StatelessWidget {
         style: TextStyle(
           color: dark ? const Color(0xFFFF8DB0) : const Color(0xFFD81B60),
           fontSize: 10,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 }
 
-/// Storefront tile: image, heart, name, rating and price.
+/// Height of the text block under a product image (category, two-line name,
+/// rating and price), used to size grid cells.
+const double kProductCardInfoHeight = 124;
+
+/// Storefront tile: soft image well with the heart, then name, rating and
+/// price (the Landing page product card).
 class ProductCard extends ConsumerWidget {
   const ProductCard({super.key, required this.product, this.label, this.width});
   final Product product;
@@ -96,8 +103,9 @@ class ProductCard extends ConsumerWidget {
       width: width,
       decoration: BoxDecoration(
         color: mv.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(MvRadius.card),
         border: Border.all(color: mv.border),
+        boxShadow: context.mvCardShadow,
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -106,40 +114,36 @@ class ProductCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AspectRatio(
-              aspectRatio: 1.05,
+              aspectRatio: 1,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
+                  ColoredBox(color: mv.surfaceMuted),
                   ProductImage(src: p.image),
                   if (p.soldOut)
                     Positioned(
                       left: 8,
                       top: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 3,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF172B34),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(7),
                         ),
                         child: const Text(
                           'SOLD OUT',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .3),
                         ),
                       ),
-                    ),
+                    )
+                  else if (p.onSale)
+                    Positioned(left: 8, top: 8, child: DiscountChip(p.percentOff)),
                   Positioned(right: 6, top: 6, child: WishHeart(product: p)),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              padding: const EdgeInsets.fromLTRB(11, 10, 11, 11),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -154,19 +158,24 @@ class ProductCard extends ConsumerWidget {
                     p.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: mv.text,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12.5,
-                      height: 1.25,
-                    ),
+                    style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 13, height: 1.25),
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    '★ ${ratingLabel(p.rating)}${p.reviews > 0 ? ' (${p.reviews})' : ''}',
-                    style: TextStyle(color: mv.textMuted, fontSize: 10.5),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF0A91A)),
+                      const SizedBox(width: 2),
+                      Flexible(
+                        child: Text(
+                          '${ratingLabel(p.rating)}${p.reviews > 0 ? ' (${p.reviews})' : ''}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: mv.textMuted, fontSize: 10.5),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Flexible(
@@ -174,11 +183,7 @@ class ProductCard extends ConsumerWidget {
                           money(p.price),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: mv.accentDeep,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w800, fontSize: 13.5),
                         ),
                       ),
                       if (p.onSale) ...[
@@ -188,20 +193,12 @@ class ProductCard extends ConsumerWidget {
                             money(p.oldPrice),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: mv.textMuted,
-                              fontSize: 10.5,
-                              decoration: TextDecoration.lineThrough,
-                            ),
+                            style: TextStyle(color: mv.textMuted, fontSize: 10.5, decoration: TextDecoration.lineThrough),
                           ),
                         ),
                       ],
                     ],
                   ),
-                  if (p.onSale) ...[
-                    const SizedBox(height: 5),
-                    DiscountChip(p.percentOff),
-                  ],
                 ],
               ),
             ),
@@ -228,13 +225,13 @@ class ProductGridSliver extends StatelessWidget {
       builder: (context, c) {
         final cols =
             c.crossAxisExtent >= 700 ? 4 : (c.crossAxisExtent >= 480 ? 3 : 2);
-        final w = (c.crossAxisExtent - (cols - 1) * 10) / cols;
+        final w = (c.crossAxisExtent - (cols - 1) * 12) / cols;
         return SliverGrid(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: cols,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            mainAxisExtent: w / 1.05 + 134,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            mainAxisExtent: w + kProductCardInfoHeight,
           ),
           delegate: SliverChildBuilderDelegate(
             (context, i) => ProductCard(

@@ -14,6 +14,8 @@ import '../../core/theme.dart';
 import '../../state/auth_state.dart';
 import '../../state/cart_state.dart';
 import '../../state/catalog_state.dart';
+import '../../widgets/brand_panel.dart';
+import '../../widgets/checkout_steps.dart';
 import '../../widgets/common.dart';
 import '../common/page_frame.dart';
 
@@ -390,11 +392,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     ref.watch(cartProvider);
     if (auth.user != null) WidgetsBinding.instance.addPostFrameCallback((_) => _prefill());
 
-    if (_loadingProduct) return const PageFrame(title: 'Checkout', body: LoadingState());
+    if (_loadingProduct) return const PageFrame(title: 'Checkout', storefront: true, body: LoadingState());
     final items = _items;
     if (_productError.isNotEmpty || (items.isEmpty && !_submitting)) {
       return PageFrame(
         title: 'Checkout',
+        storefront: true,
         body: EmptyState(title: _productError.isEmpty ? 'Your cart is empty' : _productError, action: GradientButton(label: 'Continue shopping', compact: true, onPressed: () => context.go('/shop'))),
       );
     }
@@ -405,17 +408,19 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     return PageFrame(
       title: 'Checkout',
       fallback: '/cart',
+      storefront: true,
       bottom: Row(
         children: [
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [Text('Total to pay', style: TextStyle(color: mv.textMuted, fontSize: 11)), Text(money(_total), style: context.mvH1.copyWith(fontSize: 17))],
+              children: [Text('Total to pay', style: TextStyle(color: mv.textMuted, fontSize: 11)), FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(money(_total), style: context.mvH1.copyWith(fontSize: 18, fontWeight: FontWeight.w800)))],
             ),
           ),
+          const SizedBox(width: 10),
           SizedBox(
-            width: 190,
+            width: 196,
             child: GradientButton(
               label: _submitting ? 'Placing order…' : (auth.user != null ? 'Continue to payment' : 'Verify phone & continue'),
               loading: _submitting,
@@ -425,9 +430,10 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         children: [
+          const CheckoutSteps(current: 1),
           Text('Pay with mobile money or card. MVEC holds the payment until you confirm you have your items.', style: TextStyle(color: mv.textMuted, fontSize: 12.5, height: 1.4)),
           const SizedBox(height: 12),
           if (_error.isNotEmpty) Notice(text: _error),
@@ -462,9 +468,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               children: [
                 Text('How do you want to get your order?', style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
                 const SizedBox(height: 10),
-                _Choice(selected: _isPickup, title: "I'll pick it up", subtitle: "Collect from the seller's store. No delivery fee.", onTap: () => _chooseFulfilment('pickup')),
+                _Choice(selected: _isPickup, title: "I'll pick it up", subtitle: "Collect from the seller's store. No delivery fee.", icon: Icons.storefront_outlined, onTap: () => _chooseFulfilment('pickup')),
                 const SizedBox(height: 8),
-                _Choice(selected: _isDelivery, title: 'Deliver it to me', subtitle: 'The seller or an MVEC courier brings it. A delivery fee applies.', onTap: () => _chooseFulfilment('delivery')),
+                _Choice(selected: _isDelivery, title: 'Deliver it to me', subtitle: 'The seller or an MVEC courier brings it. A delivery fee applies.', icon: Icons.local_shipping_outlined, onTap: () => _chooseFulfilment('delivery')),
                 if (_errors['fulfilment'] != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(_errors['fulfilment']!, style: const TextStyle(color: MvColors.errorText, fontSize: 12))),
                 if (_isPickup) ...[
                   const SizedBox(height: 10),
@@ -552,8 +558,16 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                     },
                     child: Column(
                       children: [
-                        RadioListTile<String>(value: 'standard', dense: true, contentPadding: EdgeInsets.zero, title: Text('Standard delivery  ·  ${_feeLabel('standard')}', style: const TextStyle(fontSize: 13))),
-                        RadioListTile<String>(value: 'express', dense: true, contentPadding: EdgeInsets.zero, title: Text('Express delivery  ·  ${_feeLabel('express')}', style: const TextStyle(fontSize: 13))),
+                        for (final speed in const [('standard', 'Standard delivery'), ('express', 'Express delivery')])
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            decoration: BoxDecoration(
+                              color: _speed == speed.$1 ? mv.soft : null,
+                              borderRadius: BorderRadius.circular(MvRadius.field + 2),
+                              border: Border.all(color: _speed == speed.$1 ? mv.accent : mv.border, width: _speed == speed.$1 ? 1.5 : 1),
+                            ),
+                            child: Material(color: Colors.transparent, child: RadioListTile<String>(value: speed.$1, dense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 8), title: Text('${speed.$2}  ·  ${_feeLabel(speed.$1)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)))),
+                          ),
                       ],
                     ),
                   ),
@@ -582,7 +596,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     child: Row(
                       children: [
-                        SizedBox(width: 46, height: 46, child: ProductImage(src: x.image, radius: 8)),
+                        Container(width: 54, height: 54, decoration: BoxDecoration(color: mv.surfaceMuted, borderRadius: BorderRadius.circular(12)), clipBehavior: Clip.antiAlias, child: ProductImage(src: x.image)),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -605,12 +619,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Order summary', style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
-                const SizedBox(height: 6),
-                SummaryRow('Products', money(_subtotal)),
-                SummaryRow(_isPickup ? 'Pickup' : 'Delivery', _fulfilment.isEmpty ? 'Choose pickup or delivery' : (_isPickup ? 'FREE (pickup)' : (_quoting && _quote == null ? '…' : (_undeliverable || _quote == null ? '—' : (_delivery == 0 ? 'FREE' : money(_delivery)))))),
-                if (_discount > 0) SummaryRow('Coupon ${_couponResult!['code']}', '−${money(_discount)}'),
-                const SizedBox(height: 4),
+                Text('Coupon', style: TextStyle(fontWeight: FontWeight.w700, color: mv.text)),
+                const SizedBox(height: 10),
                 if (_couponResult != null)
                   Row(children: [Expanded(child: Text('${_couponResult!['code']} · ${strOf(_couponResult!['message'])}', style: TextStyle(color: mv.textMuted, fontSize: 11.5))), TextButton(onPressed: () => setState(() {
                         _couponResult = null;
@@ -624,11 +634,19 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                       OutlineBtn(label: _couponBusy ? '…' : 'Apply', compact: true, onPressed: _couponBusy ? null : () => _checkCoupon(_coupon.text)),
                     ],
                   ),
-                if (_couponError.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_couponError, style: const TextStyle(color: MvColors.errorText, fontSize: 11.5))),
-                const Divider(height: 20),
-                SummaryRow('Total to pay', money(_total), bold: true),
+                if (_couponError.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(_couponError, style: const TextStyle(color: MvColors.errorText, fontSize: 11.5))),
               ],
             ),
+          ),
+          BrandPanel(
+            children: [
+              const PanelTitle('Order summary'),
+              PanelRow('Products', money(_subtotal)),
+              PanelRow(_isPickup ? 'Pickup' : 'Delivery', _fulfilment.isEmpty ? 'Choose pickup or delivery' : (_isPickup ? 'FREE (pickup)' : (_quoting && _quote == null ? '…' : (_undeliverable || _quote == null ? '—' : (_delivery == 0 ? 'FREE' : money(_delivery)))))),
+              if (_discount > 0) PanelRow('Coupon ${_couponResult!['code']}', '−${money(_discount)}'),
+              Divider(height: 22, color: Colors.white.withValues(alpha: .22)),
+              PanelRow('Total to pay', money(_total), bold: true),
+            ],
           ),
           const InfoBox(title: 'Protected payment', text: 'You pay by MTN MoMo, Airtel Money or card on the next step. MVEC holds the money and only releases it to the seller after you confirm you have your items with your code.'),
         ],
@@ -646,30 +664,38 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 }
 
 class _Choice extends StatelessWidget {
-  const _Choice({required this.selected, required this.title, required this.subtitle, required this.onTap});
+  const _Choice({required this.selected, required this.title, required this.subtitle, required this.onTap, required this.icon});
   final bool selected;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(MvRadius.card),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: selected ? mv.soft : null,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: selected ? mv.accentDeep : mv.border, width: selected ? 1.5 : 1),
+          borderRadius: BorderRadius.circular(MvRadius.card),
+          border: Border.all(color: selected ? mv.accent : mv.border, width: selected ? 1.5 : 1),
         ),
         child: Row(
           children: [
-            Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, size: 20, color: selected ? mv.accentDeep : mv.textMuted),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: mv.text, fontSize: 13)), Text(subtitle, style: TextStyle(color: mv.textMuted, fontSize: 11.5))])),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: selected ? mv.accent : mv.surfaceMuted, shape: BoxShape.circle),
+              child: Icon(icon, size: 20, color: selected ? Colors.white : mv.accentDeep),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: mv.text, fontSize: 13.5)), const SizedBox(height: 1), Text(subtitle, style: TextStyle(color: mv.textMuted, fontSize: 11.5, height: 1.3))])),
+            const SizedBox(width: 8),
+            Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded, size: 22, color: selected ? mv.accent : mv.textMuted),
           ],
         ),
       ),

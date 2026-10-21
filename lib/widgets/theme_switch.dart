@@ -8,7 +8,10 @@ import 'mv_icon.dart';
 /// track with a ghost sun on the left and moon on the right, and a round knob
 /// that slides from the sun to the moon when dark mode turns on.
 class ThemeSwitch extends ConsumerWidget {
-  const ThemeSwitch({super.key});
+  const ThemeSwitch({super.key, this.compact = false});
+
+  /// Slightly smaller track, for the crowded phone top bar.
+  final bool compact;
 
   static const _w = 52.0;
   static const _h = 28.0;
@@ -21,7 +24,7 @@ class ThemeSwitch extends ConsumerWidget {
     const dur = Duration(milliseconds: 350);
     const curve = Cubic(.4, 1.35, .5, 1);
 
-    return Semantics(
+    final core = Semantics(
       button: true,
       toggled: dark,
       label: dark ? 'Switch to light mode' : 'Switch to dark mode',
@@ -131,5 +134,6 @@ class ThemeSwitch extends ConsumerWidget {
         ),
       ),
     );
+    return compact ? SizedBox(width: 48, height: 40, child: FittedBox(child: core)) : core;
   }
 }
