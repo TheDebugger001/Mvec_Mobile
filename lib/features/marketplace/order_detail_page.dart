@@ -200,10 +200,10 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    if (_loading) return const PageFrame(title: 'Order', fallback: '/orders', body: LoadingState(label: 'Loading order…'));
+    if (_loading) return const PageFrame(title: 'Order', fallback: '/orders', shopping: true, body: LoadingState(label: 'Loading order…'));
     final o = _order;
     if (o == null) {
-      return PageFrame(title: 'Order', fallback: '/orders', body: PageList(children: [Notice(text: _loadError.isEmpty ? 'Order not found.' : _loadError), OutlineBtn(label: 'Back to orders', onPressed: () => context.go('/orders'))]));
+      return PageFrame(title: 'Order', fallback: '/orders', shopping: true, body: PageList(children: [Notice(text: _loadError.isEmpty ? 'Order not found.' : _loadError), OutlineBtn(label: 'Back to orders', onPressed: () => context.go('/orders'))]));
     }
     final items = asMaps(o['items']);
     final cancelled = ['CANCELLED', 'REFUNDED'].contains(o['orderStatus']);
@@ -224,6 +224,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     return PageFrame(
       title: 'Order details',
       fallback: '/orders',
+      shopping: true,
       body: PageList(
         onRefresh: _load,
         children: [
@@ -303,8 +304,12 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
           if (o['paymentStatus'] == 'PAID' && strOf(o['deliveryOtp']).isNotEmpty && !delivered && !cancelled)
             InfoBox(
               title: 'Your delivery code',
-              text: '${isPickup ? 'When you collect your order, give this code to the seller only once the items are in your hands.' : 'Give this code to the seller or courier only when your order is in your hands.'} It releases your payment to the seller. We also sent it to you by SMS.',
-              child: SelectableText(strOf(o['deliveryOtp']), style: GoogleFontsSafe.code(mv.accentDeep)),
+              text: '${isPickup ? 'When you collect your order, give this code to the seller only once the items are in your hands.' : 'Give this code to the seller or courier only when your order is in your hands.'} It releases your payment to the seller. It stays here on your order until delivery.',
+              // Read digit by digit by screen readers; SelectableText alone isn't announced on the web.
+              child: Semantics(
+                label: 'Delivery code ${strOf(o['deliveryOtp']).split('').join(' ')}',
+                child: ExcludeSemantics(child: SelectableText(strOf(o['deliveryOtp']), style: GoogleFontsSafe.code(mv.accentDeep))),
+              ),
             ),
           if (cancelled)
             InfoBox(

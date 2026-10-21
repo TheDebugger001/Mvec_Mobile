@@ -33,7 +33,7 @@ class _Line {
 /// `/checkout` (cart) and `/checkout?product=ID&qty=N` (buy now): details,
 /// pickup or delivery, delivery fee quote, coupon, then the order is created
 /// and the buyer goes on to pay (`pages/Checkout.jsx`). Guests confirm their
-/// phone with a texted code instead of signing up.
+/// phone with a one-time code instead of signing up.
 class CheckoutPage extends ConsumerStatefulWidget {
   const CheckoutPage({super.key, this.productId, this.qty = 1});
   final String? productId;
@@ -329,10 +329,10 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   /// No account needed: confirm the phone with a code, then order.
   Future<void> _guestFlow() async {
     setState(() => _submitting = true);
-    String devCode = '';
+    String sentTo = '';
     try {
-      final res = await AuthApi.guestSendCode(_phone.text.trim());
-      devCode = '${res['devCode'] ?? ''}';
+      final res = await AuthApi.guestSendCode(_phone.text.trim(), email: _email.text);
+      sentTo = '${res['message'] ?? ''}';
     } on ApiException catch (e) {
       if (e.statusCode != 429) {
         setState(() {
@@ -347,7 +347,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     final session = await showDialog<AuthSession>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _CodeDialog(phone: _phone.text.trim(), name: _name.text.trim(), email: _email.text.trim(), devCode: devCode),
+      builder: (_) => _CodeDialog(phone: _phone.text.trim(), name: _name.text.trim(), email: _email.text.trim(), sentTo: sentTo),
     );
     if (session == null || !mounted) {
       setState(() => _submitting = false);
@@ -434,7 +434,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           if (auth.user == null && !auth.restoring)
             Notice(
               info: true,
-              text: "No account needed. We'll text a code to your phone to confirm it's yours before you pay.",
+              text: "No account needed. We'll send a code to your phone (and to your email, if you add one) to confirm it's yours before you pay.",
               child: GestureDetector(
                 onTap: () => context.push('/login?checkout=1&next=${Uri.encodeQueryComponent(GoRouterState.of(context).uri.toString())}'),
                 child: Padding(padding: const EdgeInsets.only(top: 4), child: Text('Have an account? Log in', style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w600, fontSize: 12.5))),
@@ -452,7 +452,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                 const SizedBox(height: 10),
                 TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: dec('phone', 'Phone', hint: '07xx xxx xxx'), onChanged: (_) => setState(() => _errors.remove('phone'))),
                 const SizedBox(height: 10),
-                TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: dec('email', 'Email (optional)', hint: 'you@example.com')),
+                TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: dec('email', 'Email (optional)', hint: 'We also send your code and receipt here')),
               ],
             ),
           ),
@@ -698,13 +698,14 @@ class _ParcelRow extends StatelessWidget {
   }
 }
 
-/// Asks for the 6-digit code texted to a guest's phone.
+/// Asks for the 6-digit code sent to a guest's phone (and email, if given).
 class _CodeDialog extends StatefulWidget {
-  const _CodeDialog({required this.phone, required this.name, required this.email, required this.devCode});
+  const _CodeDialog({required this.phone, required this.name, required this.email, required this.sentTo});
   final String phone;
   final String name;
   final String email;
-  final String devCode;
+  /// Where the server says the code went, e.g. "We emailed a 6-digit code to …".
+  final String sentTo;
 
   @override
   State<_CodeDialog> createState() => _CodeDialogState();
@@ -752,8 +753,7 @@ class _CodeDialogState extends State<_CodeDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('We sent a 6-digit code to ${widget.phone}. Enter it to place your order. Only this phone can see the order.', style: const TextStyle(fontSize: 13)),
-          if (widget.devCode.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Development code: ${widget.devCode}', style: const TextStyle(fontSize: 12))),
+          Text('${widget.sentTo.isEmpty ? 'We sent a 6-digit code to ${widget.phone}.' : widget.sentTo} Enter it to place your order. Only this phone can see the order.', style: const TextStyle(fontSize: 13)),
           const SizedBox(height: 10),
           TextField(controller: _code, autofocus: true, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'Code', counterText: ''), onSubmitted: (_) => _confirm()),
           if (_error.isNotEmpty) Text(_error, style: const TextStyle(color: MvColors.errorText, fontSize: 12)),

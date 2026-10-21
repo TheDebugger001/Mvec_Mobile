@@ -246,7 +246,7 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
     final res = await jget(path);
     final list = asMaps(res['orders'] ?? res['data']);
     final balance = widget.role == 'vendor' ? asMap((await jget('/payouts/balance').catchError((_) => <String, dynamic>{}))['balance']) : <String, dynamic>{};
-    final couriers = widget.role == 'admin' ? await jlist('/users', 'data', {'role': 'delivery', 'limit': 100}).catchError((_) => <Map<String, dynamic>>[]) : <Map<String, dynamic>>[];
+    final couriers = widget.role == 'admin' ? await jlist('/users', 'data', {'role': 'delivery', 'status': 'ACTIVE', 'limit': 100}).catchError((_) => <Map<String, dynamic>>[]) : <Map<String, dynamic>>[];
     return (orders: [for (final o in list) _wholesaleRole ? _wholesale(o) : _retail(o, widget.role, userId)], balance: balance, couriers: couriers);
   });
   late String _tab = widget.role == 'admin' ? 'attention' : widget.initialTab;

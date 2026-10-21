@@ -56,9 +56,10 @@ class AuthApi {
     return _session(res);
   }
 
-  /// Texts a one-time code to a phone (guest checkout / code login).
-  static Future<Map<String, dynamic>> guestSendCode(String phone) async =>
-      asMap(await _api.post('/auth/guest/send-code', body: {'phone': phone}));
+  /// Sends a one-time code by text message and, for a new guest, to the email
+  /// they gave (guest checkout / code login). The reply's `message` says where.
+  static Future<Map<String, dynamic>> guestSendCode(String phone, {String email = ''}) async =>
+      asMap(await _api.post('/auth/guest/send-code', body: {'phone': phone, if (email.trim().isNotEmpty) 'email': email.trim()}));
 
   static Future<AuthSession> guestVerify({
     required String phone,

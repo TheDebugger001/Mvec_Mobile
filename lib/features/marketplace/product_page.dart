@@ -67,10 +67,11 @@ class _ProductPageState extends ConsumerState<ProductPage> {
   Widget build(BuildContext context) {
     final mv = context.mv;
     final p = _p;
-    if (_loading) return const PageFrame(title: 'Product', body: LoadingState());
+    if (_loading) return const PageFrame(title: 'Product', shopping: true, body: LoadingState());
     if (p == null) {
       return PageFrame(
         title: 'Product',
+        shopping: true,
         body: _error != null && statusOf(_error!) != 404
             ? ErrorState(error: _error!, onRetry: _load)
             : EmptyState(
@@ -91,9 +92,7 @@ class _ProductPageState extends ConsumerState<ProductPage> {
 
     return PageFrame(
       title: 'Product',
-      actions: [
-        Padding(padding: const EdgeInsets.only(right: 8), child: WishHeart(product: p, size: 18)),
-      ],
+      shopping: true,
       bottom: Row(
         children: [
           Expanded(
@@ -198,6 +197,8 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                 Row(
                   children: [
                     QtyStepper(value: _qty, max: maxQty, onChanged: p.soldOut ? (_) {} : (v) => setState(() => _qty = v)),
+                    const SizedBox(width: 10),
+                    WishHeart(product: p, size: 18),
                     const SizedBox(width: 10),
                     Expanded(
                       child: OutlineBtn(

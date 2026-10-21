@@ -280,6 +280,51 @@ class _AdminRecordsPageState extends ConsumerState<AdminRecordsPage> {
     if (ok) _reload();
   }
 
+  /// Adds a courier or an admin as a brand-new account. They choose their own
+  /// password from the welcome email ("Forgot password"), so no admin knows it.
+  Future<void> _addTeamAccount({required bool admin}) async {
+    final message = await showFormSheet<String>(
+      context,
+      title: admin ? 'Add an admin' : 'Add a courier',
+      subtitle: admin
+          ? 'Admins can see and change everything on MVEC. Only add MVEC staff, with their work email. This creates a new account; they choose their password from the email we send.'
+          : 'Couriers deliver paid orders and confirm them with the buyer\'s code. This creates a new account for the delivery partner; they choose their password from the email we send.',
+      submitLabel: admin ? 'Add admin' : 'Add courier',
+      fields: [
+        const FieldSpec('fullName', 'Full name', required: true),
+        const FieldSpec('email', 'Email', type: FieldType.email, required: true, hint: 'name@example.com'),
+        const FieldSpec('phone', 'Phone number', type: FieldType.phone, required: true, hint: '0788 123 456'),
+        if (admin) const FieldSpec('currentPassword', 'Your password (to confirm)', type: FieldType.password, required: true),
+      ],
+      onSubmit: (v) async {
+        final res = await jpost(admin ? '/users/admins' : '/users/couriers', v);
+        return strOf(res['message'], 'Added.');
+      },
+    );
+    if (message == null || !mounted) return;
+    toast(context, message);
+    _reload();
+  }
+
+  /// Removes or restores an admin's access, confirmed with your own password.
+  Future<void> _adminAccess(Map<String, dynamic> x, String name, {required bool restore}) async {
+    final message = await showFormSheet<String>(
+      context,
+      title: restore ? 'Restore admin access' : 'Remove admin access',
+      subtitle: restore ? '$name will be able to sign in and manage MVEC again.' : '$name will no longer be able to sign in. Everything they did stays in the activity log.',
+      submitLabel: restore ? 'Restore access' : 'Remove access',
+      danger: !restore,
+      fields: const [FieldSpec('currentPassword', 'Your password (to confirm)', type: FieldType.password, required: true)],
+      onSubmit: (v) async {
+        final res = await jpost('/users/${idOf(x)}/admin-access', {'active': restore, 'currentPassword': v['currentPassword']});
+        return strOf(res['message'], 'Saved.');
+      },
+    );
+    if (message == null || !mounted) return;
+    toast(context, message);
+    _reload();
+  }
+
   void _view(Map<String, String> record) {
     showModalBottomSheet<void>(
       context: context,
@@ -321,19 +366,12 @@ class _AdminRecordsPageState extends ConsumerState<AdminRecordsPage> {
           subtitle: '${strOf(x['email'], '—')} · ${roleLabel[role] ?? titleCase(role)}',
           status: StatusChip(status, tone: status == 'Active' ? StatusTone.good : StatusTone.warn),
           actions: [
-            if (['buyer', 'delivery', 'super_admin'].contains(role) && idOf(x) != me)
-              SizedBox(
-                width: 150,
-                child: FilterSelect(
-                  label: 'Role',
-                  value: role,
-                  options: const [('buyer', 'Buyer'), ('delivery', 'Courier'), ('super_admin', 'Admin')],
-                  onChanged: (v) {
-                    if (v == role) return;
-                    final label = const {'buyer': 'a buyer', 'delivery': 'a courier', 'super_admin': 'an admin'}[v];
-                    _patchUser(x, {'role': v}, 'Make $name $label?${v == 'super_admin' ? ' Admins can see and change everything.' : ''}');
-                  },
-                ),
+            if (role == 'super_admin' && idOf(x) != me)
+              ActionChipBtn(
+                status == 'Blocked' ? 'Restore admin access' : 'Remove admin access',
+                danger: status != 'Blocked',
+                busy: busy,
+                onPressed: () => _adminAccess(x, name, restore: status == 'Blocked'),
               ),
             if (role != 'super_admin')
               ActionChipBtn(
@@ -419,7 +457,24 @@ class _AdminRecordsPageState extends ConsumerState<AdminRecordsPage> {
       subtitle: 'Manage marketplace records and platform operations.',
       onRefresh: () async => _reload(),
       children: [
-        const InfoBox(title: 'Live marketplace data', text: 'This list is read directly from the MVEC database. User actions update the account record and take effect across the marketplace.'),
+        if (widget.type == 'users')
+          InfoBox(
+            title: 'Who gets which role',
+            text: 'Buyers sign up or check out as guests. Sellers, suppliers and affiliates choose their role when they sign up, and MVEC verifies sellers and suppliers on their own pages. Couriers and admins are added here as new accounts — a shopper\'s account is never turned into one, and roles are never switched.',
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  GradientButton(label: 'Add courier', icon: Icons.delivery_dining_outlined, compact: true, onPressed: () => _addTeamAccount(admin: false)),
+                  OutlineBtn(label: 'Add admin', icon: Icons.admin_panel_settings_outlined, compact: true, onPressed: () => _addTeamAccount(admin: true)),
+                ],
+              ),
+            ),
+          )
+        else
+          const InfoBox(title: 'Live marketplace data', text: 'This list is read directly from the MVEC database. User actions update the account record and take effect across the marketplace.'),
         if (widget.type == 'users')
           FilterSelect(
             label: 'Filter by role',

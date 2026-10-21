@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../../shell/marketplace_shell.dart' show ShopShortcuts;
 import '../../widgets/common.dart';
 
 /// Full-screen page with a back arrow (product, checkout, payment, order).
 class PageFrame extends StatelessWidget {
-  const PageFrame({super.key, required this.title, required this.body, this.actions, this.bottom, this.fallback = '/'});
+  const PageFrame({super.key, required this.title, required this.body, this.actions, this.bottom, this.fallback = '/', this.shopping = false});
   final String title;
   final Widget body;
   final List<Widget>? actions;
   final Widget? bottom;
   final String fallback;
+
+  /// Shows compare, wishlist and cart in the top bar, as on the storefront.
+  final bool shopping;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +27,7 @@ class PageFrame extends StatelessWidget {
           onPressed: () => context.canPop() ? context.pop() : context.go(fallback),
         ),
         title: Text(title),
-        actions: actions,
+        actions: shopping ? [...?actions, const ShopShortcuts(), const SizedBox(width: 6)] : actions,
         bottom: PreferredSize(preferredSize: const Size.fromHeight(1), child: Divider(height: 1, color: context.mv.border)),
       ),
       body: SafeArea(top: false, child: body),
