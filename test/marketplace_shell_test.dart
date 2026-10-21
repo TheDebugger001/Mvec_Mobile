@@ -16,11 +16,23 @@ void main() {
     await pumpApp(tester, FakeBackend(baseRoutes()));
     await tester.tap(find.byTooltip('Open menu'));
     await settle(tester);
-    expect(find.text('MARKETPLACE'), findsOneWidget);
+    expect(find.byTooltip('Close menu'), findsOneWidget);
     expect(find.text('Sign in'), findsWidgets);
-    // The drawer's left edge sits at the left of the screen.
-    final drawer = tester.getRect(find.text('MARKETPLACE'));
+    // The panel's left edge sits at the left of the screen.
+    final drawer = tester.getRect(find.byTooltip('Close menu'));
     expect(drawer.left, lessThan(200));
+  });
+
+  testWidgets('sidebar keeps every destination and closes from the menu icon', (tester) async {
+    await pumpApp(tester, FakeBackend(baseRoutes()));
+    await tester.tap(find.byTooltip('Open menu'));
+    await settle(tester);
+    for (final label in ['Home', 'Shop', 'For You', 'Deals', 'Stores', 'Categories', 'Orders', 'Wishlist', 'Cart', 'Compare', 'Help & Support', 'Become a vendor']) {
+      expect(find.text(label), findsWidgets, reason: label);
+    }
+    await tester.tap(find.byTooltip('Close menu'));
+    await settle(tester);
+    expect(find.byTooltip('Close menu'), findsNothing);
   });
 
   testWidgets('home shows products and the top bar has the required actions', (tester) async {

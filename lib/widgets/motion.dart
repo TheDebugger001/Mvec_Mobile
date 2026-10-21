@@ -287,3 +287,70 @@ class MvPageTransitionsBuilder extends PageTransitionsBuilder {
     );
   }
 }
+
+/// Slides a column of children in from the side, one after another, the first
+/// time it appears (sign-in and sign-up forms). Later rebuilds, such as typing
+/// or switching to code login, do not replay it; children added afterwards
+/// simply appear.
+class SlideInColumn extends StatefulWidget {
+  const SlideInColumn({super.key, required this.children, this.crossAxisAlignment = CrossAxisAlignment.stretch, this.from = const Offset(.18, 0)});
+  final List<Widget> children;
+  final CrossAxisAlignment crossAxisAlignment;
+  final Offset from;
+
+  @override
+  State<SlideInColumn> createState() => _SlideInColumnState();
+}
+
+class _SlideInColumnState extends State<SlideInColumn> with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+  late final int _count;
+
+  static const _step = 55; // ms between children
+  static const _each = 420; // ms for one child
+
+  @override
+  void initState() {
+    super.initState();
+    _count = widget.children.length;
+    _c = AnimationController(vsync: this, duration: Duration(milliseconds: _each + _step * (_count - 1).clamp(0, 12)));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (Motion.reduced(context)) {
+      _c.value = 1;
+    } else if (_c.value == 0 && !_c.isAnimating) {
+      _c.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = _c.duration!.inMilliseconds;
+    return Column(
+      crossAxisAlignment: widget.crossAxisAlignment,
+      children: [
+        for (var i = 0; i < widget.children.length; i++)
+          if (i >= _count)
+            widget.children[i]
+          else
+            Builder(builder: (_) {
+              final start = (_step * i.clamp(0, 12)) / total;
+              final a = CurvedAnimation(parent: _c, curve: Interval(start, (start + _each / total).clamp(0, 1), curve: Motion.out));
+              return FadeTransition(
+                opacity: a,
+                child: SlideTransition(position: Tween(begin: widget.from, end: Offset.zero).animate(a), child: widget.children[i]),
+              );
+            }),
+      ],
+    );
+  }
+}

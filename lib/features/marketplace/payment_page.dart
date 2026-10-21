@@ -11,6 +11,8 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../state/auth_state.dart';
 import '../common/page_frame.dart';
+import '../../widgets/brand_panel.dart';
+import '../../widgets/checkout_steps.dart';
 import '../../widgets/common.dart';
 
 const _pollEvery = Duration(seconds: 3);
@@ -205,12 +207,13 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    if (_loading) return const PageFrame(title: 'Payment', body: LoadingState());
+    if (_loading) return const PageFrame(title: 'Payment', storefront: true, body: LoadingState());
     final order = _order;
     if (order == null) {
       return PageFrame(
         title: 'Payment',
         fallback: '/orders',
+        storefront: true,
         body: PageList(children: [Notice(text: _error.isEmpty ? 'Order not found.' : _error), OutlineBtn(label: 'My orders', onPressed: () => context.go('/orders'))]),
       );
     }
@@ -219,35 +222,46 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
     final provider = mobileProvider(_phone.text);
     final total = order['totalAmount'];
 
-    Widget option(String value, String title, String sub, IconData icon) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: waiting ? null : () => setState(() => _method = value),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _method == value ? mv.soft : null,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _method == value ? mv.accentDeep : mv.border, width: _method == value ? 1.5 : 1),
-              ),
-              child: Row(
-                children: [
-                  Icon(icon, size: 22, color: mv.accentDeep),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: mv.text, fontSize: 13)), Text(sub, style: TextStyle(color: mv.textMuted, fontSize: 11.5))])),
-                  Icon(_method == value ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, size: 19, color: _method == value ? mv.accentDeep : mv.textMuted),
-                ],
-              ),
+    Widget option(String value, String title, String sub, IconData icon) {
+      final on = _method == value;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(MvRadius.card),
+          onTap: waiting ? null : () => setState(() => _method = value),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: on ? mv.soft : null,
+              borderRadius: BorderRadius.circular(MvRadius.card),
+              border: Border.all(color: on ? mv.accent : mv.border, width: on ? 1.5 : 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(color: on ? mv.accent : mv.surfaceMuted, shape: BoxShape.circle),
+                  child: Icon(icon, size: 21, color: on ? Colors.white : mv.accentDeep),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: mv.text, fontSize: 13.5)), const SizedBox(height: 1), Text(sub, style: TextStyle(color: mv.textMuted, fontSize: 11.5, height: 1.3))])),
+                const SizedBox(width: 8),
+                Icon(on ? Icons.check_circle_rounded : Icons.radio_button_off_rounded, size: 22, color: on ? mv.accent : mv.textMuted),
+              ],
             ),
           ),
-        );
+        ),
+      );
+    }
 
     return PageFrame(
       title: 'Payment',
       fallback: '/orders',
+      storefront: true,
       body: PageList(
         children: [
+          CheckoutSteps(current: _stage == 'confirmed' ? 3 : 2),
           PageTitle(eyebrow: 'Payment', title: 'Pay for your order', subtitle: 'Order #${order['orderNumber']}'),
           if (_error.isNotEmpty) Notice(text: _error),
           if (_notice.isNotEmpty && _stage != 'confirmed') Notice(text: _notice, ok: true),
@@ -321,18 +335,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
                 ],
               ),
             ),
-          DataCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Order total', style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
-                const SizedBox(height: 6),
-                SummaryRow('Products', money(order['subtotal'] ?? numOf(total) - numOf(order['shippingFee']))),
-                SummaryRow('Delivery', numOf(order['shippingFee']) > 0 ? money(order['shippingFee']) : 'FREE'),
-                const Divider(height: 16),
-                SummaryRow('Total', money(total), bold: true),
-              ],
-            ),
+          BrandPanel(
+            children: [
+              const PanelTitle('Order total'),
+              PanelRow('Products', money(order['subtotal'] ?? numOf(total) - numOf(order['shippingFee']))),
+              PanelRow('Delivery', numOf(order['shippingFee']) > 0 ? money(order['shippingFee']) : 'FREE'),
+              Divider(height: 22, color: Colors.white.withValues(alpha: .22)),
+              PanelRow('Total', money(total), bold: true),
+            ],
           ),
           const InfoBox(title: 'How MVEC protects you', text: 'Your payment is held by MVEC until you confirm delivery, then released to the seller. After payment you get a delivery code in your order. Only give it to the courier when your order arrives.'),
         ],

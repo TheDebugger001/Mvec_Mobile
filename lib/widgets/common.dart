@@ -10,24 +10,23 @@ import '../core/theme.dart';
 import 'motion.dart';
 import 'theme_switch.dart';
 
-/// "MVEC" wordmark with the brand gradient.
+/// "Ikiguzi" brush-script wordmark, as on the Landing page design.
 class MvLogo extends StatelessWidget {
-  const MvLogo({super.key, this.size = 26});
+  const MvLogo({super.key, this.size = 26, this.color});
   final double size;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (r) => MvColors.gradient.createShader(r),
-      blendMode: BlendMode.srcIn,
-      child: Text(
-        'MVEC',
-        style: GoogleFonts.manrope(
-          fontSize: size,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -1,
-          color: Colors.white,
-        ),
+    return Text(
+      'Ikiguzi',
+      maxLines: 1,
+      softWrap: false,
+      style: GoogleFonts.kaushanScript(
+        fontSize: size * 1.05,
+        fontWeight: FontWeight.w400,
+        color: color ?? context.mv.accentDeep,
+        height: 1.1,
       ),
     );
   }
@@ -82,7 +81,7 @@ class Avatar extends StatelessWidget {
     final u = resolveImageUrl(url);
     return CircleAvatar(
       radius: radius,
-      backgroundColor: MvColors.skyBlue,
+      backgroundColor: MvColors.brand,
       foregroundImage: u.isEmpty ? null : CachedNetworkImageProvider(u),
       child: Text(
         name.trim().isEmpty ? 'M' : name.trim()[0].toUpperCase(),
@@ -94,84 +93,7 @@ class Avatar extends StatelessWidget {
 
 // ─── Buttons ─────────────────────────────────────────────────────────────────
 
-/// Shared look for every button: height, padding, label, spinner, press spring.
-class _ButtonFrame extends StatelessWidget {
-  const _ButtonFrame({
-    required this.label,
-    required this.onPressed,
-    required this.decoration,
-    required this.foreground,
-    this.icon,
-    this.loading = false,
-    this.success = false,
-    this.expand = false,
-    this.compact = false,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final BoxDecoration decoration;
-  final Color foreground;
-  final IconData? icon;
-  final bool loading;
-  final bool success;
-  final bool expand;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null && !loading;
-    final radius = BorderRadius.circular(MvRadius.button);
-    // The label swaps to a check for a moment after a confirmed success.
-    final content = AnimatedSwitcher(
-      duration: Motion.reduced(context) ? Duration.zero : Motion.quick,
-      transitionBuilder: (child, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween<double>(begin: .85, end: 1).animate(a), child: child)),
-      child: Row(
-        key: ValueKey(success ? 'ok' : loading ? 'busy' : 'idle'),
-        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (loading)
-            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: foreground))
-          else if (success)
-            Icon(Icons.check_rounded, size: 19, color: foreground)
-          else if (icon != null)
-            Icon(icon, size: 18, color: foreground),
-          if (loading || success || icon != null) const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: foreground, fontWeight: FontWeight.w700, fontSize: compact ? 12.5 : 14, letterSpacing: .1),
-            ),
-          ),
-        ],
-      ),
-    );
-    final button = Material(
-      color: Colors.transparent,
-      child: Ink(
-        decoration: decoration.copyWith(borderRadius: radius),
-        child: InkWell(
-          borderRadius: radius,
-          onTap: enabled ? onPressed : null,
-          child: Container(
-            constraints: BoxConstraints(minHeight: compact ? 40 : 50),
-            padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20, vertical: compact ? 8 : 12),
-            child: Center(widthFactor: expand ? null : 1, heightFactor: 1, child: content),
-          ),
-        ),
-      ),
-    );
-    return Semantics(container: true, button: true, enabled: enabled, child: Pressable(enabled: enabled, child: button));
-  }
-}
-
-BoxDecoration _disabledFill(BuildContext context) => BoxDecoration(color: context.mv.surfaceMuted, border: Border.all(color: context.mv.border));
-
-/// Primary call to action: the MVEC sky-blue gradient (`.gradient-btn`).
-/// [success] briefly shows a check after an action is confirmed.
+/// Brand-teal call to action (`.gradient-btn`).
 class GradientButton extends StatelessWidget {
   const GradientButton({
     super.key,
@@ -188,29 +110,72 @@ class GradientButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool loading;
+  /// Briefly shows a check after the action is confirmed (e.g. added to cart).
   final bool success;
   final bool expand;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final off = onPressed == null && !loading;
-    return _ButtonFrame(
-      label: label,
-      onPressed: onPressed,
-      icon: icon,
-      loading: loading,
-      success: success,
-      expand: expand,
-      compact: compact,
-      foreground: off ? context.mv.textMuted : Colors.white,
-      decoration: off
-          ? _disabledFill(context)
-          : const BoxDecoration(
-              gradient: MvColors.gradient,
-              boxShadow: [BoxShadow(color: Color(0x3325ADDB), blurRadius: 16, offset: Offset(0, 6))],
+    final enabled = onPressed != null && !loading;
+    final row = Row(
+      key: ValueKey(success ? 'ok' : loading ? 'busy' : 'idle'),
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (loading)
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          )
+        else if (success)
+          const Icon(Icons.check_rounded, size: 19, color: Colors.white)
+        else if (icon != null)
+          Icon(icon, size: 18, color: Colors.white),
+        if (loading || success || icon != null) const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: compact ? 12.5 : 13.5,
             ),
+          ),
+        ),
+      ],
     );
+    final child = AnimatedSwitcher(
+      duration: Motion.reduced(context) ? Duration.zero : Motion.quick,
+      transitionBuilder: (c, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween<double>(begin: .85, end: 1).animate(a), child: c)),
+      child: row,
+    );
+    final button = Opacity(
+      opacity: enabled ? 1 : .55,
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: context.isDarkMode ? MvColors.gradientDark : MvColors.gradient,
+            borderRadius: BorderRadius.circular(MvRadius.button),
+            boxShadow: const [BoxShadow(color: Color(0x2E064F65), blurRadius: 14, offset: Offset(0, 6))],
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(MvRadius.button),
+            onTap: enabled ? onPressed : null,
+            child: Container(
+              constraints: BoxConstraints(minHeight: compact ? 40 : 48),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 20, vertical: compact ? 8 : 12),
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+    return Semantics(container: true, button: true, enabled: enabled, child: Pressable(enabled: enabled, child: button));
   }
 }
 
@@ -238,25 +203,51 @@ class OutlineBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    final off = onPressed == null && !loading;
-    final color = off ? mv.textMuted : (danger ? MvColors.dangerBtn : mv.accentDeep);
-    return _ButtonFrame(
-      label: label,
-      onPressed: onPressed,
-      icon: icon,
-      loading: loading,
-      expand: expand,
-      compact: compact,
-      foreground: color,
-      decoration: BoxDecoration(
-        color: off ? mv.surfaceMuted : mv.surface,
-        border: Border.all(color: danger && !off ? MvColors.dangerBtn.withValues(alpha: .45) : (context.isDarkMode ? const Color(0xFF396273) : const Color(0xFFBFE3F0)), width: 1.2),
+    final color = danger ? MvColors.dangerBtn : mv.accentDeep;
+    final enabled = onPressed != null && !loading;
+    final button = Opacity(
+      opacity: enabled ? 1 : .55,
+      child: Material(
+        color: mv.surface,
+        borderRadius: BorderRadius.circular(MvRadius.button),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(MvRadius.button),
+          onTap: enabled ? onPressed : null,
+          child: Container(
+            constraints: BoxConstraints(minHeight: compact ? 40 : 48),
+            padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 18, vertical: compact ? 8 : 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: danger ? color : (context.isDarkMode ? const Color(0xFF396273) : const Color(0xFFB5D2DB))),
+              borderRadius: BorderRadius.circular(MvRadius.button),
+            ),
+            child: Row(
+              mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (loading)
+                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: color))
+                else if (icon != null)
+                  Icon(icon, size: 18, color: color),
+                if (loading || icon != null) const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: compact ? 12.5 : 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
+    return Semantics(container: true, button: true, enabled: enabled, child: Pressable(enabled: enabled, child: button));
   }
 }
 
-/// Solid navy (or [color]) action (`.buy-btn`, `.danger-btn`).
+/// Solid dark/danger button (`.buy-btn`, `.danger-btn`).
 class SolidButton extends StatelessWidget {
   const SolidButton({
     super.key,
@@ -279,17 +270,92 @@ class SolidButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final off = onPressed == null && !loading;
-    final dark = context.isDarkMode;
-    return _ButtonFrame(
-      label: label,
-      onPressed: onPressed,
-      icon: icon,
-      loading: loading,
-      expand: expand,
-      compact: compact,
-      foreground: off ? context.mv.textMuted : (color == null && dark ? MvColors.darkPage : Colors.white),
-      decoration: off ? _disabledFill(context) : BoxDecoration(color: color ?? (dark ? MvColors.accentLight : MvColors.navy)),
+    final enabled = onPressed != null && !loading;
+    final button = Opacity(
+      opacity: enabled ? 1 : .55,
+      child: Material(
+        color: color ?? const Color(0xFF172B34),
+        borderRadius: BorderRadius.circular(MvRadius.button),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(MvRadius.button),
+          onTap: enabled ? onPressed : null,
+          child: Container(
+            constraints: BoxConstraints(minHeight: compact ? 40 : 48),
+            padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 18, vertical: compact ? 8 : 12),
+            child: Row(
+              mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (loading)
+                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                else if (icon != null)
+                  Icon(icon, size: 18, color: Colors.white),
+                if (loading || icon != null) const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: compact ? 12.5 : 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return Semantics(container: true, button: true, enabled: enabled, child: Pressable(enabled: enabled, child: button));
+  }
+}
+
+/// White button for use on a brand-teal panel (the cart and checkout totals).
+class OnBrandButton extends StatelessWidget {
+  const OnBrandButton({super.key, required this.label, required this.onPressed, this.loading = false, this.icon});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null && !loading;
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: enabled,
+      child: Pressable(
+        enabled: enabled,
+        child: Opacity(
+        opacity: enabled ? 1 : .6,
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(MvRadius.button),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(MvRadius.button),
+            onTap: enabled ? onPressed : null,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 50),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (loading)
+                    const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: MvColors.brand))
+                  else if (icon != null)
+                    Icon(icon, size: 18, color: MvColors.brand),
+                  if (loading || icon != null) const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: MvColors.brand, fontWeight: FontWeight.w800, fontSize: 14.5)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      ),
     );
   }
 }
@@ -314,7 +380,7 @@ class DataCard extends StatelessWidget {
         color: mv.surface,
         borderRadius: BorderRadius.circular(MvRadius.card),
         border: Border.all(color: mv.border),
-        boxShadow: [BoxShadow(color: mv.shadow.withValues(alpha: context.isDarkMode ? .25 : .035), blurRadius: 18, offset: const Offset(0, 6))],
+        boxShadow: context.mvCardShadow,
       ),
       child: child,
     );
@@ -371,32 +437,35 @@ class SectionHeading extends StatelessWidget {
   Widget build(BuildContext context) {
     final mv = context.mv;
     return Padding(
-      padding: const EdgeInsets.only(top: 6, bottom: 12),
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (eyebrow != null) Text(eyebrow!, style: context.mvEyebrow.copyWith(fontSize: 10.5, letterSpacing: 1.6)),
-                Text(title, style: context.mvSection),
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.manrope(fontSize: 18, fontWeight: FontWeight.w800, color: mv.text)),
               ],
             ),
           ),
           if (actionLabel != null)
-            Pressable(
-              child: TextButton(
-                onPressed: onAction,
-                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 34), shape: const StadiumBorder()),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Old labels ended with an arrow; the arrow is now an icon.
-                    Text(actionLabel!.replaceAll(RegExp(r'\s*→\s*$'), ''), style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700, fontSize: 12.5)),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_rounded, size: 16, color: mv.accentDeep),
-                  ],
+            InkWell(
+              onTap: onAction,
+              borderRadius: BorderRadius.circular(10),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 40),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(actionLabel!.replaceAll(RegExp(r'\s*→\s*$'), ''), style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700, fontSize: 13)),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_rounded, size: 16, color: mv.accentDeep),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -454,7 +523,7 @@ class LoadingState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5, color: MvColors.skyBlue)),
+            SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5, color: context.mv.accent)),
             if (label != null) ...[
               const SizedBox(height: 12),
               Text(label!, style: TextStyle(color: context.mv.textMuted, fontSize: 13)),
@@ -533,7 +602,7 @@ class Notice extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(MvRadius.input)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -578,7 +647,8 @@ class InfoBox extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: dark ? MvColors.darkSoft : MvColors.infoBoxBg,
-        borderRadius: BorderRadius.circular(MvRadius.card),
+        border: Border.all(color: dark ? const Color(0xFF28505F) : MvColors.infoBoxBorder),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,18 +688,10 @@ class StatusChip extends StatelessWidget {
       StatusTone.bad => (dark ? const Color(0xFF3A1414) : MvColors.errorBg, dark ? const Color(0xFFFF9D90) : MvColors.errorText),
       StatusTone.neutral => (dark ? MvColors.darkSurface2 : MvColors.neutralBg, dark ? MvColors.darkMuted : MvColors.neutralText),
     };
-    return AnimatedContainer(
-      duration: Motion.quick,
-      padding: const EdgeInsets.fromLTRB(7, 4, 9, 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(MvRadius.chip)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 6, height: 6, decoration: BoxDecoration(color: fg, shape: BoxShape.circle)),
-          const SizedBox(width: 5),
-          Text(label, style: TextStyle(color: fg, fontSize: 10.5, fontWeight: FontWeight.w700)),
-        ],
-      ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: Text(label, style: TextStyle(color: fg, fontSize: 10.5, fontWeight: FontWeight.w700)),
     );
   }
 }
@@ -649,13 +711,13 @@ class MetricCard extends StatelessWidget {
     final mv = context.mv;
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: mv.surface, borderRadius: BorderRadius.circular(MvRadius.card), border: Border.all(color: mv.border)),
+      decoration: BoxDecoration(color: mv.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: mv.border)),
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(color: context.isDarkMode ? MvColors.darkSoft : MvColors.metricIconBg, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: context.isDarkMode ? MvColors.darkSoft : MvColors.metricIconBg, borderRadius: BorderRadius.circular(9)),
             child: Icon(mvIcon(icon), color: mv.accentDeep, size: 20),
           ),
           const SizedBox(width: 11),
@@ -668,7 +730,7 @@ class MetricCard extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: AnimatedValueText(value, style: GoogleFonts.manrope(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -.2, color: mv.text)),
+                  child: AnimatedValueText(value, style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: mv.text)),
                 ),
                 if (sub != null) Text(sub!, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: mv.textMuted)),
               ],
@@ -736,9 +798,7 @@ class SummaryRow extends StatelessWidget {
           Flexible(
             child: AnimatedValueText(value,
                 textAlign: TextAlign.right,
-                style: bold
-                    ? GoogleFonts.manrope(fontWeight: FontWeight.w800, color: valueColor ?? mv.text, fontSize: 18, letterSpacing: -.2)
-                    : TextStyle(fontWeight: FontWeight.w700, color: valueColor ?? mv.text, fontSize: 13.5)),
+                style: TextStyle(fontWeight: FontWeight.w700, color: valueColor ?? mv.text, fontSize: bold ? 17 : 13.5, )),
           ),
         ],
       ),
@@ -746,7 +806,7 @@ class SummaryRow extends StatelessWidget {
   }
 }
 
-/// − 1 + stepper (`.qty`).
+/// − 1 + stepper (`.qty`): a soft pill with round buttons.
 class QtyStepper extends StatelessWidget {
   const QtyStepper({super.key, required this.value, required this.onChanged, this.min = 1, this.max = 100, this.busy = false});
   final int value;
@@ -758,41 +818,27 @@ class QtyStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    Widget btn(IconData icon, bool enabled, VoidCallback tap, String label, {bool primary = false}) {
-      final on = enabled && !busy;
-      return Semantics(
-        button: true,
-        label: label,
-        child: Pressable(
-          enabled: on,
-          scale: .88,
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: on ? tap : null,
-            child: AnimatedContainer(
-              duration: Motion.quick,
-              width: 32,
-              height: 32,
-              margin: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: on && primary ? MvColors.primaryDark : (on ? mv.surface : mv.surfaceMuted),
-                border: on && primary ? null : Border.all(color: mv.border),
-              ),
-              child: Icon(icon, size: 17, color: on ? (primary ? Colors.white : mv.text) : mv.textMuted.withValues(alpha: .5)),
+    Widget btn(IconData icon, bool enabled, VoidCallback tap, String label) => Semantics(
+          button: true,
+          label: label,
+          child: InkResponse(
+            radius: 22,
+            onTap: enabled && !busy ? tap : null,
+            child: SizedBox(
+              width: 38,
+              height: 38,
+              child: Icon(icon, size: 18, color: enabled && !busy ? mv.accentDeep : mv.textMuted.withValues(alpha: .45)),
             ),
           ),
-        ),
-      );
-    }
+        );
     return Container(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(MvRadius.chip), color: mv.surfaceMuted),
+      decoration: BoxDecoration(color: mv.surfaceMuted, borderRadius: BorderRadius.circular(999), border: Border.all(color: mv.border)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           btn(Icons.remove_rounded, value > min, () => onChanged(value - 1), 'Decrease quantity'),
-          SizedBox(width: 30, child: Center(child: AnimatedValueText('$value', style: TextStyle(fontWeight: FontWeight.w800, color: mv.text, fontSize: 14)))),
-          btn(Icons.add_rounded, value < max, () => onChanged(value + 1), 'Increase quantity', primary: true),
+          SizedBox(width: 28, child: Center(child: AnimatedValueText('$value', style: TextStyle(fontWeight: FontWeight.w800, color: mv.text, fontSize: 14)))),
+          btn(Icons.add_rounded, value < max, () => onChanged(value + 1), 'Increase quantity'),
         ],
       ),
     );
@@ -871,7 +917,7 @@ Future<bool> confirmDialog(BuildContext context, String message, {String confirm
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
-          child: Text(confirm, style: TextStyle(color: danger ? MvColors.errorText : MvColors.skyBlue, fontWeight: FontWeight.w700)),
+          child: Text(confirm, style: TextStyle(color: danger ? MvColors.errorText : ctx.mv.accentDeep, fontWeight: FontWeight.w700)),
         ),
       ],
     ),

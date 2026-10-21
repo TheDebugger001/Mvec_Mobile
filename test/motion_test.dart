@@ -94,4 +94,27 @@ void main() {
     expect(find.text('30,000 RWF'), findsNothing);
     expect(find.text('60,000 RWF'), findsOneWidget);
   });
+
+  testWidgets('sign-in forms slide in once, row by row, and settle fully visible', (tester) async {
+    Widget form(int rows, {bool reduce = false}) => _app(SlideInColumn(children: [for (var i = 0; i < rows; i++) Text('row $i')]), reduceMotion: reduce);
+    double opacity(String t) => tester.widget<FadeTransition>(find.ancestor(of: find.text(t), matching: find.byType(FadeTransition)).first).opacity.value;
+
+    await tester.pumpWidget(form(3));
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(opacity('row 0'), greaterThan(opacity('row 2')), reason: 'later rows start after earlier ones');
+    await tester.pumpAndSettle();
+    expect(opacity('row 2'), 1);
+
+    // A rebuild that adds a row (e.g. switching to code login) does not replay it.
+    await tester.pumpWidget(form(4));
+    await tester.pump();
+    expect(opacity('row 0'), 1);
+    expect(find.text('row 3'), findsOneWidget);
+  });
+
+  testWidgets('with reduce motion on, forms appear at once', (tester) async {
+    await tester.pumpWidget(_app(const SlideInColumn(children: [Text('Email')]), reduceMotion: true));
+    await tester.pump();
+    expect(tester.widget<FadeTransition>(find.ancestor(of: find.text('Email'), matching: find.byType(FadeTransition)).first).opacity.value, 1);
+  });
 }

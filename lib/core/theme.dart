@@ -5,42 +5,60 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/motion.dart' show MvPageTransitionsBuilder;
 
-/// Design tokens lifted from MVEC frontend `src/styles.css`.
+/// Brand tokens for the Ikiguzi mobile app.
+///
+/// The deep teal and the soft neutrals are sampled from the Landing page
+/// design (`#064F65` for the brand, `#F3F3F3` / `#F5F5F5` for recessed fills),
+/// so every screen reads as one app.
 class MvColors {
   MvColors._();
 
-  /// The app-wide sky-blue accent. Every active state, primary button, badge
-  /// and selected tab resolves back to this one token, so the accent can never
-  /// drift between screens. (Matches `--blue` in the web app's `src/styles.css`.)
-  static const skyBlue = Color(0xFF55C9F2);
+  /// The brand teal. Every primary button, active state, badge and selected
+  /// tab resolves back to this one token, so the accent can never drift
+  /// between screens.
+  static const brand = Color(0xFF064F65);
 
-  /// Alias kept for the dozens of call sites that read the accent as `primary`.
-  static const primary = skyBlue;
-  static const primaryDark = Color(0xFF25ADDB);
-  static const primaryDeep = Color(0xFF168DB8);
-  static const accentLight = Color(0xFF9AE2FB);
+  /// Slightly lighter teal used as the start of the brand gradient.
+  static const brandLight = Color(0xFF0B6580);
+
+  /// Pressed / dark end of the brand gradient.
+  static const brandDark = Color(0xFF043C4E);
+
+  /// Brand fill on dark surfaces, where `#064F65` would sink into the page.
+  static const brandOnDark = Color(0xFF0E7A97);
+
+  /// Old name of [brand], kept so dashboard code that still says `skyBlue`
+  /// compiles unchanged (it now resolves to the brand teal).
+  static const skyBlue = brand;
+
+  /// Aliases kept for the call sites that read the accent as `primary`.
+  static const primary = brand;
+  static const primaryDark = brandDark;
+  static const primaryDeep = brand;
+
+  /// Light teal: brand text and icons on dark surfaces.
+  static const accentLight = Color(0xFF7CCADF);
 
   static const gradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [accentLight, primary, primaryDark],
+    colors: [brandLight, brand],
   );
 
-  static const ink = Color(0xFF173448);
-  static const navy = ink;
-  static const muted = Color(0xFF64748B);
-  static const border = Color(0xFFE1EAF0);
-  static const soft = Color(0xFFEAF8FE);
-  static const page = Color(0xFFF5F9FC);
-  static const surface2 = Color(0xFFF0F5F9);
+  static const gradientDark = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF1290B0), brandOnDark],
+  );
 
-  // Small supporting accents: never for large areas or body text.
-  static const pink = Color(0xFFF5E8F2);
-  static const mint = Color(0xFFE5F7EE);
-  /// Saved-heart colour (readable on white and on [pink]).
-  static const rose = Color(0xFFE0457B);
-  static const tableHeaderBg = Color(0xFFEEFAFF);
-  static const rowHover = Color(0x0A25ADDB); // rgba(37,173,219,.035~0.04)
+  static const ink = Color(0xFF12232B);
+  static const muted = Color(0xFF6B7B84);
+  static const border = Color(0xFFE4EAED);
+  static const soft = Color(0xFFE9F3F6);
+  static const page = Color(0xFFF6F8F9);
+  static const surface2 = Color(0xFFF3F4F5);
+  static const tableHeaderBg = Color(0xFFE9F3F6);
+  static const rowHover = Color(0x0A064F65);
 
   static const successBg = Color(0xFFEAFAF4);
   static const successText = Color(0xFF15815E);
@@ -54,20 +72,24 @@ class MvColors {
   static const badgeRed = Color(0xFFE53935);
   static const neutralBg = Color(0xFFF2F5F6);
   static const neutralText = Color(0xFF66767D);
-  static const infoBoxBg = Color(0xFFEFFAFF);
-  static const infoBoxBorder = Color(0xFFC8EDF8);
-  static const infoBoxText = Color(0xFF49646E);
-  static const metricIconBg = Color(0xFFEAF9FD);
+  static const infoBoxBg = Color(0xFFEBF5F8);
+  static const infoBoxBorder = Color(0xFFCBE3EA);
+  static const infoBoxText = Color(0xFF3F5E69);
+  static const metricIconBg = Color(0xFFE6F2F5);
 
   // Dark theme
-  static const darkPage = Color(0xFF0B151B);
-  static const darkSurface = Color(0xFF13232C);
-  static const darkSurface2 = Color(0xFF1A303B);
-  static const darkSoft = Color(0xFF142C38);
+  static const darkPage = Color(0xFF0A1418);
+  static const darkSurface = Color(0xFF12212A);
+  static const darkSurface2 = Color(0xFF1A2E39);
+  static const darkSoft = Color(0xFF123240);
   static const darkText = Color(0xFFEDF8FB);
   static const darkMuted = Color(0xFFA7BAC3);
   static const darkBorder = Color(0xFF2B4653);
-  static const darkHeaderBg = Color(0xFF0D1820);
+  static const darkHeaderBg = Color(0xFF0E1B22);
+
+  /// Saved-wishlist heart, and the soft pink circle behind it.
+  static const rose = Color(0xFFE0457B);
+  static const pink = Color(0xFFF5E8F2);
 }
 
 /// Mode-aware surface, text and border tokens.
@@ -89,6 +111,7 @@ class MvPalette extends ThemeExtension<MvPalette> {
     required this.accentDeep,
     required this.onAccent,
     required this.shadow,
+    required this.accent,
   });
 
   /// Light-mode tokens.
@@ -103,11 +126,12 @@ class MvPalette extends ThemeExtension<MvPalette> {
     accentDeep: MvColors.primaryDeep,
     onAccent: Colors.white,
     shadow: Color(0x14000000),
+    accent: MvColors.brand,
   );
 
   /// Dark-mode tokens. Surfaces step up from the page background so cards stay
-  /// separable, and the deep sky-blue swaps to its light variant because
-  /// `#168DB8` is unreadable on `#13232C`.
+  /// separable, and the deep teal swaps to its light variant because
+  /// `#064F65` is unreadable on the dark surface.
   factory MvPalette.dark() => const MvPalette(
     page: MvColors.darkPage,
     surface: MvColors.darkSurface,
@@ -117,8 +141,9 @@ class MvPalette extends ThemeExtension<MvPalette> {
     text: MvColors.darkText,
     textMuted: MvColors.darkMuted,
     accentDeep: MvColors.accentLight,
-    onAccent: MvColors.darkPage,
+    onAccent: Colors.white,
     shadow: Color(0x66000000),
+    accent: MvColors.brandOnDark,
   );
 
   /// Page background behind cards and bars.
@@ -142,14 +167,18 @@ class MvPalette extends ThemeExtension<MvPalette> {
   /// De-emphasised supporting text.
   final Color textMuted;
 
-  /// Deep sky-blue for brand glyphs; brightened in dark mode.
+  /// Deep teal for brand glyphs and text; brightened in dark mode.
   final Color accentDeep;
 
-  /// Text and icons drawn on top of a sky-blue fill.
+  /// Text and icons drawn on top of an [accent] fill.
   final Color onAccent;
 
   /// Drop-shadow colour for floating surfaces.
   final Color shadow;
+
+  /// Fill for primary buttons and active states: the brand teal in light
+  /// mode, a lighter teal in dark mode where `#064F65` would disappear.
+  final Color accent;
 
   @override
   MvPalette copyWith({
@@ -163,6 +192,7 @@ class MvPalette extends ThemeExtension<MvPalette> {
     Color? accentDeep,
     Color? onAccent,
     Color? shadow,
+    Color? accent,
   }) {
     return MvPalette(
       page: page ?? this.page,
@@ -175,6 +205,7 @@ class MvPalette extends ThemeExtension<MvPalette> {
       accentDeep: accentDeep ?? this.accentDeep,
       onAccent: onAccent ?? this.onAccent,
       shadow: shadow ?? this.shadow,
+      accent: accent ?? this.accent,
     );
   }
 
@@ -192,6 +223,7 @@ class MvPalette extends ThemeExtension<MvPalette> {
       accentDeep: Color.lerp(accentDeep, other.accentDeep, t)!,
       onAccent: Color.lerp(onAccent, other.onAccent, t)!,
       shadow: Color.lerp(shadow, other.shadow, t)!,
+      accent: Color.lerp(accent, other.accent, t)!,
     );
   }
 }
@@ -202,6 +234,23 @@ extension MvThemeX on BuildContext {
 
   /// True while the dark theme is on screen.
   bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
+}
+
+/// Shared corner radii, so cards, fields and buttons round the same way.
+class MvRadius {
+  MvRadius._();
+  static const double field = 12;
+  static const double button = 14;
+  static const double card = 16;
+  static const double sheet = 24;
+  static const double chip = 999;
+  static const double input = field;
+  static const double image = 14;
+}
+
+extension MvShadowX on BuildContext {
+  /// Soft elevation for cards and floating bars (barely there in light mode).
+  List<BoxShadow> get mvCardShadow => [BoxShadow(color: mv.shadow, blurRadius: 14, offset: const Offset(0, 4))];
 }
 
 /// Optional persistent store for the theme preference.
@@ -261,9 +310,9 @@ ThemeData buildAppTheme(Brightness brightness) {
     scaffoldBackgroundColor: page,
     canvasColor: surface,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: MvColors.skyBlue,
+      seedColor: MvColors.brand,
       brightness: brightness,
-      primary: MvColors.skyBlue,
+      primary: palette.accent,
       surface: surface,
     ),
     extensions: <ThemeExtension<dynamic>>[palette],
@@ -299,13 +348,17 @@ ThemeData buildAppTheme(Brightness brightness) {
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: surface,
       surfaceTintColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      dragHandleColor: border,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(MvRadius.sheet))),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.sheet)),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.card)),
     ),
     cardTheme: CardThemeData(
       color: surface,
@@ -319,49 +372,62 @@ ThemeData buildAppTheme(Brightness brightness) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      fillColor: isDark ? surface2 : surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       hintStyle: GoogleFonts.dmSans(fontSize: 13, color: muted, fontWeight: FontWeight.w400),
       labelStyle: GoogleFonts.dmSans(
-        fontSize: 12.5,
+        fontSize: 13,
         fontWeight: FontWeight.w500,
         color: muted,
       ),
+      floatingLabelStyle: GoogleFonts.dmSans(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: palette.accentDeep,
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(MvRadius.input),
+        borderRadius: BorderRadius.circular(MvRadius.field),
         borderSide: BorderSide(color: border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(MvRadius.input),
+        borderRadius: BorderRadius.circular(MvRadius.field),
         borderSide: BorderSide(color: border),
       ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(MvRadius.field),
+        borderSide: BorderSide(color: border.withValues(alpha: .6)),
+      ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(MvRadius.input),
-        borderSide: const BorderSide(color: MvColors.skyBlue, width: 1.5),
+        borderRadius: BorderRadius.circular(MvRadius.field),
+        borderSide: BorderSide(color: palette.accent, width: 1.6),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(MvRadius.input),
+        borderRadius: BorderRadius.circular(MvRadius.field),
         borderSide: const BorderSide(color: MvColors.errorText),
       ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(MvRadius.field),
+        borderSide: const BorderSide(color: MvColors.errorText, width: 1.6),
+      ),
     ),
-    // Primary CTAs ("Add to Cart", "Shop Now", "Checkout") are sky blue.
+    // Primary CTAs ("Add to Cart", "Shop Now", "Checkout") are brand teal.
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: MvColors.skyBlue,
+        backgroundColor: palette.accent,
         foregroundColor: Colors.white,
         elevation: 0,
         textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.button)),
-        padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 14),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: MvColors.skyBlue,
+        backgroundColor: palette.accent,
         foregroundColor: Colors.white,
         textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.button)),
-        padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 14),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -374,26 +440,26 @@ ThemeData buildAppTheme(Brightness brightness) {
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: MvColors.skyBlue),
+      style: TextButton.styleFrom(foregroundColor: palette.accentDeep),
     ),
     tabBarTheme: TabBarThemeData(
-      labelColor: MvColors.skyBlue,
+      labelColor: palette.accentDeep,
       unselectedLabelColor: muted,
-      indicatorColor: MvColors.skyBlue,
+      indicatorColor: palette.accent,
       indicatorSize: TabBarIndicatorSize.label,
       labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: text,
-      contentTextStyle: GoogleFonts.dmSans(color: page, fontWeight: FontWeight.w500),
+      contentTextStyle: GoogleFonts.dmSans(color: page),
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.button)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MvRadius.field)),
     ),
     tooltipTheme: const TooltipThemeData(),
-    // Active category filters fill with the sky-blue accent.
+    // Active category filters fill with the brand teal, as pills.
     chipTheme: base.chipTheme.copyWith(
       backgroundColor: surface2,
-      selectedColor: isDark ? MvColors.primaryDark : MvColors.navy,
+      selectedColor: palette.accent,
       checkmarkColor: Colors.white,
       labelStyle: GoogleFonts.dmSans(fontSize: 12, color: text),
       secondaryLabelStyle: GoogleFonts.dmSans(
@@ -404,49 +470,21 @@ ThemeData buildAppTheme(Brightness brightness) {
       shape: const StadiumBorder(),
       side: BorderSide(color: border),
     ),
-    // Count badges pinned to top-bar icons are sky blue, not the M3 error red.
+    // Count badges pinned to top-bar icons are brand teal, not the M3 error red.
     badgeTheme: BadgeThemeData(
-      backgroundColor: MvColors.skyBlue,
+      backgroundColor: palette.accent,
       textColor: Colors.white,
       textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
     ),
   );
 }
 
-/// Corner radii: one value per kind of surface, used everywhere.
-class MvRadius {
-  MvRadius._();
-  static const double chip = 999;
-  static const double input = 12;
-  static const double button = 14;
-  static const double card = 16;
-  static const double image = 14;
-  static const double sheet = 20;
-}
-
-/// Spacing scale (4-point).
-class MvSpace {
-  MvSpace._();
-  static const double xs = 4;
-  static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 24;
-}
-
 extension MvHeadingX on BuildContext {
   TextStyle get mvH1 => GoogleFonts.manrope(
     fontSize: 22,
-    fontWeight: FontWeight.w800,
-    letterSpacing: -.4,
-    color: mv.text,
+    fontWeight: FontWeight.w700,
+    color: Theme.of(this).colorScheme.onSurface,
   );
-  /// Section headings on a page ("Popular products").
-  TextStyle get mvSection => GoogleFonts.manrope(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -.2, color: mv.text);
-
-  /// Prices on cards and summaries.
-  TextStyle get mvPrice => GoogleFonts.manrope(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -.2, color: mv.text);
-
   TextStyle get mvEyebrow => GoogleFonts.dmSans(
     fontSize: 10.5,
     fontWeight: FontWeight.w600,
