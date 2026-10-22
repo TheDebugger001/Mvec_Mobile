@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// Importing cupertinopageTransistorsitionsBuilder to use the default iOS page transition for iOS platform.
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 
 import '../widgets/motion.dart' show MvPageTransitionsBuilder;
 
