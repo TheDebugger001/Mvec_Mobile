@@ -232,7 +232,7 @@ class ShopPage extends ConsumerWidget {
               else
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: ProductGridSliver(products: shown, showVendor: true),
+                  sliver: ProductGridSliver(products: shown),
                 ),
               SliverToBoxAdapter(
                 child: PaginationBar(

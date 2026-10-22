@@ -366,26 +366,35 @@ String _here(BuildContext context) {
 
 // ─── Bottom navigation ───────────────────────────────────────────────────────
 
-/// A floating rounded bar: the active destination gets a filled teal badge
-/// behind its icon (the Furniture Store design), labels stay visible.
+/// A floating dark pill (the reference design): icons only, the active
+/// destination sits in a teal circle. Labels live in the tooltip and the
+/// semantics tree, so screen readers still announce each destination.
 class MarketBottomBar extends StatelessWidget {
   const MarketBottomBar({super.key, required this.activeIndex});
   final int activeIndex;
 
   @override
   Widget build(BuildContext context) {
-    final mv = context.mv;
+    final dark = context.isDarkMode;
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+        padding: const EdgeInsets.fromLTRB(22, 6, 22, 12),
         child: Container(
-          height: 66,
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
-            color: mv.surface,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: mv.border),
-            boxShadow: [BoxShadow(color: mv.shadow, blurRadius: 22, offset: const Offset(0, 8))],
+            // The app's own dark-mode surface (not black), outlined in dark mode so it still lifts off the page.
+            color: MvColors.darkSurface2,
+            borderRadius: BorderRadius.circular(32),
+            border: dark ? Border.all(color: MvColors.darkBorder) : null,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: dark ? .5 : .22),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -406,55 +415,58 @@ class MarketBottomBar extends StatelessWidget {
 }
 
 class _BarItem extends StatelessWidget {
-  const _BarItem({required this.dest, required this.active, required this.onTap});
+  const _BarItem({
+    required this.dest,
+    required this.active,
+    required this.onTap,
+  });
   final _Dest dest;
   final bool active;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final mv = context.mv;
-    final color = active ? mv.accentDeep : mv.textMuted;
     return Semantics(
       button: true,
       selected: active,
       label: dest.label,
       excludeSemantics: true,
-      child: Pressable(
-        scale: .9,
-        child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(26),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              width: 46,
-              height: 30,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: active ? mv.accent : Colors.transparent,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: AnimatedScale(
-                scale: active ? 1.06 : 1,
-                duration: Motion.quick,
-                curve: Motion.spring,
-                child: MvIcon(dest.icon, size: 20, color: active ? Colors.white : mv.textMuted, strokeWidth: active ? 1.7 : 1.5),
+      child: Tooltip(
+        message: dest.label,
+        child: Pressable(
+          scale: .9,
+          child: InkResponse(
+            onTap: onTap,
+            radius: 28,
+            child: Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: active ? MvColors.brandOnDark : Colors.transparent,
+                  shape: BoxShape.circle,
+                ),
+                child: AnimatedScale(
+                  scale: active ? 1.06 : 1,
+                  duration: Motion.quick,
+                  curve: Motion.spring,
+                  child: MvIcon(
+                    dest.icon,
+                    size: 22,
+                    color:
+                        active
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: .62),
+                    strokeWidth: active ? 1.7 : 1.5,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 3),
-            Text(
-              dest.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10.5, fontWeight: active ? FontWeight.w800 : FontWeight.w600, color: color),
-            ),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
