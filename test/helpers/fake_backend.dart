@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mvec_mobile/widgets/splash_gate.dart';
 import 'package:mvec_mobile/core/api_client.dart';
 import 'package:mvec_mobile/core/theme.dart';
 import 'package:mvec_mobile/main.dart';
@@ -120,7 +121,7 @@ Future<void> pumpApp(WidgetTester tester, FakeBackend backend, {Size size = cons
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(ProviderScope(
-    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs), splashDurationProvider.overrideWithValue(Duration.zero)],
     child: const MvecApp(),
   ));
   await settle(tester);

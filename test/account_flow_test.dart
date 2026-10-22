@@ -45,7 +45,7 @@ void main() {
       'POST /orders/o1/cancel': (_) => (200, {'message': 'Order cancelled.', 'order': order('o1', status: 'CANCELLED')}),
     });
     await signIn(tester, backend);
-    await tester.tap(find.text('Orders'));
+    await tester.tap(find.byTooltip('Orders'));
     await settle(tester);
     expect(find.text('MVEC-ORDER-o1'), findsOneWidget);
     expect(find.text('Awaiting payment'), findsOneWidget);

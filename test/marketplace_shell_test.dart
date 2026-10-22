@@ -6,10 +6,10 @@ void main() {
   testWidgets('bottom bar has exactly Home, Shop, For You, Deals, Orders', (tester) async {
     await pumpApp(tester, FakeBackend(baseRoutes()));
     for (final label in ['Home', 'Shop', 'For You', 'Deals', 'Orders']) {
-      expect(find.text(label), findsOneWidget, reason: label);
+      expect(find.byTooltip(label), findsOneWidget, reason: label);
     }
-    expect(find.text('Cart'), findsNothing);
-    expect(find.text('Wishlist'), findsNothing);
+    expect(find.byTooltip('Cart'), findsNothing);
+    expect(find.byTooltip('Wishlist'), findsNothing);
   });
 
   testWidgets('hamburger opens the sidebar from the left', (tester) async {
@@ -48,7 +48,7 @@ void main() {
 
   testWidgets('tapping Deals opens the sale-only shop', (tester) async {
     await pumpApp(tester, FakeBackend(baseRoutes()));
-    await tester.tap(find.text('Deals'));
+    await tester.tap(find.byTooltip('Deals'));
     await settle(tester);
     expect(find.text('Deals'), findsWidgets);
     expect(find.text('Wireless Headphones'), findsWidgets);

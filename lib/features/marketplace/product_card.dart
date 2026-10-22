@@ -91,16 +91,26 @@ class DiscountChip extends StatelessWidget {
   }
 }
 
-/// Height of the text block under a product image (category, two-line name,
-/// rating and price), used to size grid cells.
-const double kProductCardInfoHeight = 124;
+/// Image well on a card: width:height. Near-square on purpose, so a card
+/// (image plus a one-line name and the price) stays only modestly taller than
+/// it is wide. Use 0.8 for a 4:5 portrait well.
+const double kProductImageAspect = 1;
 
-/// Storefront tile: soft image well with the heart, then name, rating and
-/// price (the Landing page product card).
+/// Gap between a card's edge and its image well.
+const double _kCardInset = 6;
+
+/// Height of the text block under the image (one-line name, then price and rating).
+const double _kCardTextHeight = 56;
+
+/// Total height of a card [width] logical pixels wide, so grids and strips can
+/// give every card in a row the same height.
+double productCardHeight(double width) => _kCardInset + (width - 2 * _kCardInset) / kProductImageAspect + _kCardTextHeight;
+
+/// Storefront tile: rounded image well with the heart (and a "New" pill),
+/// then the name and the price with its rating, in a compact near-square card.
 class ProductCard extends ConsumerWidget {
-  const ProductCard({super.key, required this.product, this.label, this.width});
+  const ProductCard({super.key, required this.product, this.width});
   final Product product;
-  final String? label;
   final double? width;
 
   @override
@@ -123,101 +133,103 @@ class ProductCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ColoredBox(color: mv.surfaceMuted),
-                  ProductImage(src: p.image),
-                  if (p.soldOut)
-                    Positioned(
-                      left: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF172B34),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: const Text(
-                          'SOLD OUT',
-                          style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .3),
-                        ),
-                      ),
-                    )
-                  else if (p.onSale)
-                    Positioned(left: 8, top: 8, child: DiscountChip(p.percentOff)),
-                  Positioned(right: 6, top: 6, child: WishHeart(product: p)),
-                ],
-              ),
-            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(11, 10, 11, 11),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label ?? p.category,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: mv.textMuted, fontSize: 10.5),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    p.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 13, height: 1.25),
-                  ),
-                  const SizedBox(height: 3),
-                  // A rating only when buyers have actually reviewed it.
-                  SizedBox(
-                    height: 16,
-                    child: p.reviews > 0
-                        ? Row(
-                            children: [
-                              const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF0A91A)),
-                              const SizedBox(width: 2),
-                              Flexible(
-                                child: Text(
-                                  '${ratingLabel(p.rating)} (${p.reviews})',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(color: mv.textMuted, fontSize: 10.5),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Text('New', style: TextStyle(color: mv.textMuted, fontSize: 10.5)),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
+              padding: const EdgeInsets.fromLTRB(_kCardInset, _kCardInset, _kCardInset, 0),
+              child: AspectRatio(
+                aspectRatio: kProductImageAspect,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(MvRadius.image),
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      // The price always shows in full; the old price gives way.
-                      Flexible(
-                        flex: 3,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(money(p.price), maxLines: 1, style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w800, fontSize: 13.5)),
-                        ),
-                      ),
-                      if (p.onSale) ...[
-                        const SizedBox(width: 6),
-                        Flexible(
-                          flex: 2,
-                          child: Text(
-                            money(p.oldPrice),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: mv.textMuted, fontSize: 10.5, decoration: TextDecoration.lineThrough),
+                      ColoredBox(color: mv.surfaceMuted),
+                      ProductImage(src: p.image),
+                      if (p.soldOut)
+                        Positioned(
+                          left: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF172B34),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: const Text(
+                              'SOLD OUT',
+                              style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .3),
+                            ),
+                          ),
+                        )
+                      else if (p.onSale)
+                        Positioned(left: 8, top: 8, child: DiscountChip(p.percentOff)),
+                      Positioned(right: 6, top: 6, child: WishHeart(product: p)),
+                      // No buyer reviews yet: a "New" pill on the image, as in the reference design.
+                      if (p.reviews == 0)
+                        Positioned(
+                          left: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: mv.surface.withValues(alpha: .96),
+                              borderRadius: BorderRadius.circular(MvRadius.chip),
+                            ),
+                            child: Text('New', style: TextStyle(color: mv.text, fontSize: 10, fontWeight: FontWeight.w700)),
                           ),
                         ),
-                      ],
                     ],
                   ),
-                ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      p.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 13, height: 1.25),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        // The price always shows in full; the old price and the rating give way.
+                        Flexible(
+                          flex: 3,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(money(p.price), maxLines: 1, style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w800, fontSize: 13.5)),
+                          ),
+                        ),
+                        if (p.onSale) ...[
+                          const SizedBox(width: 6),
+                          Flexible(
+                            flex: 2,
+                            child: Text(
+                              money(p.oldPrice),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: mv.textMuted, fontSize: 10.5, decoration: TextDecoration.lineThrough),
+                            ),
+                          ),
+                        ],
+                        // A rating only when buyers have actually reviewed it.
+                        if (p.reviews > 0) ...[
+                          const Spacer(),
+                          const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF0A91A)),
+                          const SizedBox(width: 1),
+                          Text(ratingLabel(p.rating), maxLines: 1, style: TextStyle(color: mv.textMuted, fontSize: 10.5)),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -233,10 +245,8 @@ class ProductGridSliver extends StatelessWidget {
   const ProductGridSliver({
     super.key,
     required this.products,
-    this.showVendor = false,
   });
   final List<Product> products;
-  final bool showVendor;
 
   @override
   Widget build(BuildContext context) {
@@ -250,13 +260,10 @@ class ProductGridSliver extends StatelessWidget {
             crossAxisCount: cols,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            mainAxisExtent: w + kProductCardInfoHeight,
+            mainAxisExtent: productCardHeight(w),
           ),
           delegate: SliverChildBuilderDelegate(
-            (context, i) => ProductCard(
-              product: products[i],
-              label: showVendor ? products[i].vendor : null,
-            ),
+            (context, i) => ProductCard(product: products[i]),
             childCount: products.length,
           ),
         );
@@ -286,23 +293,24 @@ class ProductGridSkeleton extends StatelessWidget {
             for (var i = 0; i < count; i++)
               Container(
                 width: w,
-                height: w + kProductCardInfoHeight,
+                height: productCardHeight(w),
                 decoration: BoxDecoration(color: mv.surface, borderRadius: BorderRadius.circular(MvRadius.card), border: Border.all(color: mv.border)),
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Skeleton(width: w, height: w, radius: 0),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(11, 12, 11, 0),
+                      padding: const EdgeInsets.fromLTRB(_kCardInset, _kCardInset, _kCardInset, 0),
+                      child: Skeleton(width: w - 2 * _kCardInset, height: (w - 2 * _kCardInset) / kProductImageAspect, radius: MvRadius.image),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Skeleton(width: w * .4, height: 9, radius: 5),
+                          Skeleton(width: w * .62, height: 12, radius: 6),
                           const SizedBox(height: 8),
-                          Skeleton(width: w * .75, height: 12, radius: 6),
-                          const SizedBox(height: 18),
-                          Skeleton(width: w * .45, height: 14, radius: 6),
+                          Skeleton(width: w * .35, height: 13, radius: 6),
                         ],
                       ),
                     ),

@@ -22,7 +22,7 @@ void main() {
     });
     await pumpApp(tester, backend);
 
-    await tester.tap(find.text('Orders'));
+    await tester.tap(find.byTooltip('Orders'));
     await settle(tester);
     expect(find.text('Welcome back'), findsOneWidget);
 

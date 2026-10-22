@@ -50,7 +50,7 @@ class HomePage extends ConsumerWidget {
                 _heading('Deals of the Day', onAll: () => context.go('/shop?deal=true')),
                 SliverToBoxAdapter(
                   child: SizedBox(
-                    height: _kDealCardWidth + kProductCardInfoHeight + 8,
+                    height: productCardHeight(_kDealCardWidth) + 8,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
