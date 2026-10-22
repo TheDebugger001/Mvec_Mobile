@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../../widgets/theme_switch.dart';
 
 /// Frame shared by the sign-in, sign-up and password-reset screens.
@@ -32,8 +33,8 @@ class AuthScaffold extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              // The form slides in from the side, one row after another.
+              child: SlideInColumn(
                 children: [
                   Text(title, style: context.mvH1),
                   const SizedBox(height: 4),

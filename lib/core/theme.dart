@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../widgets/motion.dart' show MvPageTransitionsBuilder;
+
 /// Brand tokens for the Ikiguzi mobile app.
 ///
 /// The deep teal and the soft neutrals are sampled from the Landing page
@@ -84,6 +86,10 @@ class MvColors {
   static const darkMuted = Color(0xFFA7BAC3);
   static const darkBorder = Color(0xFF2B4653);
   static const darkHeaderBg = Color(0xFF0E1B22);
+
+  /// Saved-wishlist heart, and the soft pink circle behind it.
+  static const rose = Color(0xFFE0457B);
+  static const pink = Color(0xFFF5E8F2);
 }
 
 /// Mode-aware surface, text and border tokens.
@@ -237,6 +243,9 @@ class MvRadius {
   static const double button = 14;
   static const double card = 16;
   static const double sheet = 24;
+  static const double chip = 999;
+  static const double input = field;
+  static const double image = 14;
 }
 
 extension MvShadowX on BuildContext {
@@ -310,6 +319,15 @@ ThemeData buildAppTheme(Brightness brightness) {
     dividerColor: border,
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
+    // Short fade-and-slide between screens; iOS keeps its swipe-back transition.
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {
+      TargetPlatform.android: MvPageTransitionsBuilder(),
+      TargetPlatform.fuchsia: MvPageTransitionsBuilder(),
+      TargetPlatform.linux: MvPageTransitionsBuilder(),
+      TargetPlatform.windows: MvPageTransitionsBuilder(),
+      TargetPlatform.macOS: MvPageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+    }),
     // Mobile-sized, light type: DM Sans at ~90% of the Material defaults.
     textTheme: GoogleFonts.dmSansTextTheme(
       Typography.englishLike2021.apply(fontSizeFactor: .92),

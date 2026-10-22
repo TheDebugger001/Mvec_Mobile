@@ -11,6 +11,7 @@ import '../../state/auth_state.dart';
 import '../../state/cart_state.dart';
 import '../../state/compare_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../../widgets/mv_icon.dart';
 import '../common/page_frame.dart';
 import 'product_card.dart';
@@ -34,6 +35,8 @@ class _ProductPageState extends ConsumerState<ProductPage> {
   List<Map<String, dynamic>> _reviews = const [];
   ({bool ok, String message})? _feedback;
   bool _adding = false;
+  // True for a moment after the cart confirms an add: the button shows a check.
+  bool _added = false;
 
   @override
   void initState() {
@@ -113,9 +116,10 @@ class _ProductPageState extends ConsumerState<ProductPage> {
           Expanded(
             flex: 4,
             child: GradientButton(
-              label: _adding ? 'Adding…' : 'Add to cart',
+              label: _added ? 'Added' : (_adding ? 'Adding…' : 'Add to cart'),
               onPressed: p.soldOut ? null : _addToCart,
               loading: _adding,
+              success: _added,
             ),
           ),
           const SizedBox(width: 8),
@@ -134,7 +138,13 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                   children: [
                     AspectRatio(
                       aspectRatio: 1.15,
-                      child: Padding(padding: const EdgeInsets.all(18), child: ProductImage(src: _image.isEmpty ? p.image : _image, fit: BoxFit.contain)),
+                      // Photos cross-fade when you pick another one.
+                      child: AnimatedSwitcher(
+                        duration: Motion.reduced(context) ? Duration.zero : Motion.base,
+                        switchInCurve: Motion.out,
+                        transitionBuilder: (child, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween<double>(begin: .97, end: 1).animate(a), child: child)),
+                        child: Padding(key: ValueKey(_image), padding: const EdgeInsets.all(18), child: ProductImage(src: _image.isEmpty ? p.image : _image, fit: BoxFit.contain)),
+                      ),
                     ),
                     Positioned(right: 16, top: 14, child: WishHeart(product: p, size: 20)),
                     if (p.soldOut)
@@ -306,6 +316,12 @@ class _ProductPageState extends ConsumerState<ProductPage> {
       setState(() {
         _adding = false;
         _feedback = r;
+        _added = r.ok;
+      });
+    }
+    if (r.ok) {
+      Future.delayed(const Duration(milliseconds: 1600), () {
+        if (mounted) setState(() => _added = false);
       });
     }
   }

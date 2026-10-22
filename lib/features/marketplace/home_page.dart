@@ -35,7 +35,7 @@ class HomePage extends ConsumerWidget {
         slivers: [
           const SliverPadding(padding: EdgeInsets.fromLTRB(16, 14, 16, 0), sliver: SliverToBoxAdapter(child: _HeroCarousel())),
           ...catalog.when(
-            loading: () => [const SliverToBoxAdapter(child: LoadingState(label: 'Loading the marketplace…'))],
+            loading: () => [const SliverPadding(padding: EdgeInsets.fromLTRB(16, 18, 16, 0), sliver: SliverToBoxAdapter(child: ProductGridSkeleton()))],
             error: (e, _) => [SliverToBoxAdapter(child: ErrorState(error: e, onRetry: () => ref.invalidate(catalogProvider)))],
             data: (c) => [
               if (c.error)

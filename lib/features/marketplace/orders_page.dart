@@ -10,6 +10,7 @@ import '../../core/format.dart';
 import '../../core/order_rules.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 
 /// `/orders` — the buyer's purchases (`pages/Orders.jsx`).
 class OrdersPage extends ConsumerStatefulWidget {
@@ -133,11 +134,18 @@ class _OrderRow extends StatelessWidget {
     final remaining = paidCancelRemaining(o, now);
     final id = strOf(o['id']);
     final awaiting = isAwaitingPayment(o);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(color: mv.surface, border: Border.all(color: mv.border), borderRadius: BorderRadius.circular(12)),
+    return Pressable(
+      scale: .985,
+      child: Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: mv.surface,
+        border: Border.all(color: mv.border.withValues(alpha: .8)),
+        borderRadius: BorderRadius.circular(MvRadius.card),
+        boxShadow: [BoxShadow(color: mv.shadow.withValues(alpha: context.isDarkMode ? .25 : .035), blurRadius: 14, offset: const Offset(0, 5))],
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(MvRadius.card),
         onTap: () => context.push('/orders/$id'),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -176,6 +184,7 @@ class _OrderRow extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

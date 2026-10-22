@@ -15,6 +15,7 @@ import '../state/catalog_state.dart';
 import '../state/compare_state.dart';
 import '../state/notifications_state.dart';
 import '../widgets/common.dart';
+import '../widgets/motion.dart';
 import '../widgets/mv_icon.dart';
 import '../widgets/theme_switch.dart';
 
@@ -204,7 +205,9 @@ class _BarIcon extends StatelessWidget {
     final mv = context.mv;
     return Tooltip(
       message: tooltip,
-      child: InkResponse(
+      child: Pressable(
+        scale: .88,
+        child: InkResponse(
         onTap: onTap,
         radius: 22,
         child: SizedBox(
@@ -218,7 +221,8 @@ class _BarIcon extends StatelessWidget {
                 Positioned(
                   right: 2,
                   top: 5,
-                  child: Container(
+                  // Bounces when something is added.
+                  child: BumpOnIncrease(value: badge, child: Container(
                     constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
@@ -231,11 +235,12 @@ class _BarIcon extends StatelessWidget {
                       badge > 99 ? '99+' : '$badge',
                       style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, height: 1),
                     ),
-                  ),
+                  )),
                 ),
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -415,7 +420,9 @@ class _BarItem extends StatelessWidget {
       selected: active,
       label: dest.label,
       excludeSemantics: true,
-      child: InkWell(
+      child: Pressable(
+        scale: .9,
+        child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(26),
         child: Column(
@@ -431,7 +438,12 @@ class _BarItem extends StatelessWidget {
                 color: active ? mv.accent : Colors.transparent,
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: MvIcon(dest.icon, size: 20, color: active ? Colors.white : mv.textMuted, strokeWidth: active ? 1.7 : 1.5),
+              child: AnimatedScale(
+                scale: active ? 1.06 : 1,
+                duration: Motion.quick,
+                curve: Motion.spring,
+                child: MvIcon(dest.icon, size: 20, color: active ? Colors.white : mv.textMuted, strokeWidth: active ? 1.7 : 1.5),
+              ),
             ),
             const SizedBox(height: 3),
             Text(
@@ -442,6 +454,7 @@ class _BarItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

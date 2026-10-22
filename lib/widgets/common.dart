@@ -7,6 +7,7 @@ import '../core/api_client.dart';
 import '../core/format.dart';
 import '../core/icons.dart';
 import '../core/theme.dart';
+import 'motion.dart';
 import 'theme_switch.dart';
 
 /// "Ikiguzi" brush-script wordmark, as on the Landing page design.
@@ -57,7 +58,11 @@ class ProductImage extends StatelessWidget {
             fit: fit,
             width: size,
             height: size,
-            placeholder: (_, __) => Container(color: mv.soft),
+            // Shimmer while loading, then a short fade so images never pop in.
+            fadeInDuration: Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 260),
+            fadeOutDuration: const Duration(milliseconds: 120),
+            fadeInCurve: Motion.out,
+            placeholder: (_, __) => Skeleton(width: size, height: size, radius: 0),
             errorWidget: (_, __, ___) => placeholder(),
           );
     return radius > 0 ? ClipRRect(borderRadius: BorderRadius.circular(radius), child: child) : child;
@@ -96,6 +101,7 @@ class GradientButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.loading = false,
+    this.success = false,
     this.expand = false,
     this.compact = false,
   });
@@ -104,13 +110,16 @@ class GradientButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool loading;
+  /// Briefly shows a check after the action is confirmed (e.g. added to cart).
+  final bool success;
   final bool expand;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !loading;
-    final child = Row(
+    final row = Row(
+      key: ValueKey(success ? 'ok' : loading ? 'busy' : 'idle'),
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -120,9 +129,11 @@ class GradientButton extends StatelessWidget {
             height: 16,
             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
           )
+        else if (success)
+          const Icon(Icons.check_rounded, size: 19, color: Colors.white)
         else if (icon != null)
           Icon(icon, size: 18, color: Colors.white),
-        if (loading || icon != null) const SizedBox(width: 8),
+        if (loading || success || icon != null) const SizedBox(width: 8),
         Flexible(
           child: Text(
             label,
@@ -136,6 +147,11 @@ class GradientButton extends StatelessWidget {
           ),
         ),
       ],
+    );
+    final child = AnimatedSwitcher(
+      duration: Motion.reduced(context) ? Duration.zero : Motion.quick,
+      transitionBuilder: (c, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween<double>(begin: .85, end: 1).animate(a), child: c)),
+      child: row,
     );
     final button = Opacity(
       opacity: enabled ? 1 : .55,
@@ -159,7 +175,7 @@ class GradientButton extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(container: true, button: true, enabled: enabled, child: button);
+    return Semantics(container: true, button: true, enabled: enabled, child: Pressable(enabled: enabled, child: button));
   }
 }
 
@@ -227,7 +243,7 @@ class OutlineBtn extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(container: true, button: true, enabled: enabled, child: button);
+    return Semantics(container: true, button: true, enabled: enabled, child: Pressable(enabled: enabled, child: button));
   }
 }
 
@@ -289,7 +305,7 @@ class SolidButton extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(container: true, button: true, enabled: enabled, child: button);
+    return Semantics(container: true, button: true, enabled: enabled, child: Pressable(enabled: enabled, child: button));
   }
 }
 
@@ -309,7 +325,9 @@ class OnBrandButton extends StatelessWidget {
       container: true,
       button: true,
       enabled: enabled,
-      child: Opacity(
+      child: Pressable(
+        enabled: enabled,
+        child: Opacity(
         opacity: enabled ? 1 : .6,
         child: Material(
           color: Colors.white,
@@ -336,6 +354,7 @@ class OnBrandButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -711,7 +730,7 @@ class MetricCard extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text(value, style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: mv.text)),
+                  child: AnimatedValueText(value, style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.w600, color: mv.text)),
                 ),
                 if (sub != null) Text(sub!, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: mv.textMuted)),
               ],
@@ -733,11 +752,27 @@ class MetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, c) {
       final cols = c.maxWidth < 330 ? 1 : 2;
-      final w = (c.maxWidth - (cols - 1) * 10) / cols;
-      return Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [for (final m in children) SizedBox(width: w, child: m)],
+      if (cols == 1) {
+        return Column(children: [for (final m in children) Padding(padding: const EdgeInsets.only(bottom: 10), child: m)]);
+      }
+      // Tiles in the same row share the taller one's height, so rows line up.
+      return Column(
+        children: [
+          for (var i = 0; i < children.length; i += 2)
+            Padding(
+              padding: EdgeInsets.only(bottom: i + 2 < children.length ? 10 : 0),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: children[i]),
+                    const SizedBox(width: 10),
+                    Expanded(child: i + 1 < children.length ? children[i + 1] : const SizedBox()),
+                  ],
+                ),
+              ),
+            ),
+        ],
       );
     });
   }
@@ -761,7 +796,7 @@ class SummaryRow extends StatelessWidget {
           Expanded(child: Text(label, style: TextStyle(color: bold ? mv.text : mv.textMuted, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, fontSize: bold ? 15 : 13))),
           const SizedBox(width: 8),
           Flexible(
-            child: Text(value,
+            child: AnimatedValueText(value,
                 textAlign: TextAlign.right,
                 style: TextStyle(fontWeight: FontWeight.w700, color: valueColor ?? mv.text, fontSize: bold ? 17 : 13.5, )),
           ),
@@ -802,7 +837,7 @@ class QtyStepper extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           btn(Icons.remove_rounded, value > min, () => onChanged(value - 1), 'Decrease quantity'),
-          SizedBox(width: 28, child: Center(child: Text('$value', style: TextStyle(fontWeight: FontWeight.w800, color: mv.text, fontSize: 14)))),
+          SizedBox(width: 28, child: Center(child: AnimatedValueText('$value', style: TextStyle(fontWeight: FontWeight.w800, color: mv.text, fontSize: 14)))),
           btn(Icons.add_rounded, value < max, () => onChanged(value + 1), 'Increase quantity'),
         ],
       ),
@@ -859,7 +894,13 @@ void toast(BuildContext context, String message, {bool error = false}) {
   final m = ScaffoldMessenger.of(context);
   m.hideCurrentSnackBar();
   m.showSnackBar(SnackBar(
-    content: Text(message),
+    content: Row(
+      children: [
+        Icon(error ? Icons.error_outline_rounded : Icons.check_circle_rounded, size: 20, color: error ? Colors.white : const Color(0xFF6EE0B4)),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message)),
+      ],
+    ),
     backgroundColor: error ? MvColors.errorText : null,
     duration: const Duration(seconds: 3),
   ));

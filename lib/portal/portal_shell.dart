@@ -14,6 +14,7 @@ import '../models/user.dart';
 import '../state/auth_state.dart';
 import '../state/notifications_state.dart';
 import '../widgets/common.dart';
+import '../widgets/motion.dart';
 
 /// Which dashboard a path belongs to ("/vendor/orders" -> "/vendor").
 String? portalPrefix(String path) {
@@ -129,7 +130,7 @@ class PortalShell extends ConsumerWidget {
           IconButton(
             tooltip: 'Notifications',
             onPressed: () => context.go(_notificationsPath(prefix)),
-            icon: Badge(isLabelVisible: unread > 0, label: Text(unread > 9 ? '9+' : '$unread'), child: const Icon(Icons.notifications_none_rounded)),
+            icon: BumpOnIncrease(value: unread, child: Badge(isLabelVisible: unread > 0, label: Text(unread > 9 ? '9+' : '$unread'), child: const Icon(Icons.notifications_none_rounded))),
           ),
           Padding(
             padding: const EdgeInsets.only(right: 10, left: 2),
@@ -154,31 +155,64 @@ class _PortalBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final mv = context.mv;
     Widget cell(String label, IconData icon, bool on, VoidCallback tap) => Expanded(
-      child: InkWell(
-        onTap: tap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 22, color: on ? mv.accentDeep : mv.textMuted),
-              const SizedBox(height: 3),
-              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: on ? mv.accentDeep : mv.textMuted)),
-            ],
+      child: Pressable(
+        scale: .9,
+        child: InkWell(
+          onTap: tap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 30,
+                  child: Center(
+                    child: AnimatedScale(scale: on ? 1.08 : 1, duration: Motion.quick, curve: Motion.spring, child: Icon(icon, size: 22, color: on ? mv.accentDeep : mv.textMuted)),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                AnimatedDefaultTextStyle(
+                  duration: Motion.quick,
+                  style: TextStyle(fontSize: 10.5, fontWeight: on ? FontWeight.w800 : FontWeight.w500, color: on ? mv.accentDeep : mv.textMuted),
+                  child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+    final count = items.length + 1;
     return Container(
-      decoration: BoxDecoration(color: mv.surface, border: Border(top: BorderSide(color: mv.border))),
+      decoration: BoxDecoration(
+        color: mv.surface,
+        border: Border(top: BorderSide(color: mv.border)),
+        boxShadow: [BoxShadow(color: mv.shadow, blurRadius: 14, offset: const Offset(0, -2))],
+      ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            for (var i = 0; i < items.length; i++) cell(bottomLabel[items[i].href] ?? items[i].label, mvIcon(items[i].icon), i == selected, () => context.go(items[i].href)),
-            cell('More', Icons.grid_view_rounded, false, onMore),
-          ],
-        ),
+        child: LayoutBuilder(builder: (context, c) {
+          final slot = c.maxWidth / count;
+          return Stack(
+            children: [
+              // The pill glides to the section you pick.
+              if (selected >= 0)
+                AnimatedPositioned(
+                  duration: Motion.reduced(context) ? Duration.zero : Motion.base,
+                  curve: Motion.spring,
+                  left: slot * selected + (slot - 52) / 2,
+                  top: 7,
+                  child: Container(width: 52, height: 30, decoration: BoxDecoration(color: mv.soft, borderRadius: BorderRadius.circular(MvRadius.chip))),
+                ),
+              Row(
+                children: [
+                  for (var i = 0; i < items.length; i++) cell(bottomLabel[items[i].href] ?? items[i].label, mvIcon(items[i].icon), i == selected, () => context.go(items[i].href)),
+                  cell('More', Icons.grid_view_rounded, false, onMore),
+                ],
+              ),
+            ],
+          );
+        }),
       ),
     );
   }

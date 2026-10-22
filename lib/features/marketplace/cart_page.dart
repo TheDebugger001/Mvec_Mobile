@@ -8,6 +8,7 @@ import '../../state/cart_state.dart';
 import '../../widgets/brand_panel.dart';
 import '../../widgets/checkout_steps.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 
 /// `/cart` — lines grouped by seller, quantity steppers, subtotal and the way
 /// to checkout (`pages/Cart.jsx`).
@@ -73,7 +74,13 @@ class _CartPageState extends ConsumerState<CartPage> {
                 ],
               ),
             ),
-            for (final item in entry.value) _CartTile(item: item, busy: _busy == item.id, onQty: (q) => _run(item.id, () => notifier.setQty(item.id, q)), onRemove: () => _run(item.id, () => notifier.remove(item.id))),
+            for (final item in entry.value)
+              // Fades out while its change is being saved.
+              AnimatedOpacity(
+                opacity: _busy == item.id ? .55 : 1,
+                duration: Motion.quick,
+                child: _CartTile(item: item, busy: _busy == item.id, onQty: (q) => _run(item.id, () => notifier.setQty(item.id, q)), onRemove: () => _run(item.id, () => notifier.remove(item.id))),
+              ),
           ],
           if (cart.lines.isNotEmpty) ...[
             const SizedBox(height: 10),

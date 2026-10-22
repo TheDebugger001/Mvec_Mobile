@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../models/product.dart';
 import '../../state/cart_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../../widgets/mv_icon.dart';
 
 /// Heart in a white circle on a product image (saves to the wishlist).
@@ -24,7 +25,9 @@ class WishHeart extends ConsumerWidget {
     return Semantics(
       button: true,
       label: wished ? 'Remove from wishlist' : 'Save to wishlist',
-      child: Material(
+      child: Pressable(
+        scale: .86,
+        child: Material(
         color: mv.surface.withValues(alpha: .96),
         shape: const CircleBorder(),
         elevation: 1.5,
@@ -43,15 +46,20 @@ class WishHeart extends ConsumerWidget {
           },
           child: Padding(
             padding: const EdgeInsets.all(7),
-            child: MvIcon(
-              'heart',
-              size: size,
-              strokeWidth: 1.5,
-              color: wished ? MvColors.badgeRed : mv.textMuted,
-              fill: wished ? MvColors.badgeRed : null,
+            // Pops when the wishlist confirms the save, settles back on removal.
+            child: HeartPop(
+              active: wished,
+              child: MvIcon(
+                'heart',
+                size: size,
+                strokeWidth: 1.5,
+                color: wished ? MvColors.badgeRed : mv.textMuted,
+                fill: wished ? MvColors.badgeRed : null,
+              ),
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -99,7 +107,9 @@ class ProductCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mv = context.mv;
     final p = product;
-    return Container(
+    return Pressable(
+      scale: .97,
+      child: Container(
       width: width,
       decoration: BoxDecoration(
         color: mv.surface,
@@ -161,34 +171,42 @@ class ProductCard extends ConsumerWidget {
                     style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 13, height: 1.25),
                   ),
                   const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF0A91A)),
-                      const SizedBox(width: 2),
-                      Flexible(
-                        child: Text(
-                          '${ratingLabel(p.rating)}${p.reviews > 0 ? ' (${p.reviews})' : ''}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: mv.textMuted, fontSize: 10.5),
-                        ),
-                      ),
-                    ],
+                  // A rating only when buyers have actually reviewed it.
+                  SizedBox(
+                    height: 16,
+                    child: p.reviews > 0
+                        ? Row(
+                            children: [
+                              const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF0A91A)),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  '${ratingLabel(p.rating)} (${p.reviews})',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: mv.textMuted, fontSize: 10.5),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text('New', style: TextStyle(color: mv.textMuted, fontSize: 10.5)),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
+                      // The price always shows in full; the old price gives way.
                       Flexible(
-                        child: Text(
-                          money(p.price),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w800, fontSize: 13.5),
+                        flex: 3,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(money(p.price), maxLines: 1, style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w800, fontSize: 13.5)),
                         ),
                       ),
                       if (p.onSale) ...[
                         const SizedBox(width: 6),
                         Flexible(
+                          flex: 2,
                           child: Text(
                             money(p.oldPrice),
                             maxLines: 1,
@@ -204,6 +222,7 @@ class ProductCard extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -243,5 +262,56 @@ class ProductGridSliver extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// Placeholder cards with the same shape as [ProductCard], shown while the
+/// real products load.
+class ProductGridSkeleton extends StatelessWidget {
+  const ProductGridSkeleton({super.key, this.count = 4});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final mv = context.mv;
+    return LayoutBuilder(builder: (context, c) {
+      final cols = c.maxWidth >= 700 ? 4 : (c.maxWidth >= 480 ? 3 : 2);
+      final w = (c.maxWidth - (cols - 1) * 12) / cols;
+      return Semantics(
+        label: 'Loading products',
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (var i = 0; i < count; i++)
+              Container(
+                width: w,
+                height: w + kProductCardInfoHeight,
+                decoration: BoxDecoration(color: mv.surface, borderRadius: BorderRadius.circular(MvRadius.card), border: Border.all(color: mv.border)),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Skeleton(width: w, height: w, radius: 0),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(11, 12, 11, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Skeleton(width: w * .4, height: 9, radius: 5),
+                          const SizedBox(height: 8),
+                          Skeleton(width: w * .75, height: 12, radius: 6),
+                          const SizedBox(height: 18),
+                          Skeleton(width: w * .45, height: 14, radius: 6),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    });
   }
 }

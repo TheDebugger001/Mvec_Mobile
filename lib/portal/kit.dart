@@ -9,6 +9,7 @@ import '../core/format.dart';
 import '../core/theme.dart';
 import '../core/upload.dart';
 import '../widgets/common.dart';
+import '../widgets/motion.dart';
 
 // Building blocks shared by every dashboard (seller, supplier, affiliate,
 // courier, admin). They mirror the web's seller/shared.jsx helpers:
@@ -318,11 +319,17 @@ class RecordCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
-    final card = Container(
+    final card = AnimatedContainer(
+      duration: Motion.quick,
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(color: selected ? mv.soft : mv.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: selected ? MvColors.skyBlue : mv.border)),
+      decoration: BoxDecoration(
+        color: selected ? mv.soft : mv.surface,
+        borderRadius: BorderRadius.circular(MvRadius.card),
+        border: Border.all(color: selected ? MvColors.primaryDark : mv.border.withValues(alpha: .8)),
+        boxShadow: [BoxShadow(color: mv.shadow.withValues(alpha: context.isDarkMode ? .25 : .03), blurRadius: 14, offset: const Offset(0, 4))],
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(MvRadius.card),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
@@ -368,7 +375,8 @@ class RecordCard extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(container: true, child: card);
+    // Cards that open something give a small press response.
+    return Semantics(container: true, child: Pressable(enabled: onTap != null, scale: .985, child: card));
   }
 }
 
@@ -394,14 +402,14 @@ class ActionChipBtn extends StatelessWidget {
     final bg = primary ? MvColors.primaryDark : mv.surface;
     final button = Material(
       color: onPressed == null ? bg.withValues(alpha: .5) : bg,
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(MvRadius.chip),
       child: InkWell(
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(MvRadius.chip),
         onTap: busy ? null : onPressed,
         child: Container(
           constraints: const BoxConstraints(minHeight: 36),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(9), border: Border.all(color: primary ? Colors.transparent : (danger ? MvColors.errorText.withValues(alpha: .35) : mv.border))),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(MvRadius.chip), border: Border.all(color: primary ? Colors.transparent : (danger ? MvColors.errorText.withValues(alpha: .35) : mv.border))),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -413,7 +421,7 @@ class ActionChipBtn extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(container: true, button: true, enabled: onPressed != null && !busy, child: button);
+    return Semantics(container: true, button: true, enabled: onPressed != null && !busy, child: Pressable(enabled: onPressed != null && !busy, scale: .94, child: button));
   }
 }
 
@@ -500,7 +508,13 @@ class MiniBars extends StatelessWidget {
                   children: [
                     if (v > 0) FittedBox(child: Text(compact(v), style: TextStyle(fontSize: 9.5, color: mv.textMuted))),
                     const SizedBox(height: 2),
-                    Container(height: (v / maxV) * height + 2, decoration: BoxDecoration(gradient: MvColors.gradient, borderRadius: BorderRadius.circular(5))),
+                    // Bars grow up from the baseline when the chart appears or its numbers change.
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: (v / maxV) * height + 2),
+                      duration: Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 520),
+                      curve: Motion.out,
+                      builder: (_, h, __) => Container(height: h, decoration: BoxDecoration(gradient: MvColors.gradient, borderRadius: BorderRadius.circular(6))),
+                    ),
                     const SizedBox(height: 4),
                     Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: mv.textMuted)),
                   ],
