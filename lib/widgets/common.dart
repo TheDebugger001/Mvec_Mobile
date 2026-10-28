@@ -22,7 +22,8 @@ class MvLogo extends StatelessWidget {
       'Ikiguzi',
       maxLines: 1,
       softWrap: false,
-      style: GoogleFonts.kaushanScript(
+      style: TextStyle(
+        fontFamily: 'Kaushan Script',
         fontSize: size * 1.05,
         fontWeight: FontWeight.w400,
         color: color ?? context.mv.accentDeep,

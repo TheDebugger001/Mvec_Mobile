@@ -88,6 +88,11 @@ flutter:
           weight: 500
         - asset: assets/fonts/roboto/Roboto-Bold.ttf
           weight: 700
+    # The "Ikiguzi" wordmark. Bundled (SIL OFL) so it is there on the first
+    # frame of the splash instead of being downloaded at runtime.
+    - family: Kaushan Script
+      fonts:
+        - asset: assets/fonts/kaushan/KaushanScript-Regular.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
