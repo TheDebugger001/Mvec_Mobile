@@ -52,6 +52,10 @@ class ProductImage extends StatelessWidget {
           alignment: Alignment.center,
           child: Icon(Icons.image_outlined, color: mv.textMuted.withValues(alpha: .6), size: 30),
         );
+    // Decode at the size the image is shown at, never wider than the screen.
+    // Full-size phone photos (~48 MB each decoded) exhaust the image cache on
+    // low-memory devices, and the pictures then silently stay blank.
+    final decodeWidth = ((size ?? MediaQuery.sizeOf(context).width) * MediaQuery.devicePixelRatioOf(context)).round();
     final child = url.isEmpty
         ? placeholder()
         : CachedNetworkImage(
@@ -59,6 +63,7 @@ class ProductImage extends StatelessWidget {
             fit: fit,
             width: size,
             height: size,
+            memCacheWidth: decodeWidth > 0 ? decodeWidth : null,
             // Shimmer while loading, then a short fade so images never pop in.
             fadeInDuration: Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 260),
             fadeOutDuration: const Duration(milliseconds: 120),
@@ -83,7 +88,9 @@ class Avatar extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       backgroundColor: MvColors.brand,
-      foregroundImage: u.isEmpty ? null : CachedNetworkImageProvider(u),
+      foregroundImage: u.isEmpty
+          ? null
+          : ResizeImage(CachedNetworkImageProvider(u), width: (radius * 2 * MediaQuery.devicePixelRatioOf(context)).round(), policy: ResizeImagePolicy.fit),
       child: Text(
         name.trim().isEmpty ? 'M' : name.trim()[0].toUpperCase(),
         style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: radius * .9),

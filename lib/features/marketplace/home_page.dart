@@ -81,7 +81,7 @@ class HomePage extends ConsumerWidget {
                     ),
                     SliverToBoxAdapter(
                       child: SizedBox(
-                        height: productCardHeight(_kDealCardWidth) + 8,
+                        height: productCardHeight(_kDealCardWidth, MediaQuery.textScalerOf(context)) + 8,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -129,7 +129,8 @@ class HomePage extends ConsumerWidget {
                     ),
                     SliverToBoxAdapter(
                       child: SizedBox(
-                        height: 96,
+                        // 56 of padding and logo row, 40 of name + category text.
+                        height: 56 + MediaQuery.textScalerOf(context).scale(40),
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -409,16 +410,18 @@ class _HeroCard extends StatelessWidget {
                             c.maxHeight * _kHeroImageAspect,
                           ),
                           height: c.maxHeight,
-                          child: ShaderMask(
-                            blendMode: BlendMode.dstIn,
-                            shaderCallback:
-                                (r) => const LinearGradient(
-                                  colors: [
-                                    Color(0x00000000),
-                                    Color(0xFF000000),
-                                  ],
-                                  stops: [0, .42],
-                                ).createShader(r),
+                          // The photo fades into the card colour on its left edge.
+                          // A gradient painted over it looks the same as a
+                          // ShaderMask on this solid background, without the
+                          // offscreen layer some Android GPU drivers draw blank.
+                          child: DecoratedBox(
+                            position: DecorationPosition.foreground,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [bg, bg.withValues(alpha: 0)],
+                                stops: const [0, .42],
+                              ),
+                            ),
                             child: Image.asset(
                               s.imageAsset!,
                               fit: BoxFit.cover,
@@ -652,7 +655,8 @@ class _PromoBanner extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(MvRadius.sheet),
       child: Container(
-        height: 204,
+        // Taller only when the phone's font size is turned up.
+        height: MediaQuery.textScalerOf(context).scale(204).clamp(204.0, 300.0),
         color: dark ? const Color(0xFF0A4457) : MvColors.brand,
         child: LayoutBuilder(
           builder:

@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The API and every product image come over the network. The debug and
+         profile manifests already ask for this, so without it here only release
+         builds (the APK installed on real phones) lose all network access. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Product photos are picked off the device, so the app needs to be able to
          see them. READ_MEDIA_IMAGES covers Android 13+; READ_EXTERNAL_STORAGE is
          the equivalent on Android 12L and below. Both pickers hand back a

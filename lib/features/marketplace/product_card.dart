@@ -99,12 +99,16 @@ const double kProductImageAspect = 1;
 /// Gap between a card's edge and its image well.
 const double _kCardInset = 6;
 
-/// Height of the text block under the image (one-line name, then price and rating).
-const double _kCardTextHeight = 56;
+/// Height of the text block under the image (one-line name, then price and
+/// rating): 15 of padding plus 41 of text at the default font size.
+const double _kCardTextPadding = 15;
+const double _kCardTextLines = 41;
 
 /// Total height of a card [width] logical pixels wide, so grids and strips can
-/// give every card in a row the same height.
-double productCardHeight(double width) => _kCardInset + (width - 2 * _kCardInset) / kProductImageAspect + _kCardTextHeight;
+/// give every card in a row the same height. The text block grows with the
+/// phone's font-size setting so large text is not cut off.
+double productCardHeight(double width, [TextScaler scaler = TextScaler.noScaling]) =>
+    _kCardInset + (width - 2 * _kCardInset) / kProductImageAspect + _kCardTextPadding + scaler.scale(_kCardTextLines);
 
 /// Storefront tile: rounded image well with the heart (and a "New" pill),
 /// then the name and the price with its rating, in a compact near-square card.
@@ -260,7 +264,7 @@ class ProductGridSliver extends StatelessWidget {
             crossAxisCount: cols,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            mainAxisExtent: productCardHeight(w),
+            mainAxisExtent: productCardHeight(w, MediaQuery.textScalerOf(context)),
           ),
           delegate: SliverChildBuilderDelegate(
             (context, i) => ProductCard(product: products[i]),
@@ -284,6 +288,8 @@ class ProductGridSkeleton extends StatelessWidget {
     return LayoutBuilder(builder: (context, c) {
       final cols = c.maxWidth >= 700 ? 4 : (c.maxWidth >= 480 ? 3 : 2);
       final w = (c.maxWidth - (cols - 1) * 12) / cols;
+      // The first frame can lay out at zero width; wait until there is room.
+      if (w <= 2 * _kCardInset) return const SizedBox.shrink();
       return Semantics(
         label: 'Loading products',
         child: Wrap(
@@ -293,7 +299,7 @@ class ProductGridSkeleton extends StatelessWidget {
             for (var i = 0; i < count; i++)
               Container(
                 width: w,
-                height: productCardHeight(w),
+                height: productCardHeight(w, MediaQuery.textScalerOf(context)),
                 decoration: BoxDecoration(color: mv.surface, borderRadius: BorderRadius.circular(MvRadius.card), border: Border.all(color: mv.border)),
                 clipBehavior: Clip.antiAlias,
                 child: Column(

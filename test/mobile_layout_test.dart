@@ -9,19 +9,30 @@ import 'helpers/fake_backend.dart';
 /// a real check that nothing is clipped or overflowing.
 void main() {
   const sizes = [Size(320, 640), Size(360, 740), Size(412, 915)];
+  // Light theme only: a landscape phone, a tablet, and a phone with the
+  // system font size turned up (common on older or low-vision users' phones).
+  const extra = [(Size(844, 390), 1.0), (Size(768, 1024), 1.0), (Size(360, 740), 1.3)];
 
   void go(WidgetTester tester, String location) => GoRouter.of(tester.element(find.byType(Scaffold).first)).go(location);
 
-  for (final size in sizes) {
-    for (final dark in [false, true]) {
-      testWidgets('storefront fits at ${size.width.toInt()}x${size.height.toInt()}${dark ? ' (dark)' : ''}', (tester) async {
-        await pumpApp(tester, FakeBackend(baseRoutes()), size: size);
+  final runs = [
+    for (final size in sizes)
+      for (final dark in [false, true]) (size, 1.0, dark),
+    for (final (size, scale) in extra) (size, scale, false),
+  ];
+
+  for (final (size, scale, dark) in runs) {
+    {
+      testWidgets('storefront fits at ${size.width.toInt()}x${size.height.toInt()}${scale != 1 ? ' text x$scale' : ''}${dark ? ' (dark)' : ''}', (tester) async {
+        await pumpApp(tester, FakeBackend(baseRoutes()), size: size, textScale: scale);
         if (dark) {
           await tester.tap(find.bySemanticsLabel('Switch to dark mode'));
           await settle(tester);
         }
 
-        // Home, scrolled to the bottom.
+        // Home, scrolled to the bottom. In landscape the deals row starts below the fold.
+        final home = find.descendant(of: find.byType(CustomScrollView).first, matching: find.byType(Scrollable)).first;
+        await tester.scrollUntilVisible(find.text('Deals of the Day'), 200, scrollable: home);
         expect(find.text('Deals of the Day'), findsOneWidget);
         for (var i = 0; i < 3; i++) {
           await tester.drag(find.byType(CustomScrollView).first, const Offset(0, -700));
@@ -54,6 +65,7 @@ void main() {
 
         go(tester, '/cart');
         await settle(tester);
+        await tester.scrollUntilVisible(find.text('Proceed to checkout'), 200, scrollable: find.byType(Scrollable).first);
         expect(find.text('Proceed to checkout'), findsOneWidget);
         await tester.drag(find.byType(ListView).first, const Offset(0, -500));
         await settle(tester, frames: 4);

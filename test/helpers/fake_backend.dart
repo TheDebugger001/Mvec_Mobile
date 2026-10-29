@@ -90,7 +90,7 @@ Map<String, Handler> baseRoutes() => {
     };
 
 /// Boots the real app on a phone-sized screen with [backend] answering the API.
-Future<void> pumpApp(WidgetTester tester, FakeBackend backend, {Size size = const Size(390, 844)}) async {
+Future<void> pumpApp(WidgetTester tester, FakeBackend backend, {Size size = const Size(390, 844), double textScale = 1, String? token}) async {
   GoogleFonts.config.allowRuntimeFetching = false;
   // Secure storage has no platform side in tests: keep it in memory.
   final store = <String, String>{};
@@ -114,12 +114,15 @@ Future<void> pumpApp(WidgetTester tester, FakeBackend backend, {Size size = cons
   );
   addTearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'), null));
   await TokenStore.instance.clear(); // the token cache outlives a single test
+  if (token != null) await TokenStore.instance.write(token); // starts signed in
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   Api.instance.dio.httpClientAdapter = backend;
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   await tester.pumpWidget(ProviderScope(
     overrides: [sharedPreferencesProvider.overrideWithValue(prefs), splashDurationProvider.overrideWithValue(Duration.zero)],
     child: const MvecApp(),
