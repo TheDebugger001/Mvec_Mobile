@@ -9,7 +9,7 @@ import 'api.dart';
 import 'kit.dart';
 
 // Pages shared by several roles: a problem-report case (buyer, seller and
-// MVEC each see their own actions), the list of cases, and MVEC Support.
+// Ikiguzi each see their own actions), the list of cases, and Ikiguzi Support.
 
 const _reason = {
   'ITEM_NOT_RECEIVED': 'Item not received',
@@ -20,7 +20,7 @@ const _reason = {
   'OTHER': 'Other problem',
 };
 const _closed = ['RESOLVED_BUYER_REFUNDED', 'RESOLVED_VENDOR_RELEASED', 'RESOLVED_SPLIT', 'REJECTED', 'WITHDRAWN'];
-const _steps = ['Reported', 'Seller responding', 'MVEC reviewing', 'Resolved'];
+const _steps = ['Reported', 'Seller responding', 'Ikiguzi reviewing', 'Resolved'];
 
 int _stepOf(Map<String, dynamic> c) {
   if (_closed.contains(c['status'])) return 3;
@@ -51,20 +51,20 @@ String _next(Map<String, dynamic> c, String you) {
   if (c['status'] == 'UNDER_REVIEW') {
     return you == 'admin'
         ? 'Both sides are waiting for your decision. Read the conversation, ask for anything missing, then decide below.'
-        : "MVEC is reviewing both sides and will decide. You can still add information below. You'll be told the outcome.";
+        : "Ikiguzi is reviewing both sides and will decide. You can still add information below. You'll be told the outcome.";
   }
   if (c['offerStatus'] == 'PENDING') {
     return you == 'buyer'
-        ? 'The seller offers to refund ${money(c['offerAmount'])}. Accept it to close the case, or decline and MVEC will decide.'
+        ? 'The seller offers to refund ${money(c['offerAmount'])}. Accept it to close the case, or decline and Ikiguzi will decide.'
         : you == 'seller'
         ? 'Waiting for the buyer to answer your ${money(c['offerAmount'])} offer.'
         : 'The seller offered ${money(c['offerAmount'])}; waiting for the buyer.';
   }
   if (you == 'seller') {
-    return "The payment for this order is on hold. Refund the buyer, offer a partial refund, or reply with your side${deadline.isNotEmpty ? ' before $deadline' : ''}. If you don't respond in time, MVEC will decide.";
+    return "The payment for this order is on hold. Refund the buyer, offer a partial refund, or reply with your side${deadline.isNotEmpty ? ' before $deadline' : ''}. If you don't respond in time, Ikiguzi will decide.";
   }
   if (you == 'buyer') {
-    return "The seller has been told and has ${deadline.isNotEmpty ? 'until $deadline' : 'a few days'} to respond. The payment stays on hold meanwhile. If you can't agree, ask MVEC to decide.";
+    return "The seller has been told and has ${deadline.isNotEmpty ? 'until $deadline' : 'a few days'} to respond. The payment stays on hold meanwhile. If you can't agree, ask Ikiguzi to decide.";
   }
   return "Waiting for the seller to respond${deadline.isNotEmpty ? ' (by $deadline)' : ''}. If they don't, the case comes to you automatically.";
 }
@@ -212,8 +212,8 @@ class _DisputeCaseViewState extends State<DisputeCaseView> {
                     ),
                     const SizedBox(height: 8),
                     OutlineBtn(
-                      label: 'Decline, let MVEC decide',
-                      onPressed: _busy.isNotEmpty ? null : () => _act('decline', () => jpost('$_base/offer/decline'), 'Decline the offer? MVEC will review the case and decide.'),
+                      label: 'Decline, let Ikiguzi decide',
+                      onPressed: _busy.isNotEmpty ? null : () => _act('decline', () => jpost('$_base/offer/decline'), 'Decline the offer? Ikiguzi will review the case and decide.'),
                     ),
                   ],
                 ),
@@ -284,7 +284,7 @@ class _DisputeCaseViewState extends State<DisputeCaseView> {
               if (can['offer'] == true)
                 Padding(padding: const EdgeInsets.only(bottom: 8), child: OutlineBtn(label: 'Offer a partial refund', onPressed: _busy.isNotEmpty ? null : () => _offer(heldGross))),
               if (can['escalate'] == true)
-                OutlineBtn(label: 'Ask MVEC to decide', onPressed: _busy.isNotEmpty ? null : () => _act('escalate', () => jpost('$_base/escalate'), 'Ask MVEC to decide this case?')),
+                OutlineBtn(label: 'Ask Ikiguzi to decide', onPressed: _busy.isNotEmpty ? null : () => _act('escalate', () => jpost('$_base/escalate'), 'Ask Ikiguzi to decide this case?')),
             ],
             if (you == 'buyer' && !closed) ...[
               const SizedBox(height: 10),
@@ -292,8 +292,8 @@ class _DisputeCaseViewState extends State<DisputeCaseView> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: OutlineBtn(
-                    label: 'Ask MVEC to decide',
-                    onPressed: _busy.isNotEmpty ? null : () => _act('escalate', () => jpost('$_base/escalate'), 'Ask MVEC to decide? MVEC will review both sides.'),
+                    label: 'Ask Ikiguzi to decide',
+                    onPressed: _busy.isNotEmpty ? null : () => _act('escalate', () => jpost('$_base/escalate'), 'Ask Ikiguzi to decide? Ikiguzi will review both sides.'),
                   ),
                 ),
               if (can['withdraw'] == true)
@@ -307,7 +307,7 @@ class _DisputeCaseViewState extends State<DisputeCaseView> {
             ],
             if (can['decide'] == true)
               Section(
-                title: 'MVEC decision',
+                title: 'Ikiguzi decision',
                 children: [
                   RadioGroup<String>(
                     groupValue: _decision,
@@ -317,7 +317,7 @@ class _DisputeCaseViewState extends State<DisputeCaseView> {
                         for (final (k, l, desc) in [
                           ('REFUND_BUYER', 'Refund the buyer in full', '${money(heldGross)} goes back to the buyer.'),
                           ('RELEASE_TO_VENDOR', 'Pay the seller', 'The seller is paid as if delivered.'),
-                          ('SPLIT_SETTLEMENT', 'Split', 'Refund part to the buyer, release part to the seller; MVEC keeps any rest.'),
+                          ('SPLIT_SETTLEMENT', 'Split', 'Refund part to the buyer, release part to the seller; Ikiguzi keeps any rest.'),
                         ])
                           RadioListTile<String>(
                             contentPadding: EdgeInsets.zero,
@@ -437,7 +437,7 @@ const disputeReasonLabel = {
 const _disputeStatus = {
   'OPEN': ('Waiting for seller', StatusTone.warn),
   'EVIDENCE_SUBMITTED': ('Seller responded', StatusTone.warn),
-  'UNDER_REVIEW': ('MVEC deciding', StatusTone.warn),
+  'UNDER_REVIEW': ('Ikiguzi deciding', StatusTone.warn),
   'RESOLVED_BUYER_REFUNDED': ('Buyer refunded', StatusTone.bad),
   'RESOLVED_VENDOR_RELEASED': ('Seller paid', StatusTone.good),
   'RESOLVED_SPLIT': ('Split', StatusTone.good),
@@ -494,7 +494,7 @@ class _DisputesListPageState extends State<DisputesListPage> {
     return PortalPage(
       eyebrow: '${widget.role} · refunds',
       title: 'Refunds & disputes',
-      subtitle: _admin ? 'Review reported problems, evidence and their resolution.' : 'Problems buyers reported with your orders. Respond with your side so MVEC can resolve them fairly.',
+      subtitle: _admin ? 'Review reported problems, evidence and their resolution.' : 'Problems buyers reported with your orders. Respond with your side so Ikiguzi can resolve them fairly.',
       onRefresh: _data.reload,
       children: [
         LoadView(
@@ -517,7 +517,7 @@ class _DisputesListPageState extends State<DisputesListPage> {
                     MetricCard(icon: 'bell', label: 'Open cases', value: '${active.length}', sub: '${rows.length} in total'),
                     MetricCard(icon: 'edit', label: _admin ? 'Awaiting evidence' : 'Need your response', value: '${active.where((r) => r['status'] == 'OPEN').length}', sub: 'Not yet answered'),
                     MetricCard(icon: 'shield', label: 'Amount at stake', value: money(active.fold<num>(0, (s, r) => s + numOf(r['disputedAmount']))), sub: 'Held until resolved'),
-                    MetricCard(icon: 'check', label: 'Resolved', value: '${rows.length - active.length}', sub: 'Closed by MVEC'),
+                    MetricCard(icon: 'check', label: 'Resolved', value: '${rows.length - active.length}', sub: 'Closed by Ikiguzi'),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -552,7 +552,7 @@ class _DisputesListPageState extends State<DisputesListPage> {
   }
 }
 
-// ─── MVEC Support ────────────────────────────────────────────────────────────
+// ─── Ikiguzi Support ────────────────────────────────────────────────────────────
 
 const supportCategories = [
   ('ORDER', 'Order or delivery'),
@@ -568,7 +568,7 @@ StatusChip supportChip(dynamic s) {
   return StatusChip(x?.$1 ?? titleCase(s), tone: x?.$2 ?? StatusTone.warn);
 }
 
-/// `/<role>/support` — send MVEC a request and follow the replies.
+/// `/<role>/support` — send Ikiguzi a request and follow the replies.
 class SupportPage extends StatefulWidget {
   const SupportPage({super.key, required this.role});
   final String role;
@@ -605,7 +605,7 @@ class _SupportPageState extends State<SupportPage> {
       final description = _reference.text.trim().isNotEmpty ? 'Reference: ${_reference.text.trim()}\n\n${_message.text.trim()}' : _message.text.trim();
       final res = await jpost('/support/cases', {'subject': _subject.text.trim(), 'category': _category, 'priority': _priority, 'description': description});
       if (!mounted) return;
-      toast(context, 'Ticket ${asMap(res['case'])['ticketNumber'] ?? ''} created. MVEC support will reply here.');
+      toast(context, 'Ticket ${asMap(res['case'])['ticketNumber'] ?? ''} created. Ikiguzi support will reply here.');
       _subject.clear();
       _reference.clear();
       _message.clear();
@@ -625,8 +625,8 @@ class _SupportPageState extends State<SupportPage> {
   Widget build(BuildContext context) {
     return PortalPage(
       eyebrow: '${widget.role} · support',
-      title: 'MVEC Support',
-      subtitle: 'Contact the MVEC team about payments, deliveries, orders or your account, and follow every request here.',
+      title: 'Ikiguzi Support',
+      subtitle: 'Contact the Ikiguzi team about payments, deliveries, orders or your account, and follow every request here.',
       onRefresh: _cases.reload,
       children: [
         Section(
@@ -641,7 +641,7 @@ class _SupportPageState extends State<SupportPage> {
                 child: InkWell(
                   onTap: () => context.go('/orders'),
                   child: const Tiny(
-                    "Problem with a specific order? Open it in My orders and choose Report a problem. The seller and MVEC both receive it, and the payment stays on hold until it's resolved.",
+                    "Problem with a specific order? Open it in My orders and choose Report a problem. The seller and Ikiguzi both receive it, and the payment stays on hold until it's resolved.",
                   ),
                 ),
               ),
@@ -657,7 +657,7 @@ class _SupportPageState extends State<SupportPage> {
             const SizedBox(height: 10),
             TextField(controller: _message, minLines: 4, maxLines: 8, decoration: const InputDecoration(labelText: 'Message *', hintText: "Describe the issue and what you've already tried…")),
             const SizedBox(height: 12),
-            GradientButton(label: 'Send to MVEC', loading: _sending, onPressed: _send),
+            GradientButton(label: 'Send to Ikiguzi', loading: _sending, onPressed: _send),
           ],
         ),
         LoadView(
@@ -667,7 +667,7 @@ class _SupportPageState extends State<SupportPage> {
                 title: 'Your requests',
                 subtitle: '${cases.where((c) => c['status'] == 'OPEN' || c['status'] == 'IN_PROGRESS').length} open',
                 children: [
-                  if (cases.isEmpty) const EmptyState(icon: Icons.support_agent_outlined, title: 'No requests yet', message: "Requests you send will appear here with MVEC's replies."),
+                  if (cases.isEmpty) const EmptyState(icon: Icons.support_agent_outlined, title: 'No requests yet', message: "Requests you send will appear here with Ikiguzi's replies."),
                   for (final c in cases)
                     RecordCard(
                       title: strOf(c['subject']),
@@ -746,7 +746,7 @@ class _TicketPageState extends State<_TicketPage> {
                         builder: (_) {
                           final a = m['author'];
                           final staff = a is Map && a['role'] != null && !['vendor', 'supplier', 'buyer', 'affiliate', 'delivery'].contains(a['role']);
-                          final who = staff ? (widget.staff ? 'MVEC (${personName(a, 'support')})' : 'MVEC support') : (widget.staff ? personName(a, 'Customer') : 'You');
+                          final who = staff ? (widget.staff ? 'Ikiguzi (${personName(a, 'support')})' : 'Ikiguzi support') : (widget.staff ? personName(a, 'Customer') : 'You');
                           return _Bubble(who: who, when: formatDate(m['createdAt']), text: strOf(m['message']), role: staff ? 'mvec' : (widget.staff ? 'buyer' : 'seller'));
                         },
                       ),

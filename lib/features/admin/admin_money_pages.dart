@@ -186,7 +186,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> with _Reloadable<
   }
 }
 
-// ─── MVEC earnings ──────────────────────────────────────────────────────────
+// ─── Ikiguzi earnings ──────────────────────────────────────────────────────────
 
 class _MvecWallet extends StatefulWidget {
   const _MvecWallet();
@@ -211,7 +211,7 @@ class _MvecWalletState extends State<_MvecWallet> {
     final res = await showFormSheet<Map<String, dynamic>>(
       context,
       title: 'Record a withdrawal',
-      subtitle: "The money sits in MVEC's payment provider accounts (Paypack, Flutterwave, K-Pay). Move it to the company bank there, then record it here so the books match.",
+      subtitle: "The money sits in Ikiguzi's payment provider accounts (Paypack, Flutterwave, K-Pay). Move it to the company bank there, then record it here so the books match.",
       fields: [
         FieldSpec('amount', 'Amount moved (RWF)', type: FieldType.number, required: true, help: 'Up to ${money(available)}.'),
         const FieldSpec('destination', 'Moved to', required: true, hint: 'e.g. BK account 000400012345'),
@@ -235,8 +235,8 @@ class _MvecWalletState extends State<_MvecWallet> {
         final w = d.wallet;
         final available = numOf(w['availableBalance']);
         return Section(
-          title: 'MVEC wallet',
-          subtitle: 'What MVEC keeps after sellers, suppliers, affiliates and provider fees, plus ad and subscription income.',
+          title: 'Ikiguzi wallet',
+          subtitle: 'What Ikiguzi keeps after sellers, suppliers, affiliates and provider fees, plus ad and subscription income.',
           children: [
             MetricGrid(
               children: [
@@ -261,7 +261,7 @@ class _MvecWalletState extends State<_MvecWallet> {
   }
 }
 
-/// `/admin/commissions` — what MVEC earns on every sale.
+/// `/admin/commissions` — what Ikiguzi earns on every sale.
 class AdminEarningsPage extends StatefulWidget {
   const AdminEarningsPage({super.key});
 
@@ -280,8 +280,8 @@ class _AdminEarningsPageState extends State<AdminEarningsPage> with _Reloadable<
   Widget build(BuildContext context) {
     return PortalPage(
       eyebrow: 'Orders & payments',
-      title: 'MVEC earnings',
-      subtitle: 'What MVEC earns on every sale, and where the rest of the money goes.',
+      title: 'Ikiguzi earnings',
+      subtitle: 'What Ikiguzi earns on every sale, and where the rest of the money goes.',
       onRefresh: data.reload,
       action: FilterSelect(
         label: 'Period',
@@ -311,21 +311,21 @@ class _AdminEarningsPageState extends State<AdminEarningsPage> with _Reloadable<
                   MetricGrid(
                     children: [
                       MetricCard(icon: 'chart', label: 'Sales', value: money(t['gross']), sub: 'Paid order lines, excluding refunds'),
-                      MetricCard(icon: 'wallet', label: 'MVEC commission', value: money(fee), sub: 'From the commission rules'),
-                      MetricCard(icon: 'shop', label: 'MVEC keeps', value: money(t['mvecNet']), sub: '${money(t['released'])} earned · ${money(t['held'])} until delivery'),
-                      MetricCard(icon: 'users', label: "Sellers' share", value: money(t['sellers']), sub: "After MVEC's fee; theirs to withdraw once delivered"),
+                      MetricCard(icon: 'wallet', label: 'Ikiguzi commission', value: money(fee), sub: 'From the commission rules'),
+                      MetricCard(icon: 'shop', label: 'Ikiguzi keeps', value: money(t['mvecNet']), sub: '${money(t['released'])} earned · ${money(t['held'])} until delivery'),
+                      MetricCard(icon: 'users', label: "Sellers' share", value: money(t['sellers']), sub: "After Ikiguzi's fee; theirs to withdraw once delivered"),
                       if (numOf(t['adRevenue']) > 0 || numOf(t['subscriptionRevenue']) > 0) ...[
-                        MetricCard(icon: 'tag', label: 'Ad clicks', value: money(t['adRevenue']), sub: 'Sponsored products, MVEC income'),
-                        MetricCard(icon: 'wallet', label: 'Subscriptions', value: money(t['subscriptionRevenue']), sub: 'Premium plans, MVEC income'),
+                        MetricCard(icon: 'tag', label: 'Ad clicks', value: money(t['adRevenue']), sub: 'Sponsored products, Ikiguzi income'),
+                        MetricCard(icon: 'wallet', label: 'Subscriptions', value: money(t['subscriptionRevenue']), sub: 'Premium plans, Ikiguzi income'),
                       ],
                     ],
                   ),
                   const SizedBox(height: 14),
                   Section(
-                    title: "Where MVEC's fee goes",
+                    title: "Where Ikiguzi's fee goes",
                     subtitle: 'From ${money(fee)} in fees',
                     children: [
-                      for (final (label, v) in [('Affiliates (paid by MVEC)', affiliatesByMvec), ('Payment provider fees', numOf(t['gatewayFees'])), ('MVEC keeps', numOf(t['mvecNet']))])
+                      for (final (label, v) in [('Affiliates (paid by Ikiguzi)', affiliatesByMvec), ('Payment provider fees', numOf(t['gatewayFees'])), ('Ikiguzi keeps', numOf(t['mvecNet']))])
                         ShareBar(label, fee == 0 ? 0 : v / fee, money(v)),
                       if (numOf(t['affiliatesPaidBySellers']) > 0) Tiny('Sellers also paid affiliates ${money(t['affiliatesPaidBySellers'])} from their own share.'),
                     ],
@@ -376,24 +376,24 @@ const ledgerEntry = {
   'PAYMENT_RECEIVED': 'Buyer payment received',
   'PAYMENT_ESCROW_LOCK': 'Buyer payment received',
   'ESCROW_RELEASE_VENDOR': 'Seller paid (delivery)',
-  'PLATFORM_COMMISSION_DEDUCTION': 'MVEC commission',
+  'PLATFORM_COMMISSION_DEDUCTION': 'Ikiguzi commission',
   'AFFILIATE_COMMISSION': 'Affiliate commission',
   'GATEWAY_FEE': 'Payment provider fee',
   'BUYER_REFUND': 'Refund to buyer',
   'PAYOUT_SENT': 'Withdrawal sent',
   'AD_BUDGET_RESERVED': 'Ad budget reserved',
   'AD_BUDGET_RETURNED': 'Ad budget returned',
-  'AD_CLICK_REVENUE': 'Ad click (MVEC income)',
-  'SUBSCRIPTION_FEE': 'Subscription fee (MVEC income)',
+  'AD_CLICK_REVENUE': 'Ad click (Ikiguzi income)',
+  'SUBSCRIPTION_FEE': 'Subscription fee (Ikiguzi income)',
   'COURIER_FEE_PAYOUT': 'Courier fee',
   'ADMIN_MANUAL_ADJUSTMENT': 'Correction',
 };
 const ledgerAccount = {
   'BUYER_PAYMENTS': 'Buyer payments',
-  'ESCROW_HOLDING': 'MVEC holding',
-  'PLATFORM_REVENUE': 'MVEC revenue',
-  'ADMIN_REVENUE': 'MVEC revenue',
-  'DEVELOPER_REVENUE': 'MVEC revenue',
+  'ESCROW_HOLDING': 'Ikiguzi holding',
+  'PLATFORM_REVENUE': 'Ikiguzi revenue',
+  'ADMIN_REVENUE': 'Ikiguzi revenue',
+  'DEVELOPER_REVENUE': 'Ikiguzi revenue',
   'VENDOR_PAYABLE': 'Seller balances',
   'SUPPLIER_PAYABLE': 'Supplier balances',
   'COURIER_PAYABLE': 'Courier balances',
@@ -405,14 +405,14 @@ const ledgerAccount = {
 };
 const _balanceRows = [
   ('BUYER_PAYMENTS', 'Total buyers have paid in (shown negative: it came from outside)'),
-  ('ESCROW_HOLDING', 'Held by MVEC until delivery'),
+  ('ESCROW_HOLDING', 'Held by Ikiguzi until delivery'),
   ('VENDOR_PAYABLE', 'Earned by sellers and suppliers, not yet withdrawn'),
-  ('PLATFORM_REVENUE', 'Earned by MVEC, not yet withdrawn'),
+  ('PLATFORM_REVENUE', 'Earned by Ikiguzi, not yet withdrawn'),
   ('AFFILIATE_COMMISSION', 'Earned by affiliates, not yet withdrawn'),
   ('GATEWAY_FEES', 'Payment provider fees'),
   ('AD_BUDGETS', 'Ad budgets reserved, not yet spent'),
   ('BUYER_REFUND_HOLD', 'Refunded to buyers'),
-  ('PAID_OUT', 'Sent out to sellers, suppliers, affiliates and MVEC'),
+  ('PAID_OUT', 'Sent out to sellers, suppliers, affiliates and Ikiguzi'),
 ];
 
 /// `/admin/ledger` — double-entry books and where the money is.
@@ -457,7 +457,7 @@ class _AdminLedgerPageState extends State<AdminLedgerPage> with _Reloadable<Admi
                 if (b.isNotEmpty)
                   Section(
                     title: 'Where the money is',
-                    subtitle: "Real money sits in MVEC's payment provider account; this says whose it is.",
+                    subtitle: "Real money sits in Ikiguzi's payment provider account; this says whose it is.",
                     trailing: StatusChip(d['balanced'] == true ? 'Books balance' : 'Books do not balance', tone: d['balanced'] == true ? StatusTone.good : StatusTone.warn),
                     children: [
                       for (final (k, label) in _balanceRows) RecordCard(title: ledgerAccount[k]!, subtitle: label, amount: money(bal(k))),
@@ -551,7 +551,7 @@ class _AdminAnalyticsPageState extends State<AdminAnalyticsPage> with _Reloadabl
                       sub: change == null ? 'No sales in the period before' : '${numOf(change) >= 0 ? '▲' : '▼'} ${numOf(change).abs()}% vs the period before',
                     ),
                     MetricCard(icon: 'cart', label: 'Paid orders', value: '${numOf(t['paidOrders']).toInt()}', sub: '${numOf(t['orders']).toInt()} placed · ${numOf(t['conversion'])}% paid'),
-                    MetricCard(icon: 'wallet', label: 'Average order', value: money(t['averageOrder']), sub: 'MVEC kept ${money(t['mvecEarned'])}'),
+                    MetricCard(icon: 'wallet', label: 'Average order', value: money(t['averageOrder']), sub: 'Ikiguzi kept ${money(t['mvecEarned'])}'),
                     MetricCard(
                       icon: 'users',
                       label: 'New accounts',

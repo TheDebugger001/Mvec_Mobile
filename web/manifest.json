@@ -1,11 +1,11 @@
 {
-    "name": "mvec_mobile",
-    "short_name": "mvec_mobile",
+    "name": "Ikiguzi",
+    "short_name": "Ikiguzi",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Ikiguzi, your marketplace for everything.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

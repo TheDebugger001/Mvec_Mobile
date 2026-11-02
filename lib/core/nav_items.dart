@@ -49,7 +49,7 @@ const adminNavGroups = <NavGroup>[
     NavItem('/admin/payments', 'Payments', 'wallet'),
     NavItem('/admin/vendor-payouts', 'Seller Payouts', 'wallet'),
     NavItem('/admin/transfers', 'Refunds & Withdrawals', 'wallet'),
-    NavItem('/admin/commissions', 'MVEC Earnings', 'wallet'),
+    NavItem('/admin/commissions', 'Ikiguzi Earnings', 'wallet'),
     NavItem('/admin/commission-rules', 'Commission Rules', 'tag'),
     NavItem('/admin/ledger', 'Financial Ledger', 'wallet'),
   ]),
@@ -115,7 +115,7 @@ const sellerNavGroups = <NavGroup>[
   NavGroup('Support', [
     NavItem('/vendor/messages', 'Messages', 'users'),
     NavItem('/vendor/notifications', 'Notifications', 'bell'),
-    NavItem('/vendor/support', 'MVEC Support', 'bell'),
+    NavItem('/vendor/support', 'Ikiguzi Support', 'bell'),
   ]),
 ];
 
@@ -142,7 +142,7 @@ const supplierNavGroups = <NavGroup>[
   NavGroup('Support', [
     NavItem('/supplier/messages', 'Messages', 'users'),
     NavItem('/supplier/notifications', 'Notifications', 'bell'),
-    NavItem('/supplier/support', 'MVEC Support', 'bell'),
+    NavItem('/supplier/support', 'Ikiguzi Support', 'bell'),
   ]),
 ];
 
@@ -161,7 +161,7 @@ const affiliateNavGroups = <NavGroup>[
   NavGroup('Support', [
     NavItem('/affiliate/messages', 'Messages', 'users'),
     NavItem('/affiliate/notifications', 'Notifications', 'bell'),
-    NavItem('/affiliate/support', 'MVEC Support', 'bell'),
+    NavItem('/affiliate/support', 'Ikiguzi Support', 'bell'),
   ]),
 ];
 
@@ -173,15 +173,15 @@ const deliveryNavGroups = <NavGroup>[
   ]),
   NavGroup('Support', [
     NavItem('/delivery/messages', 'Messages', 'users'),
-    NavItem('/delivery/support', 'MVEC Support', 'bell'),
+    NavItem('/delivery/support', 'Ikiguzi Support', 'bell'),
     NavItem('/profile', 'My Account', 'user'),
   ]),
 ];
 
 /// Mobile bottom-bar items per role (the web's `mobilePrimaryByRole`). Admin
 /// follows the product owner's brief — Overview, Sales, Wallet, Users — mapped
-/// onto the admin pages that really exist: Orders (sales), MVEC Earnings
-/// (the MVEC wallet) and Users.
+/// onto the admin pages that really exist: Orders (sales), Ikiguzi Earnings
+/// (the Ikiguzi wallet) and Users.
 const Map<String, List<String>> mobilePrimaryByRole = {
   'vendor': ['/vendor', '/vendor/products', '/vendor/orders', '/vendor/payouts'],
   'supplier': ['/supplier', '/supplier/products', '/supplier/orders', '/supplier/payments'],

@@ -21,7 +21,7 @@ const kAffiliateMinimumWithdrawal = 10000;
 
 Future<void> shareLink(BuildContext context, String url, String name) async {
   try {
-    await SharePlus.instance.share(ShareParams(text: '$name on MVEC: $url', subject: name));
+    await SharePlus.instance.share(ShareParams(text: '$name on Ikiguzi: $url', subject: name));
   } catch (_) {
     if (context.mounted) await copyText(context, url, 'Link copied.');
   }
@@ -562,7 +562,7 @@ class _AffiliateWithdrawalsPageState extends State<AffiliateWithdrawalsPage> {
               ? '${money(value)} was sent to your mobile money.'
               : status == 'PROCESSING'
               ? '${money(value)} is being sent to your mobile money. You will get a notification when it arrives.'
-              : 'Your ${money(value)} withdrawal is waiting for MVEC approval. You will get a notification when it is sent.',
+              : 'Your ${money(value)} withdrawal is waiting for Ikiguzi approval. You will get a notification when it is sent.',
         );
       }
       _amount.clear();
@@ -623,7 +623,7 @@ class _AffiliateWithdrawalsPageState extends State<AffiliateWithdrawalsPage> {
                   children: [
                     Tiny('1. Request a withdrawal to MTN MoMo, Airtel Money or a bank account.'),
                     Tiny('2. Up to RWF 100,000 to mobile money is sent automatically within minutes.'),
-                    Tiny('3. Larger amounts and bank transfers are sent after MVEC approval.'),
+                    Tiny('3. Larger amounts and bank transfers are sent after Ikiguzi approval.'),
                     Tiny('4. You get a notification and SMS when the money is sent. A failed transfer returns to your balance.'),
                   ],
                 ),

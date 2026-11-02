@@ -95,7 +95,7 @@ Future<String?> askCancelReason(BuildContext context, Map<String, dynamic> o) {
   return showFormSheet<String>(
     context,
     title: 'Cancel ${o['orderNumber'] ?? 'order'}?',
-    subtitle: paid ? 'The buyer paid through MVEC: they get a full refund, and your items go back into stock.' : 'Your items go back into stock. The customer is notified.',
+    subtitle: paid ? 'The buyer paid through Ikiguzi: they get a full refund, and your items go back into stock.' : 'Your items go back into stock. The customer is notified.',
     fields: [
       FieldSpec('reason', 'Reason', type: FieldType.select, required: true, options: [for (final r in cancelReasons) (r, r)]),
       const FieldSpec('note', 'Note for the customer', hint: 'Optional'),
@@ -258,7 +258,7 @@ final planProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   }
 });
 
-/// Shows [child] when the account may use [feature]. While MVEC's paid plans
+/// Shows [child] when the account may use [feature]. While Ikiguzi's paid plans
 /// are off everyone may use everything; the server still checks.
 class PremiumGate extends ConsumerWidget {
   const PremiumGate({super.key, required this.feature, required this.title, required this.child, this.base = '/vendor'});
@@ -293,7 +293,7 @@ class PremiumGate extends ConsumerWidget {
 bool needsOnboarding(AppUser? u) => (u?.role == 'vendor' || u?.role == 'supplier') && u?.isOnboarded == false;
 
 /// Banner shown above the seller/supplier overview while onboarding is
-/// incomplete, or when MVEC asked for changes to the profile.
+/// incomplete, or when Ikiguzi asked for changes to the profile.
 class OnboardingBanner extends ConsumerWidget {
   const OnboardingBanner({super.key});
 
@@ -302,7 +302,7 @@ class OnboardingBanner extends ConsumerWidget {
     final user = ref.watch(authProvider.select((a) => a.user));
     if (user?.role == 'vendor' && user?.verificationStatus == 'REJECTED' && !needsOnboarding(user)) {
       return Notice(
-        text: 'MVEC asked you to update your store profile',
+        text: 'Ikiguzi asked you to update your store profile',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -319,7 +319,7 @@ class OnboardingBanner extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Tiny('Complete your business profile and wait for MVEC verification before publishing products, creating a store, or placing supply orders.'),
+          const Tiny('Complete your business profile and wait for Ikiguzi verification before publishing products, creating a store, or placing supply orders.'),
           ActionChipBtn('Complete onboarding', primary: true, onPressed: () => showOnboarding(context, ref)),
         ],
       ),
@@ -335,7 +335,7 @@ Future<void> showOnboarding(BuildContext context, WidgetRef ref) async {
   await showFormSheet<void>(
     context,
     title: 'Complete onboarding',
-    subtitle: 'Submit your complete business profile. MVEC will review it before marketplace actions are enabled.',
+    subtitle: 'Submit your complete business profile. Ikiguzi will review it before marketplace actions are enabled.',
     fields: [
       const FieldSpec('businessName', 'Business name', required: true),
       FieldSpec('category', 'Category', type: FieldType.select, required: true, placeholderOption: 'Select a category', options: [for (final c in categories) (strOf(c['name']), strOf(c['name']))]),

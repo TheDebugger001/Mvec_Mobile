@@ -53,7 +53,7 @@ class _SellerOverviewPageState extends ConsumerState<SellerOverviewPage> {
       subtitle:
           user?.isStaff == true
               ? "You're working in ${user?.staffStoreName ?? 'the store'} as ${staffRoleLabel[user?.staffRole] ?? 'staff'}. Menus show what your role can access."
-              : 'Everything you need to operate your MVEC store.',
+              : 'Everything you need to operate your Ikiguzi store.',
       onRefresh: _data.reload,
       children: [
         const OnboardingBanner(),
@@ -490,7 +490,7 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: [
-            Tiny('Complete product information before publishing it to the MVEC marketplace.'),
+            Tiny('Complete product information before publishing it to the Ikiguzi marketplace.'),
             if (_error.isNotEmpty) Notice(text: _error),
             _heading('Basic information'),
             _field('name', 'Product name *', hint: 'e.g. Samsung Galaxy S25'),

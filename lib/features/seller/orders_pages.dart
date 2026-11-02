@@ -258,7 +258,7 @@ class _SellerOrderDetailPageState extends ConsumerState<SellerOrderDetailPage> {
                     ),
                   KV('Subtotal', money(gross)),
                   if (coupon > 0) KV('Coupon ${asMap(o['coupon'])['code'] ?? ''}', '-${money(coupon)}'),
-                  KV('MVEC platform fee (${d.commission.toStringAsFixed(d.commission % 1 == 0 ? 0 : 1)}%)', '-${money(fee)}'),
+                  KV('Ikiguzi platform fee (${d.commission.toStringAsFixed(d.commission % 1 == 0 ? 0 : 1)}%)', '-${money(fee)}'),
                   KV(
                     'Delivery${parcels.isNotEmpty && strOf(parcels.first['method']).isNotEmpty ? ' · ${titleCase(parcels.first['method'])}' : ''}',
                     delivery > 0
@@ -278,7 +278,7 @@ class _SellerOrderDetailPageState extends ConsumerState<SellerOrderDetailPage> {
                   Text(strOf(customer['name'], personName(o['user'])), style: const TextStyle(fontWeight: FontWeight.w700)),
                   if (strOf(customer['phone']).isNotEmpty) Tiny(strOf(customer['phone'])),
                   if (strOf(customer['email'] ?? asMap(o['user'])['email']).isNotEmpty) Tiny(strOf(customer['email'] ?? asMap(o['user'])['email'])),
-                  if (manual) Tiny(o['user'] != null ? 'Linked to the customer’s MVEC account' : 'Guest customer (no MVEC account)'),
+                  if (manual) Tiny(o['user'] != null ? 'Linked to the customer’s Ikiguzi account' : 'Guest customer (no Ikiguzi account)'),
                   Tiny(
                     isPickup(o)
                         ? 'The buyer collects this order from your store. Ask for their delivery code when you hand it over.'
@@ -381,7 +381,7 @@ extension _IfEmpty on String {
 const _payments = [
   ('COD', 'Cash on delivery', 'Customer pays when the order arrives.'),
   ('PAID_OFFLINE', 'Already paid', 'You received cash, MoMo or a bank transfer.'),
-  ('LINK', 'MVEC payment link', 'Customer pays online; needs an MVEC account with this phone or email.'),
+  ('LINK', 'Ikiguzi payment link', 'Customer pays online; needs an Ikiguzi account with this phone or email.'),
 ];
 
 /// Record a sale made in person, by phone or on WhatsApp (`ManualOrderModal`).
@@ -513,7 +513,7 @@ class _ManualOrderPageState extends State<ManualOrderPage> {
           builder:
               (ctx) => AlertDialog(
                 title: const Text('Order created'),
-                content: Text('${strOf(res['message'])} Send this link to the customer; they pay after signing in to MVEC.\n\n$full'),
+                content: Text('${strOf(res['message'])} Send this link to the customer; they pay after signing in to Ikiguzi.\n\n$full'),
                 actions: [
                   TextButton(onPressed: () => copyText(ctx, full, 'Payment link copied.'), child: const Text('Copy link')),
                   TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('View order')),
@@ -557,7 +557,7 @@ class _ManualOrderPageState extends State<ManualOrderPage> {
                 _input(_name, 'Name *'),
                 _input(_phone, 'Phone *', hint: '07xx xxx xxx', type: TextInputType.phone),
                 _input(_email, 'Email', hint: 'Optional', type: TextInputType.emailAddress),
-                const Tiny('If the phone or email matches an MVEC buyer, the order appears in their account.'),
+                const Tiny('If the phone or email matches an Ikiguzi buyer, the order appears in their account.'),
               ],
             ),
             Section(
@@ -707,7 +707,7 @@ class _ManualOrderPageState extends State<ManualOrderPage> {
                     showSelectedIcon: false,
                     onSelectionChanged: (s) => setState(() => _offline = s.first),
                   ),
-                if (_payment != 'LINK') const Tiny("You collect this payment yourself, so it isn't added to your MVEC balance."),
+                if (_payment != 'LINK') const Tiny("You collect this payment yourself, so it isn't added to your Ikiguzi balance."),
                 const SizedBox(height: 8),
                 _input(_note, 'Note', hint: 'Optional, e.g. gift wrap, call before delivery', lines: 3),
               ],

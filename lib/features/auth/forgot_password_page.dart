@@ -51,7 +51,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   Future<void> _sendCode() => _run(() async {
         if (_identity.text.trim().isEmpty) {
-          throw ApiException('Enter the email or phone number on your MVEC account.');
+          throw ApiException('Enter the email or phone number on your Ikiguzi account.');
         }
         final res = await AuthApi.forgotPassword(_identity.text);
         setState(() {

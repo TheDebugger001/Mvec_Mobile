@@ -115,7 +115,7 @@ class StoresPage extends ConsumerWidget {
             eyebrow: 'Marketplace stores',
             title: 'Stores',
             subtitle:
-                'Every store selling on MVEC. Sellers checked by MVEC carry a Verified badge; every order is protected by MVEC either way.',
+                'Every store selling on Ikiguzi. Sellers checked by Ikiguzi carry a Verified badge; every order is protected by Ikiguzi either way.',
           ),
           AsyncBody<Catalog>(
             value: catalog,
@@ -515,11 +515,11 @@ class HelpPage extends StatelessWidget {
     ),
     (
       'How do refunds work?',
-      "You can cancel within 30 minutes of paying for a full refund. After that, use Report a problem on the order; MVEC holds the seller's payment while it reviews. Refunds go back to the mobile money number or card you paid with.",
+      "You can cancel within 30 minutes of paying for a full refund. After that, use Report a problem on the order; Ikiguzi holds the seller's payment while it reviews. Refunds go back to the mobile money number or card you paid with.",
     ),
     (
       'When does the seller get my money?',
-      'MVEC holds your payment until you give the courier your 6-digit delivery code. Only give the code when the items are in your hands.',
+      'Ikiguzi holds your payment until you give the courier your 6-digit delivery code. Only give the code when the items are in your hands.',
     ),
     (
       'How can I contact a seller?',
@@ -565,12 +565,12 @@ class HelpPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Contact MVEC',
+                'Contact Ikiguzi',
                 style: TextStyle(fontWeight: FontWeight.w600, color: mv.text),
               ),
               const SizedBox(height: 4),
               Text(
-                'Questions about a payment, a delivery or your account? Send MVEC a request and follow the replies here.',
+                'Questions about a payment, a delivery or your account? Send Ikiguzi a request and follow the replies here.',
                 style: TextStyle(color: mv.textMuted, fontSize: 12.5),
               ),
               const SizedBox(height: 10),

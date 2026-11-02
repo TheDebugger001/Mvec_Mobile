@@ -124,7 +124,7 @@ Map<String, dynamic> _other(Map<String, dynamic> conversation, String myId) {
   return people.firstWhere((p) => idOf(p) != myId, orElse: () => <String, dynamic>{});
 }
 
-String _personName(Map<String, dynamic> p) => strOf(p['companyName'] ?? p['fullName'] ?? p['Fullname'], 'MVEC user');
+String _personName(Map<String, dynamic> p) => strOf(p['companyName'] ?? p['fullName'] ?? p['Fullname'], 'Ikiguzi user');
 
 /// `/buyer/messages` — direct conversations with sellers (`pages/Messages.jsx`).
 class MessagesPage extends ConsumerStatefulWidget {
@@ -480,7 +480,7 @@ class _RefundsPageState extends State<RefundsPage> {
                 const SizedBox(height: 4),
                 Text('Order ${strOf(asMap(r['order'])['orderNumber'], '—')} · ${_disputeReason[r['reason']] ?? statusLabel(r['reason'])}', style: TextStyle(color: mv.textMuted, fontSize: 12)),
                 Text('${money(r['disputedAmount'])} · ${formatDate(r['createdAt'])}', style: TextStyle(color: mv.textMuted, fontSize: 12)),
-                if (strOf(asMap(r['arbitrationDecision'])['decision']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('MVEC decision: ${statusLabel(asMap(r['arbitrationDecision'])['decision'])}', style: const TextStyle(fontSize: 12.5))),
+                if (strOf(asMap(r['arbitrationDecision'])['decision']).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Ikiguzi decision: ${statusLabel(asMap(r['arbitrationDecision'])['decision'])}', style: const TextStyle(fontSize: 12.5))),
                 Padding(padding: const EdgeInsets.only(top: 6), child: Text('Open the case', style: TextStyle(color: mv.accentDeep, fontWeight: FontWeight.w700, fontSize: 12.5))),
               ]),
             ),
@@ -647,7 +647,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           DataCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(strOf(premium?['plan'], 'Buyer Ad Removal'), style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
-              Text('${money(price)} · ${strOf(premium?['billing'], 'Monthly')} · no ads anywhere on MVEC', style: TextStyle(color: mv.textMuted, fontSize: 12)),
+              Text('${money(price)} · ${strOf(premium?['billing'], 'Monthly')} · no ads anywhere on Ikiguzi', style: TextStyle(color: mv.textMuted, fontSize: 12)),
               if (premiumActive) ...[const SizedBox(height: 8), const StatusChip('Your plan'), Text('Active until ${strOf(sub['renewal'])}. Pay again any time to add 30 more days.', style: TextStyle(color: mv.textMuted, fontSize: 11.5))],
               const SizedBox(height: 12),
               SegmentedButton<String>(

@@ -76,7 +76,7 @@ class Product {
       brand: strOf(p['brand']),
       vendor: strOf(
         vendor['companyName'] ?? vendor['Fullname'] ?? vendor['fullName'],
-        'MVEC Seller',
+        'Ikiguzi Seller',
       ),
       vendorId: strOf(
         vendor['_id'] ?? vendor['id'] ?? (p['vendor'] is String ? p['vendor'] : null) ?? p['vendorId'],

@@ -100,7 +100,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                 if (cart.blocked)
                   const Padding(padding: EdgeInsets.only(top: 10), child: Text('Fix the highlighted items to continue.', style: TextStyle(color: Color(0xFFFFB4AB), fontSize: 12, fontWeight: FontWeight.w600))),
                 const SizedBox(height: 10),
-                Text('Your payment is held by MVEC until you confirm delivery.', style: TextStyle(color: Colors.white.withValues(alpha: .7), fontSize: 11.5)),
+                Text('Your payment is held by Ikiguzi until you confirm delivery.', style: TextStyle(color: Colors.white.withValues(alpha: .7), fontSize: 11.5)),
               ],
             ),
           ],

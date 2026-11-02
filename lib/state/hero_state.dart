@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/catalog_api.dart';
 import '../models/product.dart';
 
-/// Products whose ad campaign MVEC approved for the home-page hero. Empty when
+/// Products whose ad campaign Ikiguzi approved for the home-page hero. Empty when
 /// there is none right now (the web shows a stand-in photo in that case).
 final heroAdsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
   try {

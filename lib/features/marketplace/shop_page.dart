@@ -103,7 +103,7 @@ class ShopPage extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 sliver: SliverToBoxAdapter(
                   child: PageTitle(
-                    eyebrow: 'MVEC Marketplace',
+                    eyebrow: 'Ikiguzi Marketplace',
                     title:
                         dealsOnly
                             ? 'Deals'

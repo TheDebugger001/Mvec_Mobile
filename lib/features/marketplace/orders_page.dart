@@ -110,7 +110,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
             EmptyState(icon: Icons.inventory_2_outlined, title: 'No orders yet', message: 'Once you check out, your orders will show up here.', action: GradientButton(label: 'Start shopping', compact: true, onPressed: () => context.go('/shop'))),
           if (_orders.isNotEmpty && shown.isEmpty) const EmptyState(title: 'No matching orders'),
           for (final o in shown) _OrderRow(order: o, now: _now, busy: _busyId == strOf(o['id']), onCancel: () => _cancel(o)),
-          if (_orders.isNotEmpty) const InfoBox(title: 'Protected payment & delivery', text: 'MVEC holds your payment until you confirm delivery with your code. You can cancel within 30 minutes of paying, before the seller ships. Unpaid orders are cancelled automatically after 30 minutes.'),
+          if (_orders.isNotEmpty) const InfoBox(title: 'Protected payment & delivery', text: 'Ikiguzi holds your payment until you confirm delivery with your code. You can cancel within 30 minutes of paying, before the seller ships. Unpaid orders are cancelled automatically after 30 minutes.'),
           if (!_loading) Padding(padding: const EdgeInsets.only(top: 4), child: GradientButton(label: 'Continue shopping', expand: true, onPressed: () => context.go('/shop'))),
           SizedBox(height: mv.page == Colors.transparent ? 0 : 0),
         ],

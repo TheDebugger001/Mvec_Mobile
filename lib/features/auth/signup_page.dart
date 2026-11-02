@@ -92,7 +92,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     final info = _roles[_role]!;
     return AuthScaffold(
       title: 'Create your account',
-      subtitle: 'Join MVEC with your phone number. Email is optional.',
+      subtitle: 'Join Ikiguzi with your phone number. Email is optional.',
       children: [
         if (_error.isNotEmpty) Notice(text: _error),
         TextField(
@@ -121,6 +121,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: _role,
           decoration: const InputDecoration(labelText: 'Account type'),
           items: const [
@@ -133,6 +134,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: _gender,
           decoration: const InputDecoration(labelText: 'Gender (optional)'),
           items: const [

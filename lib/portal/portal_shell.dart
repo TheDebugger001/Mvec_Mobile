@@ -306,7 +306,7 @@ class _PortalDrawerState extends ConsumerState<PortalDrawer> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            user?.fullName.isNotEmpty == true ? user!.fullName : 'MVEC User',
+                            user?.fullName.isNotEmpty == true ? user!.fullName : 'Ikiguzi User',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontWeight: FontWeight.w700, color: mv.text, fontSize: 13.5),

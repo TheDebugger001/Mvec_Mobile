@@ -1,6 +1,6 @@
-# MVEC Mobile
+# Ikiguzi Mobile
 
-Flutter mobile app for the MVEC marketplace. It mirrors `Mvec_frontend` (React)
+Flutter mobile app for the Ikiguzi marketplace. It mirrors `Mvec_frontend` (React)
 and talks to the existing `Ikiguzi_backend` REST API. Nothing is mocked: every
 screen reads and writes through the real `/api` endpoints.
 
@@ -20,6 +20,20 @@ flutter run --dart-define=API_BASE_URL=http://<host>:4000/api
 then `http://localhost:4000/api`. On the Android emulator a `localhost` URL is
 rewritten to `10.0.2.2` automatically; on a real phone use your machine's LAN
 IP or the hosted URL.
+
+## Build the APK
+
+```bash
+flutter build apk --release \
+  --dart-define=API_BASE_URL=https://api.ikiguzi.com/api \
+  --dart-define=WEB_URL=https://ikiguzi.com
+```
+
+The result is `build/app/outputs/flutter-apk/app-release.apk`. Without the
+`--dart-define`s the app points at `localhost`. Release builds are signed with
+the key named in `android/key.properties` (not in git); without that file they
+fall back to the debug keys, which can't update an installed release or go on
+Google Play. Keep the key and its password backed up: updates need the same key.
 
 ## What is built
 

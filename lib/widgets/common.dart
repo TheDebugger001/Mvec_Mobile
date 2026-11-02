@@ -33,7 +33,7 @@ class MvLogo extends StatelessWidget {
   }
 }
 
-/// Network image with the MVEC placeholder when missing or failing.
+/// Network image with the Ikiguzi placeholder when missing or failing.
 class ProductImage extends StatelessWidget {
   const ProductImage({super.key, required this.src, this.fit = BoxFit.cover, this.radius = 0, this.size});
   final String? src;

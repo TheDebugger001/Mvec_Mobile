@@ -45,7 +45,7 @@ class _SellerStoresPageState extends State<SellerStoresPage> {
     final saved = await showFormSheet<Map<String, dynamic>>(
       context,
       title: s == null ? 'Register a store' : 'Edit ${s['storeName']}',
-      subtitle: s == null ? 'Each store gets its own name, logo and contact details on MVEC.' : 'Update how this storefront appears to buyers.',
+      subtitle: s == null ? 'Each store gets its own name, logo and contact details on Ikiguzi.' : 'Update how this storefront appears to buyers.',
       fields: [
         const FieldSpec('logo', 'Store logo', type: FieldType.image),
         const FieldSpec('storeName', 'Store name', required: true, hint: 'e.g. Kigali Tech Store'),
@@ -247,7 +247,7 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (v['verificationStatus'] == 'REJECTED')
-                  Notice(text: 'MVEC asked for changes: ${strOf(v['verificationNote'], 'Check your business details.')} Save your profile to send it back for review.'),
+                  Notice(text: 'Ikiguzi asked for changes: ${strOf(v['verificationNote'], 'Check your business details.')} Save your profile to send it back for review.'),
                 Section(
                   title: 'Business profile',
                   subtitle: 'Shown on your public vendor page',
@@ -278,19 +278,19 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
                 ),
                 Section(
                   title: 'Account status',
-                  subtitle: 'Managed by MVEC',
+                  subtitle: 'Managed by Ikiguzi',
                   children: [
                     Row(children: [const Expanded(child: Text('Account')), Pill(strOf(v['status'], 'ACTIVE'))]),
                     const SizedBox(height: 8),
                     Row(children: [const Expanded(child: Text('Verification')), Pill(strOf(v['verificationStatus'], 'PENDING'))]),
-                    KV('MVEC commission', defaultPercent != null ? '$defaultPercent% unless your category differs' : d.commissionRate),
+                    KV('Ikiguzi commission', defaultPercent != null ? '$defaultPercent% unless your category differs' : d.commissionRate),
                     KV('Rating', '${numOf(v['ratingAvg']).toStringAsFixed(1)} / 5'),
                   ],
                 ),
                 if (defaultPercent != null && cats.any((c) => c['percent'] != defaultPercent))
                   Section(
-                    title: 'Your MVEC commission by category',
-                    subtitle: 'Taken from each sale when the buyer pays. Payment provider fees are paid by ${fees['gatewayFeePayer'] == 'SELLER' ? 'you' : 'MVEC'}.',
+                    title: 'Your Ikiguzi commission by category',
+                    subtitle: 'Taken from each sale when the buyer pays. Payment provider fees are paid by ${fees['gatewayFeePayer'] == 'SELLER' ? 'you' : 'Ikiguzi'}.',
                     children: [
                       for (final c in cats.where((c) => c['percent'] != defaultPercent)) KV('${c['category']} (${c['source']})', '${c['percent']}%'),
                       KV('Every other category', '$defaultPercent%'),
@@ -913,8 +913,8 @@ class _SellerShippingPageState extends State<SellerShippingPage> {
                 ),
               if (d.zones.isEmpty)
                 const InfoBox(
-                  title: 'Using MVEC standard rates',
-                  text: 'Until you add a zone, buyers pay MVEC standard delivery: free in Kigali City and 5,000 RWF elsewhere (express 10,000 RWF). Add zones to set your own fees and coverage.',
+                  title: 'Using Ikiguzi standard rates',
+                  text: 'Until you add a zone, buyers pay Ikiguzi standard delivery: free in Kigali City and 5,000 RWF elsewhere (express 10,000 RWF). Add zones to set your own fees and coverage.',
                 ),
               if (usingOther) const InfoBox(title: 'No zones for this store yet', text: "Checkout uses your other stores' zones for its items until you add zones here."),
               Section(
@@ -957,7 +957,7 @@ class _SellerShippingPageState extends State<SellerShippingPage> {
               ),
               Section(
                 title: 'Coverage',
-                subtitle: d.zones.isNotEmpty ? (uncovered > 0 ? '$uncovered of 30 districts not delivered' : 'All 30 districts delivered') : 'MVEC standard rates apply',
+                subtitle: d.zones.isNotEmpty ? (uncovered > 0 ? '$uncovered of 30 districts not delivered' : 'All 30 districts delivered') : 'Ikiguzi standard rates apply',
                 children: [
                   for (final p in rwandaLocations.keys) ...[
                     Padding(padding: const EdgeInsets.only(top: 6, bottom: 4), child: Text(p, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5))),
@@ -1076,7 +1076,7 @@ class _PreviewCardState extends State<_PreviewCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Tiny('${r['method'] != _method ? '${titleCase(_method)} not offered, ${titleCase(r['method']).toLowerCase()} used · ' : ''}${r['zoneName'] ?? ''} · ${r['eta'] ?? ''}'),
-                    if (r['source'] != 'seller') const Tiny('You have no zones yet, so MVEC standard rates apply.'),
+                    if (r['source'] != 'seller') const Tiny('You have no zones yet, so Ikiguzi standard rates apply.'),
                   ],
                 ),
               )
@@ -1277,7 +1277,7 @@ class _SellerReviewsPageState extends State<SellerReviewsPage> {
     return PortalPage(
       eyebrow: widget.eyebrow,
       title: 'Reviews',
-      subtitle: 'See what buyers say about your products and reply publicly. Your reply shows under the review on the product page and the buyer is notified. Moderation stays with MVEC.',
+      subtitle: 'See what buyers say about your products and reply publicly. Your reply shows under the review on the product page and the buyer is notified. Moderation stays with Ikiguzi.',
       onRefresh: _data.reload,
       children: [
         LoadView(
@@ -1475,7 +1475,7 @@ class _SellerAnalyticsPageState extends State<SellerAnalyticsPage> {
                     children: [
                       RecordCard(title: 'Coupon discounts', subtitle: 'Given on your items', amount: money(discount)),
                       RecordCard(title: 'Ad spend', subtitle: '${compact(adClicks)} clicks · $liveAds live campaign${liveAds == 1 ? '' : 's'}', amount: money(adSpend)),
-                      RecordCard(title: 'Affiliate commission', subtitle: 'Paid by MVEC, not you', amount: money(0)),
+                      RecordCard(title: 'Affiliate commission', subtitle: 'Paid by Ikiguzi, not you', amount: money(0)),
                     ],
                   ),
                   Section(
@@ -1614,7 +1614,7 @@ class _SellerCustomersPageState extends State<SellerCustomersPage> {
     return PortalPage(
       eyebrow: 'Seller platform',
       title: 'Customers',
-      subtitle: 'Everyone who bought from you: MVEC buyers and the guest customers from your manual orders.',
+      subtitle: 'Everyone who bought from you: Ikiguzi buyers and the guest customers from your manual orders.',
       onRefresh: _data.reload,
       children: [
         LoadView(
@@ -1644,7 +1644,7 @@ class _SellerCustomersPageState extends State<SellerCustomersPage> {
                   FilterSelect(
                     label: 'Customer type',
                     value: _type,
-                    options: const [('', 'All customers'), ('buyer', 'MVEC buyers'), ('guest', 'Guests')],
+                    options: const [('', 'All customers'), ('buyer', 'Ikiguzi buyers'), ('guest', 'Guests')],
                     onChanged: (v) => setState(() => _type = v),
                   ),
                   const SizedBox(height: 12),
@@ -1715,7 +1715,7 @@ class _CustomerSheetState extends State<_CustomerSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(strOf(c['name']), style: context.mvH1.copyWith(fontSize: 18)),
-                        Tiny('${c['guest'] == true ? 'Guest customer (no MVEC account)' : 'MVEC buyer'}${strOf(c['city']).isNotEmpty ? ' · ${c['city']}' : ''}'),
+                        Tiny('${c['guest'] == true ? 'Guest customer (no Ikiguzi account)' : 'Ikiguzi buyer'}${strOf(c['city']).isNotEmpty ? ' · ${c['city']}' : ''}'),
                       ],
                     ),
                   ),
@@ -1859,7 +1859,7 @@ class _SellerCategoriesPageState extends State<SellerCategoriesPage> {
         return PortalPage(
           eyebrow: 'Seller platform',
           title: 'Categories',
-          subtitle: 'Marketplace categories your products can be listed in. Categories are shared across MVEC; editing and removing them is handled by MVEC admins.',
+          subtitle: 'Marketplace categories your products can be listed in. Categories are shared across Ikiguzi; editing and removing them is handled by Ikiguzi admins.',
           onRefresh: _data.reload,
           action: GradientButton(label: 'Add category', icon: Icons.add_rounded, compact: true, onPressed: () => _add('', tree)),
           children: [
@@ -1885,7 +1885,7 @@ class _SellerCategoriesPageState extends State<SellerCategoriesPage> {
                       onTap: r.children.isEmpty ? null : () => setState(() => _open.contains(r.id) ? _open.remove(r.id) : _open.add(r.id)),
                       leading: Icon(r.children.isEmpty ? Icons.sell_outlined : (_open.contains(r.id) || _q.isNotEmpty ? Icons.expand_less_rounded : Icons.expand_more_rounded)),
                       title: Text(r.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text('Yours ${mineOf(r)} · On MVEC ${marketOf(r)}${r.children.isNotEmpty ? ' · ${r.children.length} sub' : ''}', style: const TextStyle(fontSize: 12)),
+                      subtitle: Text('Yours ${mineOf(r)} · On Ikiguzi ${marketOf(r)}${r.children.isNotEmpty ? ' · ${r.children.length} sub' : ''}', style: const TextStyle(fontSize: 12)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1901,7 +1901,7 @@ class _SellerCategoriesPageState extends State<SellerCategoriesPage> {
                           dense: true,
                           contentPadding: const EdgeInsets.only(left: 40),
                           title: Text(c.name),
-                          subtitle: Text('Yours ${mine[c.id] ?? 0} · On MVEC ${numOf(c.data['productCount']).toInt()}'),
+                          subtitle: Text('Yours ${mine[c.id] ?? 0} · On Ikiguzi ${numOf(c.data['productCount']).toInt()}'),
                           trailing:
                               (mine[c.id] ?? 0) > 0
                                   ? IconButton(tooltip: 'View products', icon: const Icon(Icons.visibility_outlined, size: 20), onPressed: () => context.go('/vendor/products?category=${c.id}'))

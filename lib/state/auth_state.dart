@@ -32,7 +32,7 @@ class AuthNotifier extends Notifier<AuthState> {
       state = AuthState(
         restoring: false,
         notice: event == SessionEvent.blocked
-            ? 'Your account is blocked or suspended. Contact MVEC support.'
+            ? 'Your account is blocked or suspended. Contact Ikiguzi support.'
             : 'Your session has ended. Please sign in again.',
       );
     });

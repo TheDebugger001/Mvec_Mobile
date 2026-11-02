@@ -654,7 +654,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(user.fullName.isEmpty ? 'MVEC user' : user.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, color: mv.text, fontSize: 14)),
+                                  Text(user.fullName.isEmpty ? 'Ikiguzi user' : user.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, color: mv.text, fontSize: 14)),
                                   Text(_roleLabel(user.role), style: TextStyle(color: mv.textMuted, fontSize: 11.5)),
                                 ],
                               ),
@@ -712,7 +712,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
                           ],
                         ),
                       ),
-                    const _DrawerHeading('My MVEC'),
+                    const _DrawerHeading('My Ikiguzi'),
                     link('Orders', 'box', '/orders', selected: active == 4),
                     link('Wishlist', 'heart', '/wishlist', selected: path == '/wishlist'),
                     link('Cart', 'cart', '/cart', selected: path == '/cart'),

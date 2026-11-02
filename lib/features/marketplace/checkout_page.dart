@@ -434,7 +434,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         children: [
           const CheckoutSteps(current: 1),
-          Text('Pay with mobile money or card. MVEC holds the payment until you confirm you have your items.', style: TextStyle(color: mv.textMuted, fontSize: 12.5, height: 1.4)),
+          Text('Pay with mobile money or card. Ikiguzi holds the payment until you confirm you have your items.', style: TextStyle(color: mv.textMuted, fontSize: 12.5, height: 1.4)),
           const SizedBox(height: 12),
           if (_error.isNotEmpty) Notice(text: _error),
           if (auth.user == null && !auth.restoring)
@@ -470,7 +470,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                 const SizedBox(height: 10),
                 _Choice(selected: _isPickup, title: "I'll pick it up", subtitle: "Collect from the seller's store. No delivery fee.", icon: Icons.storefront_outlined, onTap: () => _chooseFulfilment('pickup')),
                 const SizedBox(height: 8),
-                _Choice(selected: _isDelivery, title: 'Deliver it to me', subtitle: 'The seller or an MVEC courier brings it. A delivery fee applies.', icon: Icons.local_shipping_outlined, onTap: () => _chooseFulfilment('delivery')),
+                _Choice(selected: _isDelivery, title: 'Deliver it to me', subtitle: 'The seller or an Ikiguzi courier brings it. A delivery fee applies.', icon: Icons.local_shipping_outlined, onTap: () => _chooseFulfilment('delivery')),
                 if (_errors['fulfilment'] != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(_errors['fulfilment']!, style: const TextStyle(color: MvColors.errorText, fontSize: 12))),
                 if (_isPickup) ...[
                   const SizedBox(height: 10),
@@ -648,7 +648,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               PanelRow('Total to pay', money(_total), bold: true),
             ],
           ),
-          const InfoBox(title: 'Protected payment', text: 'You pay by MTN MoMo, Airtel Money or card on the next step. MVEC holds the money and only releases it to the seller after you confirm you have your items with your code.'),
+          const InfoBox(title: 'Protected payment', text: 'You pay by MTN MoMo, Airtel Money or card on the next step. Ikiguzi holds the money and only releases it to the seller after you confirm you have your items with your code.'),
         ],
       ),
     );

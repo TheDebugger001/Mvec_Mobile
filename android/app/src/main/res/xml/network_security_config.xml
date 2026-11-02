@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The MVEC backend is served over plain HTTP on a raw IP, which Android 9+
-     (API 28) blocks by default. Only that host is opened up; every other
-     connection stays on the platform default of "no cleartext". -->
+<!-- The hosted backend (api.ikiguzi.com) is HTTPS only, so nothing on the Android
+     network stack may use plain HTTP. Debug builds can still reach a local
+     backend over HTTP because Dart's HttpClient does not go through this config. -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">157.173.119.15</domain>
-    </domain-config>
     <base-config cleartextTrafficPermitted="false" />
 </network-security-config>

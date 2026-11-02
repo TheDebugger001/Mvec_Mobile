@@ -112,10 +112,10 @@ String _vendorName(dynamic vendor) {
   if (vendor is Map) {
     return strOf(
       vendor['companyName'] ?? vendor['Fullname'] ?? vendor['fullName'] ?? vendor['businessName'] ?? vendor['name'],
-      'MVEC Seller',
+      'Ikiguzi Seller',
     );
   }
-  return strOf(vendor, 'MVEC Seller');
+  return strOf(vendor, 'Ikiguzi Seller');
 }
 
 class CartState {

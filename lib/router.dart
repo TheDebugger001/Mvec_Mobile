@@ -103,7 +103,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/boot', builder: (_, __) => const Scaffold(body: Center(child: LoadingState(label: 'Loading MVEC…')))),
+      GoRoute(path: '/boot', builder: (_, __) => const Scaffold(body: Center(child: LoadingState(label: 'Loading Ikiguzi…')))),
       GoRoute(path: '/login', builder: (_, s) => LoginPage(next: s.uri.queryParameters['next'] ?? '', checkout: s.uri.queryParameters['checkout'] == '1')),
       GoRoute(path: '/signup', builder: (_, s) => SignupPage(role: s.uri.queryParameters['role'], next: s.uri.queryParameters['next'] ?? '')),
       GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordPage()),
@@ -117,7 +117,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/payment/:id', builder: (_, s) => PaymentPage(orderId: s.pathParameters['id']!)),
       GoRoute(path: '/orders/:id', builder: (_, s) => OrderDetailPage(id: s.pathParameters['id']!)),
       GoRoute(path: '/buyer/messages/:id', builder: (_, s) => ChatPage(id: s.pathParameters['id']!)),
-      GoRoute(path: '/buyer/support/requests', builder: (_, __) => const PageFrame(title: 'MVEC Support', fallback: '/buyer/support', body: SupportPage(role: 'buyer'))),
+      GoRoute(path: '/buyer/support/requests', builder: (_, __) => const PageFrame(title: 'Ikiguzi Support', fallback: '/buyer/support', body: SupportPage(role: 'buyer'))),
       GoRoute(path: '/vendor/orders/:id', builder: (_, s) => SellerOrderDetailPage(id: s.pathParameters['id']!)),
       GoRoute(path: '/admin/orders/:id', builder: (_, s) => SellerOrderDetailPage(id: s.pathParameters['id']!, admin: true)),
       // Dashboards share the dashboard top bar, side menu and bottom bar.
@@ -236,7 +236,7 @@ final _deliveryRoutes = <GoRoute>[
           header: InfoBox(
             title: 'Delivery confirmation',
             text:
-                "When you hand the items to the buyer, ask for the 6-digit code shown on their order. The correct code completes the delivery and releases the seller's payment. Five wrong codes lock the delivery for MVEC support.",
+                "When you hand the items to the buyer, ask for the 6-digit code shown on their order. The correct code completes the delivery and releases the seller's payment. Five wrong codes lock the delivery for Ikiguzi support.",
           ),
         ),
   ),

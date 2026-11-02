@@ -16,7 +16,7 @@ import '../../portal/shared_pages.dart';
 
 const _steps = <({String label, String by, List<String> statuses, String text})>[
   (label: 'Order placed', by: 'You', statuses: ['PENDING'], text: 'The items are reserved for you for 30 minutes while you pay.'),
-  (label: 'Payment confirmed', by: 'Payment provider · automatic', statuses: ['CONFIRMED'], text: 'Mobile money, card or K-Pay confirms your payment. MVEC holds the money; the seller is not paid yet.'),
+  (label: 'Payment confirmed', by: 'Payment provider · automatic', statuses: ['CONFIRMED'], text: 'Mobile money, card or K-Pay confirms your payment. Ikiguzi holds the money; the seller is not paid yet.'),
   (label: 'Preparing & packing', by: 'Seller', statuses: ['PROCESSING', 'READY_FOR_SHIPMENT'], text: 'The seller prepares your items and marks them packed.'),
   (label: 'On the way', by: 'Seller, then courier', statuses: ['SHIPPED', 'OUT_FOR_DELIVERY'], text: 'The seller hands the parcel over; the courier marks it out for delivery.'),
   (label: 'Delivered', by: 'You, with your code', statuses: ['DELIVERED', 'COMPLETED'], text: 'When the items are in your hands, give the courier your 6-digit code. That confirms delivery and releases the payment to the seller.'),
@@ -125,7 +125,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     final o = _order!;
     final paid = o['paymentStatus'] == 'PAID';
     final kpay = asMap(o['paidVia'])['gateway'] == 'KPAY' && ['CARD', 'SPENN'].contains(asMap(o['paidVia'])['method']);
-    final backTo = kpay ? "you through K-Pay by MVEC's team" : (o['paymentMethod'] == 'CARD' ? 'the card you paid with' : 'your mobile money');
+    final backTo = kpay ? "you through K-Pay by Ikiguzi's team" : (o['paymentMethod'] == 'CARD' ? 'the card you paid with' : 'your mobile money');
     if (!await confirmDialog(context, paid ? 'Cancel this order? Your payment is sent back to $backTo.' : 'Cancel this order?', confirm: 'Cancel order', danger: true)) return;
     setState(() {
       _cancelling = true;
@@ -158,7 +158,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       await DisputesApi.open(orderId: strOf(o['id']), reason: _reason, description: _description.text.trim(), amount: numOf(o['totalAmount']));
       setState(() {
         _order = {...o, 'paymentStatus': 'DISPUTED'};
-        _notice = (ok: true, text: 'Your problem was reported. The seller and MVEC have been told, and the payment is on hold meanwhile.');
+        _notice = (ok: true, text: 'Your problem was reported. The seller and Ikiguzi have been told, and the payment is on hold meanwhile.');
       });
       await _findCase();
     } catch (e) {
@@ -286,7 +286,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                 const SizedBox(height: 12),
                 Text('Seller & payment', style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
                 const SizedBox(height: 6),
-                Text(vendors.isEmpty ? 'MVEC Seller' : vendors.join(', '), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                Text(vendors.isEmpty ? 'Ikiguzi Seller' : vendors.join(', '), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
                 Text('Payment: ${o['paymentStatus'] == 'PAID' ? 'Paid${strOf(o['paidAt']).isEmpty ? '' : ' on ${formatDate(o['paidAt'])}'}' : buyerStatus(o)}', style: TextStyle(color: mv.textMuted, fontSize: 12.5)),
                 if (method.isNotEmpty && o['paymentStatus'] != 'PENDING') Text('Method: $methodText', style: TextStyle(color: mv.textMuted, fontSize: 12.5)),
               ],
@@ -382,7 +382,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                 children: [
                   Text('Report a problem', style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
                   const SizedBox(height: 4),
-                  Text("Use this if something is wrong with your order. The seller's payment stays on hold while MVEC reviews it.", style: TextStyle(color: mv.textMuted, fontSize: 12)),
+                  Text("Use this if something is wrong with your order. The seller's payment stays on hold while Ikiguzi reviews it.", style: TextStyle(color: mv.textMuted, fontSize: 12)),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
                     initialValue: _reason.isEmpty ? null : _reason,
@@ -404,7 +404,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
               _load();
             }))
           else if (o['paymentStatus'] == 'DISPUTED')
-            InfoBox(title: 'Problem reported', text: 'MVEC support is reviewing this order. You can follow it under Refunds.', child: Align(alignment: Alignment.centerLeft, child: OutlineBtn(label: 'Open refunds', compact: true, onPressed: () => context.push('/buyer/refunds')))),
+            InfoBox(title: 'Problem reported', text: 'Ikiguzi support is reviewing this order. You can follow it under Refunds.', child: Align(alignment: Alignment.centerLeft, child: OutlineBtn(label: 'Open refunds', compact: true, onPressed: () => context.push('/buyer/refunds')))),
         ],
       ),
     );

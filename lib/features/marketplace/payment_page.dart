@@ -280,7 +280,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Payment confirmed ✓', style: context.mvH1.copyWith(fontSize: 16)),
                 const SizedBox(height: 6),
-                Text('Thank you! Your payment is held safely by MVEC. Taking you to your order…', style: TextStyle(color: mv.textMuted, fontSize: 13)),
+                Text('Thank you! Your payment is held safely by Ikiguzi. Taking you to your order…', style: TextStyle(color: mv.textMuted, fontSize: 13)),
                 const SizedBox(height: 12),
                 GradientButton(label: 'View order', compact: true, onPressed: () => context.pushReplacement('/orders/${widget.orderId}')),
               ]),
@@ -312,7 +312,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
                   if (_method == 'momo' || (_method == 'kpay' && _kpayMethod == 'momo')) ...[
                     TextField(controller: _phone, enabled: !waiting, keyboardType: TextInputType.phone, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: 'Mobile money number', hintText: '07xx xxx xxx', helperText: provider.isEmpty ? null : provider)),
                   ] else
-                    Text(_method == 'card' ? "You will enter your card on Flutterwave's secure page, then come back here. MVEC never sees your card number." : "You finish the payment on K-Pay's secure page and come back here.", style: TextStyle(color: mv.textMuted, fontSize: 12)),
+                    Text(_method == 'card' ? "You will enter your card on Flutterwave's secure page, then come back here. Ikiguzi never sees your card number." : "You finish the payment on K-Pay's secure page and come back here.", style: TextStyle(color: mv.textMuted, fontSize: 12)),
                   const SizedBox(height: 14),
                   GradientButton(
                     label: waiting ? (_method == 'card' ? 'Confirming your card payment…' : 'Waiting for your approval…') : 'Pay ${money(total)}${_method == 'card' ? ' by card' : (_method == 'kpay' ? ' with K-Pay' : '')}',
@@ -344,7 +344,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
               PanelRow('Total', money(total), bold: true),
             ],
           ),
-          const InfoBox(title: 'How MVEC protects you', text: 'Your payment is held by MVEC until you confirm delivery, then released to the seller. After payment you get a delivery code in your order. Only give it to the courier when your order arrives.'),
+          const InfoBox(title: 'How Ikiguzi protects you', text: 'Your payment is held by Ikiguzi until you confirm delivery, then released to the seller. After payment you get a delivery code in your order. Only give it to the courier when your order arrives.'),
         ],
       ),
     );

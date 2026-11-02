@@ -27,7 +27,7 @@ class MvecApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'MVEC',
+      title: 'Ikiguzi',
       debugShowCheckedModeBanner: false,
       theme: lightAppTheme,
       darkTheme: darkAppTheme,

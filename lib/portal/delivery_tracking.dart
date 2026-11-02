@@ -94,10 +94,10 @@ class _Delivery {
     return (titleCase(o['paymentStatus'] == 'DISPUTED' ? 'DISPUTED' : o['orderStatus']), StatusTone.bad, 'Not settled');
   }
   if (_isCod(o)) return ('Cash on delivery', StatusTone.warn, 'Collect from the buyer');
-  if (o['paidOffline'] == true) return ('Paid offline', StatusTone.good, 'Settled outside MVEC');
+  if (o['paidOffline'] == true) return ('Paid offline', StatusTone.good, 'Settled outside Ikiguzi');
   if (o['paymentStatus'] != 'PAID') return ('Awaiting payment', StatusTone.warn, 'Not yet paid');
   if (_doneStates.contains(o['orderStatus'])) return ('Released', StatusTone.good, "Added to the seller's balance");
-  return ('Held by MVEC', StatusTone.warn, 'Released after delivery');
+  return ('Held by Ikiguzi', StatusTone.warn, 'Released after delivery');
 }
 
 double _daysSince(dynamic d) {
@@ -213,7 +213,7 @@ const _copy = {
   'supplier': ('Delivery & settlement', 'Ship paid wholesale orders. Funds are released when the vendor confirms receipt.'),
   'admin': (
     'Deliveries',
-    'Orders that need action first: stuck on the way, paid but not shipped, or waiting for pickup. Sellers deliver their own orders; assign an MVEC courier here once you have courier accounts.',
+    'Orders that need action first: stuck on the way, paid but not shipped, or waiting for pickup. Sellers deliver their own orders; assign an Ikiguzi courier here once you have courier accounts.',
   ),
   'delivery': ('My deliveries', 'Deliveries assigned to you. Ask the buyer for their 6-digit code when you hand over the items.'),
 };
@@ -322,14 +322,14 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
             final steps =
                 _wholesaleRole
                     ? const [('Vendor pays', 'Funds are locked in escrow.'), ('You ship', 'Mark the order as shipped.'), ('Vendor confirms', 'Payment is released to you.')]
-                    : const [('Buyer pays', 'MVEC holds the money.'), ('Parcel delivered', 'The buyer shares their 6-digit code.'), ('Funds released', "The amount moves to the seller's balance.")];
+                    : const [('Buyer pays', 'Ikiguzi holds the money.'), ('Parcel delivered', 'The buyer shares their 6-digit code.'), ('Funds released', "The amount moves to the seller's balance.")];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 MetricGrid(
                   children: [
                     MetricCard(icon: 'box', label: 'In progress', value: '${counts['active']}', sub: _wholesaleRole ? 'Wholesale orders' : 'Parcels on the way'),
-                    MetricCard(icon: 'shield', label: 'Held until delivery', value: money(heldTotal), sub: 'Protected by MVEC'),
+                    MetricCard(icon: 'shield', label: 'Held until delivery', value: money(heldTotal), sub: 'Protected by Ikiguzi'),
                     if (widget.role == 'vendor' && d.balance.isNotEmpty) ...[
                       MetricCard(icon: 'wallet', label: 'Available balance', value: money(d.balance['availableBalance']), sub: 'Withdraw from Payouts'),
                       MetricCard(icon: 'chart', label: 'Total earned', value: money(d.balance['totalEarned']), sub: '${money(d.balance['pendingBalance'])} pending'),
@@ -437,7 +437,7 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
           const SizedBox(height: 10),
           if (o.closed)
             Tiny(
-              'This order is ${titleCase(o.raw['paymentStatus'] == 'DISPUTED' ? 'DISPUTED' : o.status).toLowerCase()} and will not be delivered${o.raw['paymentStatus'] == 'DISPUTED' ? ' until MVEC resolves the dispute' : ''}.',
+              'This order is ${titleCase(o.raw['paymentStatus'] == 'DISPUTED' ? 'DISPUTED' : o.status).toLowerCase()} and will not be delivered${o.raw['paymentStatus'] == 'DISPUTED' ? ' until Ikiguzi resolves the dispute' : ''}.',
             )
           else
             Row(

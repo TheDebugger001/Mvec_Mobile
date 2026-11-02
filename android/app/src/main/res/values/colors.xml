@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MvColors.brand -->
+    <color name="ic_launcher_background">#064F65</color>
+    <!-- MvColors.page -->
+    <color name="splash_background">#F6F8F9</color>
+</resources>

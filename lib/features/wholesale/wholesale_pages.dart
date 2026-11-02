@@ -21,7 +21,7 @@ num _units(Map<String, dynamic> o) => asMaps(o['items']).fold<num>(0, (n, i) => 
 const _status = {
   'PENDING_PAYMENT': ('Waiting for payment', StatusTone.warn, 'Pay within 48 hours or the order expires and the stock is released.', 'The vendor has not paid yet. Do not ship.'),
   'ESCROW_HELD': (
-    'Paid · MVEC holds the money',
+    'Paid · Ikiguzi holds the money',
     StatusTone.warn,
     'The supplier has 7 days to ship. You can still cancel for a full refund.',
     'Paid. Ship within 7 days or the order is cancelled and refunded.',
@@ -33,8 +33,8 @@ const _status = {
     'Waiting for the vendor to confirm. You are paid automatically after 7 days if no problem is reported.',
   ),
   'DELIVERED': ('Delivered', StatusTone.warn, 'Confirm receipt to pay the supplier.', 'Waiting for the vendor to confirm receipt.'),
-  'CONFIRMED_RELEASED': ('Completed', StatusTone.good, 'Received. The supplier was paid.', "Completed. The money (minus MVEC's commission) is in your balance."),
-  'DISPUTED': ('Problem reported', StatusTone.bad, 'MVEC is reviewing the problem; the money stays on hold.', 'The vendor reported a problem. MVEC will decide; the money stays on hold.'),
+  'CONFIRMED_RELEASED': ('Completed', StatusTone.good, 'Received. The supplier was paid.', "Completed. The money (minus Ikiguzi's commission) is in your balance."),
+  'DISPUTED': ('Problem reported', StatusTone.bad, 'Ikiguzi is reviewing the problem; the money stays on hold.', 'The vendor reported a problem. Ikiguzi will decide; the money stays on hold.'),
   'CANCELLED': ('Cancelled', StatusTone.bad, 'Cancelled. If you had paid, the money is being refunded.', 'Cancelled.'),
 };
 
@@ -91,7 +91,7 @@ class _WholesaleOrdersPageState extends State<WholesaleOrdersPage> {
       title: problem ? 'Report a problem with ${o['orderNumber']}' : 'Cancel ${o['orderNumber']}',
       subtitle:
           problem
-              ? 'MVEC holds the payment while it reviews. Describe what you received and what you expected.'
+              ? 'Ikiguzi holds the payment while it reviews. Describe what you received and what you expected.'
               : (o['status'] == 'ESCROW_HELD' ? 'The vendor is refunded in full.' : 'The vendor has not paid yet.'),
       fields: [FieldSpec('reason', problem ? 'What is wrong?' : "Why can't you fulfil it? The vendor sees this.", type: FieldType.textarea, required: true)],
       submitLabel: problem ? 'Report problem' : 'Cancel order',
@@ -108,7 +108,7 @@ class _WholesaleOrdersPageState extends State<WholesaleOrdersPage> {
       },
     );
     if (ok == true && mounted) {
-      toast(context, problem ? 'Problem reported. MVEC will review it; the payment stays on hold.' : 'Order cancelled. The vendor was told.');
+      toast(context, problem ? 'Problem reported. Ikiguzi will review it; the payment stays on hold.' : 'Order cancelled. The vendor was told.');
       _data.reload();
     }
   }
@@ -231,7 +231,7 @@ class _WholesaleOrdersPageState extends State<WholesaleOrdersPage> {
       subtitle:
           supplier
               ? 'Ship paid orders within 7 days. You are paid when the vendor confirms receipt (or automatically 7 days after shipping).'
-              : 'Stock you buy from suppliers. MVEC holds your payment until you confirm the goods arrived.',
+              : 'Stock you buy from suppliers. Ikiguzi holds your payment until you confirm the goods arrived.',
       onRefresh: _data.reload,
       action: newPurchase,
       children: [
@@ -253,12 +253,12 @@ class _WholesaleOrdersPageState extends State<WholesaleOrdersPage> {
                   MetricGrid(
                     children: [
                       MetricCard(icon: 'bell', label: supplier ? 'To ship' : 'Needs you', value: '$toAct', sub: supplier ? 'Paid and waiting' : 'To pay or confirm'),
-                      MetricCard(icon: 'wallet', label: 'Held by MVEC', value: money(sum(held)), sub: '${held.length} order${held.length == 1 ? '' : 's'}'),
+                      MetricCard(icon: 'wallet', label: 'Held by Ikiguzi', value: money(sum(held)), sub: '${held.length} order${held.length == 1 ? '' : 's'}'),
                       MetricCard(
                         icon: 'chart',
                         label: supplier ? 'Completed sales' : 'Completed purchases',
                         value: money(sum(rows.where((o) => o['status'] == 'CONFIRMED_RELEASED'))),
-                        sub: "Before MVEC's commission",
+                        sub: "Before Ikiguzi's commission",
                       ),
                     ],
                   ),
@@ -405,7 +405,7 @@ class _PayWholesaleSheetState extends State<PayWholesaleSheet> {
           children: [
             Text('PAY WHOLESALE ORDER', style: context.mvEyebrow.copyWith(fontSize: 11, letterSpacing: 1.4)),
             Text(money(o['totalAmount']), style: context.mvH1.copyWith(fontSize: 22)),
-            Tiny('${o['orderNumber']} · ${partyName(o['supplier'])}. MVEC holds the money and pays the supplier only after you confirm the goods arrived.'),
+            Tiny('${o['orderNumber']} · ${partyName(o['supplier'])}. Ikiguzi holds the money and pays the supplier only after you confirm the goods arrived.'),
             const SizedBox(height: 10),
             if (_error.isNotEmpty) Notice(text: _error),
             if (_waiting.isNotEmpty)
@@ -769,7 +769,7 @@ class _SupplierQuotesPageState extends State<SupplierQuotesPage> {
           'note',
           'Note (optional)',
           hint: 'Brand, delivery terms…',
-          help: "If accepted, the vendor pays MVEC, you ship, and you are paid when they confirm receipt (minus MVEC's wholesale commission).",
+          help: "If accepted, the vendor pays Ikiguzi, you ship, and you are paid when they confirm receipt (minus Ikiguzi's wholesale commission).",
         ),
       ],
       initial: {
@@ -943,7 +943,7 @@ class _FindSuppliersPageState extends State<FindSuppliersPage> {
                   empty: EmptyState(
                     icon: Icons.storefront_outlined,
                     title: _q.isNotEmpty ? 'No suppliers match your search' : 'No verified suppliers yet',
-                    message: _q.isNotEmpty ? 'Try a different name or location.' : 'Verified suppliers will appear here as they join MVEC.',
+                    message: _q.isNotEmpty ? 'Try a different name or location.' : 'Verified suppliers will appear here as they join Ikiguzi.',
                   ),
                   itemBuilder:
                       (s) => RecordCard(
@@ -951,7 +951,7 @@ class _FindSuppliersPageState extends State<FindSuppliersPage> {
                         title: strOf(s['businessName']),
                         badges: const [StatusChip('Verified ✓', tone: StatusTone.good)],
                         subtitle: '${_locationOf(s)} · ${numOf(s['ratingAvg']) > 0 ? '★ ${numOf(s['ratingAvg']).toStringAsFixed(1)}' : 'New'}',
-                        lines: [strOf(s['description'], 'Wholesale supplier on MVEC.')],
+                        lines: [strOf(s['description'], 'Wholesale supplier on Ikiguzi.')],
                         actions: [
                           ActionChipBtn(
                             'View catalog',
@@ -965,7 +965,7 @@ class _FindSuppliersPageState extends State<FindSuppliersPage> {
                 ),
                 const InfoBox(
                   title: '✓ B2B trust',
-                  text: 'Every supplier here is verified by MVEC. Minimum order quantities and stock are checked when you order, and your payment stays in escrow until you confirm the delivery.',
+                  text: 'Every supplier here is verified by Ikiguzi. Minimum order quantities and stock are checked when you order, and your payment stays in escrow until you confirm the delivery.',
                 ),
               ],
             );

@@ -194,7 +194,7 @@ ApiException describeError(DioException e, {String? fallback}) {
     if (e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.unknown) {
       return ApiException(
-        "We can't reach MVEC right now. Check your internet connection and try again in a moment.",
+        "We can't reach Ikiguzi right now. Check your internet connection and try again in a moment.",
       );
     }
     return ApiException(fallback ?? e.message ?? 'Something went wrong. Please try again.');
@@ -234,7 +234,7 @@ ApiException describeError(DioException e, {String? fallback}) {
                 .hasMatch(serverMessage);
         message = generic
             ? (fallback ??
-                'Something went wrong on our side, not yours. Please try again in a moment; if it keeps happening, contact MVEC support.')
+                'Something went wrong on our side, not yours. Please try again in a moment; if it keeps happening, contact Ikiguzi support.')
             : serverMessage;
         final ref = data is Map ? data['reference']?.toString() : null;
         if (ref != null && ref.isNotEmpty && !message.contains(ref)) {

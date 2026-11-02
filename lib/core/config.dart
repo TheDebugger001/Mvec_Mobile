@@ -35,7 +35,7 @@ String get apiOrigin => apiBaseUrl.replaceFirst(RegExp(r'/api$'), '');
 /// Key the session token is stored under.
 const String kTokenKey = 'huska_token';
 
-/// Where the MVEC website lives, for links people share (payment links,
+/// Where the Ikiguzi website lives, for links people share (payment links,
 /// affiliate links). `--dart-define=WEB_URL=...`, then `WEB_URL` in `.env`;
 /// otherwise the local web dev server next to the API.
 String get webOrigin {

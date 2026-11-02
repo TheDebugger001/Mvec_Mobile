@@ -357,13 +357,17 @@ class RecordCard extends StatelessWidget {
                   ),
                   if (amount != null || status != null) ...[
                     const SizedBox(width: 8),
-                    Column(
+                    // A long value (a schedule, a sentence) wraps instead of running off the card.
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .42),
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        if (amount != null) Text(amount!, style: TextStyle(fontWeight: FontWeight.w800, color: mv.text, fontSize: 13.5)),
+                        if (amount != null) Text(amount!, textAlign: TextAlign.end, style: TextStyle(fontWeight: FontWeight.w800, color: mv.text, fontSize: 13.5)),
                         if (amount != null && status != null) const SizedBox(height: 4),
                         if (status != null) status!,
                       ],
+                      ),
                     ),
                   ],
                   if (onTap != null && actions.isEmpty) Padding(padding: const EdgeInsets.only(left: 4), child: Icon(Icons.chevron_right_rounded, color: mv.textMuted, size: 20)),
@@ -410,13 +414,17 @@ class ActionChipBtn extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 36),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(MvRadius.chip), border: Border.all(color: primary ? Colors.transparent : (danger ? MvColors.errorText.withValues(alpha: .35) : mv.border))),
-          child: Row(
+          // Shrinks a little rather than overflowing when the row is narrow.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (busy) SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: fg)) else if (icon != null) Icon(icon, size: 16, color: fg),
               if (busy || icon != null) const SizedBox(width: 6),
               Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 12.5)),
             ],
+            ),
           ),
         ),
       ),
@@ -509,11 +517,14 @@ class MiniBars extends StatelessWidget {
                     if (v > 0) FittedBox(child: Text(compact(v), style: TextStyle(fontSize: 9.5, color: mv.textMuted))),
                     const SizedBox(height: 2),
                     // Bars grow up from the baseline when the chart appears or its numbers change.
-                    TweenAnimationBuilder<double>(
+                    // Flexible: the bar gives way if the labels need the room, e.g. large system text.
+                    Flexible(
+                      child: TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0, end: (v / maxV) * height + 2),
                       duration: Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 520),
                       curve: Motion.out,
                       builder: (_, h, __) => Container(height: h, decoration: BoxDecoration(gradient: MvColors.gradient, borderRadius: BorderRadius.circular(6))),
+                    ),
                     ),
                     const SizedBox(height: 4),
                     Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: mv.textMuted)),

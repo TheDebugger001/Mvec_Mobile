@@ -38,7 +38,7 @@ class _VerificationBanner extends ConsumerWidget {
     final user = ref.watch(authProvider.select((a) => a.user));
     if (user?.verificationStatus == 'REJECTED') {
       return Notice(
-        text: 'MVEC asked you to update your profile.',
+        text: 'Ikiguzi asked you to update your profile.',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -48,7 +48,7 @@ class _VerificationBanner extends ConsumerWidget {
         ),
       );
     }
-    if (user?.verificationStatus == 'PENDING') return const Notice(info: true, text: 'MVEC is reviewing your profile. You will get a message, SMS and email when it is done.');
+    if (user?.verificationStatus == 'PENDING') return const Notice(info: true, text: 'Ikiguzi is reviewing your profile. You will get a message, SMS and email when it is done.');
     return const SizedBox.shrink();
   }
 }
@@ -132,9 +132,9 @@ class _SupplierOverviewPageState extends ConsumerState<SupplierOverviewPage> wit
             final low = d.products.where((p) => numOf(p['stockQuantity']) < (numOf(p['moq']) > 10 ? numOf(p['moq']) : 10)).toList();
             final toQuote = d.requests.where((r) => r['matchesMyCategory'] == true && r['myQuote'] == null).toList();
             final todo = <(String, String, String, bool)>[
-              if (toShip > 0) ('$toShip paid order${toShip == 1 ? '' : 's'} to ship', 'Ship within 7 days. MVEC holds the money until the vendor confirms receipt.', '/supplier/orders', true),
+              if (toShip > 0) ('$toShip paid order${toShip == 1 ? '' : 's'} to ship', 'Ship within 7 days. Ikiguzi holds the money until the vendor confirms receipt.', '/supplier/orders', true),
               if (disputed > 0)
-                ('$disputed order${disputed == 1 ? '' : 's'} with a reported problem', 'MVEC is reviewing; contact the vendor in Messages if you can fix it.', '/supplier/orders', true),
+                ('$disputed order${disputed == 1 ? '' : 's'} with a reported problem', 'Ikiguzi is reviewing; contact the vendor in Messages if you can fix it.', '/supplier/orders', true),
               if (low.isNotEmpty) ('${low.length} product${low.length == 1 ? '' : 's'} running low', low.take(3).map((p) => p['name']).join(', '), '/supplier/inventory', false),
               if (numOf(d.finance['availablePayout']) >= kSupplierPayoutMinimum)
                 ('${money(d.finance['availablePayout'])} ready to withdraw', 'Request a payout to mobile money or your bank.', '/supplier/payments', false),
@@ -174,7 +174,7 @@ class _SupplierOverviewPageState extends ConsumerState<SupplierOverviewPage> wit
                       sub: '${numOf(d.delivery['activeShipments']).toInt()} in progress',
                     ),
                     MetricCard(icon: 'chart', label: 'Sales', value: money(d.finance['grossSales']), sub: 'Total wholesale sales'),
-                    MetricCard(icon: 'wallet', label: 'Held by MVEC', value: money(d.finance['escrowHeld']), sub: 'Paid to you when vendors confirm receipt'),
+                    MetricCard(icon: 'wallet', label: 'Held by Ikiguzi', value: money(d.finance['escrowHeld']), sub: 'Paid to you when vendors confirm receipt'),
                   ],
                 ),
               ],
@@ -456,7 +456,7 @@ class _SupplierAnalyticsPageState extends State<SupplierAnalyticsPage> {
 }
 
 const _payoutMethods = {'MTN_MOMO': 'MTN MoMo', 'AIRTEL_MONEY': 'Airtel Money', 'BANK_TRANSFER': 'Bank transfer'};
-const _payoutStatus = {'PENDING': 'Waiting for MVEC', 'PROCESSING': 'Being sent', 'PAID': 'Sent', 'REJECTED': 'Declined', 'FAILED': 'Failed'};
+const _payoutStatus = {'PENDING': 'Waiting for Ikiguzi', 'PROCESSING': 'Being sent', 'PAID': 'Sent', 'REJECTED': 'Declined', 'FAILED': 'Failed'};
 
 /// `/supplier/payments` — balance and payouts to mobile money or bank.
 class SupplierPaymentsPage extends StatefulWidget {
@@ -488,7 +488,7 @@ class _SupplierPaymentsPageState extends State<SupplierPaymentsPage> with _Polli
     final ok = await showFormSheet<bool>(
       context,
       title: 'Request a payout',
-      subtitle: 'MVEC sends it and you get a notification at each step. You can withdraw up to ${money(available)}.',
+      subtitle: 'Ikiguzi sends it and you get a notification at each step. You can withdraw up to ${money(available)}.',
       fields: const [],
       fieldsFor:
           (v) => [
@@ -500,7 +500,7 @@ class _SupplierPaymentsPageState extends State<SupplierPaymentsPage> with _Polli
               required: true,
               hint: v['method'] == 'BANK_TRANSFER' ? 'e.g. Bank of Kigali 000400012345' : '07…',
             ),
-            const FieldSpec('note', 'Note for MVEC (optional)'),
+            const FieldSpec('note', 'Note for Ikiguzi (optional)'),
           ],
       initial: {'method': 'MTN_MOMO', 'amount': '${available.floor()}'},
       submitLabel: 'Request payout',
@@ -513,7 +513,7 @@ class _SupplierPaymentsPageState extends State<SupplierPaymentsPage> with _Polli
       },
     );
     if (ok == true && mounted) {
-      toast(context, 'Payout requested. MVEC sends it and you get a notification when it is on its way.');
+      toast(context, 'Payout requested. Ikiguzi sends it and you get a notification when it is on its way.');
       _data.reload();
     }
   }
@@ -545,7 +545,7 @@ class _SupplierPaymentsPageState extends State<SupplierPaymentsPage> with _Polli
                 const SizedBox(height: 14),
                 Section(
                   title: 'Request a payout',
-                  subtitle: 'MVEC sends it and you get a notification at each step.',
+                  subtitle: 'Ikiguzi sends it and you get a notification at each step.',
                   children: [
                     if (available < kSupplierPayoutMinimum)
                       Tiny('You can request a payout once you have ${money(kSupplierPayoutMinimum)} available. Money becomes available when vendors confirm they received their orders.')
@@ -821,7 +821,7 @@ class _SupplierSettingsPageState extends ConsumerState<SupplierSettingsPage> {
 
   Future<void> _save() async {
     if (_c.values.any((c) => c.text.trim().isEmpty) || _category.isEmpty) {
-      toast(context, 'Fill in every field so MVEC can verify you.', error: true);
+      toast(context, 'Fill in every field so Ikiguzi can verify you.', error: true);
       return;
     }
     setState(() => _saving = true);
@@ -843,7 +843,7 @@ class _SupplierSettingsPageState extends ConsumerState<SupplierSettingsPage> {
     return PortalPage(
       eyebrow: 'Settings',
       title: 'Supplier profile',
-      subtitle: 'Vendors see this profile. Keep it complete so MVEC can verify you.',
+      subtitle: 'Vendors see this profile. Keep it complete so Ikiguzi can verify you.',
       children: [
         LoadView(
           loader: _data,
@@ -865,7 +865,7 @@ class _SupplierSettingsPageState extends ConsumerState<SupplierSettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_status['verificationStatus'] == 'REJECTED')
-                  Notice(text: 'MVEC asked for changes: ${strOf(_status['verificationNote'], 'Check your details.')} Saving sends your profile back for review.'),
+                  Notice(text: 'Ikiguzi asked for changes: ${strOf(_status['verificationNote'], 'Check your details.')} Saving sends your profile back for review.'),
                 DataCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -874,7 +874,8 @@ class _SupplierSettingsPageState extends ConsumerState<SupplierSettingsPage> {
                         children: [
                           ProductImage(src: _logo, size: 64, radius: 12),
                           const SizedBox(width: 12),
-                          ActionChipBtn(
+                          Flexible(
+                            child: ActionChipBtn(
                             _logo.isEmpty ? 'Upload logo' : 'Change logo',
                             icon: Icons.upload_rounded,
                             busy: _uploading,
@@ -888,6 +889,7 @@ class _SupplierSettingsPageState extends ConsumerState<SupplierSettingsPage> {
                                 });
                               }
                             },
+                          ),
                           ),
                         ],
                       ),

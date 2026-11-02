@@ -16,7 +16,7 @@ const _payoutTabs = <(String, String, List<String>?)>[
   ('CLOSED', 'Rejected / cancelled', ['REJECTED', 'CANCELLED', 'FAILED']),
 ];
 const _payoutStep = {
-  'PENDING': 'Waiting for MVEC review',
+  'PENDING': 'Waiting for Ikiguzi review',
   'PROCESSING': 'Being sent to your mobile money',
   'PAID': 'Sent',
   'REJECTED': 'Rejected — the amount is back in your balance',
@@ -162,7 +162,7 @@ class _SellerPayoutsPageState extends State<SellerPayoutsPage> {
                     ),
                     const SizedBox(height: 12),
                     GradientButton(label: 'Request payout', loading: _requesting, onPressed: available < min ? null : () => _request(s)),
-                    const Tiny('MVEC reviews requests and sends the money, usually within 1 business day. You can cancel while a request is waiting for review.'),
+                    const Tiny('Ikiguzi reviews requests and sends the money, usually within 1 business day. You can cancel while a request is waiting for review.'),
                   ],
                 ),
                 Section(
@@ -172,8 +172,8 @@ class _SellerPayoutsPageState extends State<SellerPayoutsPage> {
                     RecordCard(title: 'On hold', subtitle: 'Orders with an open dispute', amount: money(s['frozen'])),
                     RecordCard(title: 'Available', subtitle: 'Released to you, ready to withdraw', amount: money(available)),
                     if (numOf(s['collectedBySeller']) > 0)
-                      RecordCard(title: 'Collected by you', subtitle: 'Manual orders paid in cash or offline — not in your MVEC balance', amount: money(s['collectedBySeller'])),
-                    RecordCard(title: 'MVEC commission', subtitle: '${d.commissionRate} of each released sale', amount: money(s['commissionPaid'])),
+                      RecordCard(title: 'Collected by you', subtitle: 'Manual orders paid in cash or offline — not in your Ikiguzi balance', amount: money(s['collectedBySeller'])),
+                    RecordCard(title: 'Ikiguzi commission', subtitle: '${d.commissionRate} of each released sale', amount: money(s['commissionPaid'])),
                   ],
                 ),
                 Section(
@@ -428,7 +428,7 @@ class _SellerAdsPageState extends State<SellerAdsPage> {
     final res = await showFormSheet<Map<String, dynamic>>(
       context,
       title: 'New ad campaign',
-      subtitle: 'Paid from your available balance (${money(available)}). Reviewed by MVEC before it goes live.',
+      subtitle: 'Paid from your available balance (${money(available)}). Reviewed by Ikiguzi before it goes live.',
       fields: [
         FieldSpec('productId', 'Product', type: FieldType.select, required: true, placeholderOption: 'Select a product', options: [for (final p in products) (idOf(p), strOf(p['name']))]),
         const FieldSpec('placement', 'Where to show it', type: FieldType.select, options: _placements),
@@ -543,7 +543,7 @@ class _SellerAdsPageState extends State<SellerAdsPage> {
             InfoBox(
               title: 'How ads work',
               text:
-                  'Your budget is reserved from your available balance when you submit. MVEC reviews the campaign, usually within a day. Once live, each buyer click costs ${money(cpc)}; views are free. When the end date passes, the budget runs out or you end it, any unspent amount returns to your balance.',
+                  'Your budget is reserved from your available balance when you submit. Ikiguzi reviews the campaign, usually within a day. Once live, each buyer click costs ${money(cpc)}; views are free. When the end date passes, the budget runs out or you end it, any unspent amount returns to your balance.',
             ),
           ],
         );
@@ -569,7 +569,7 @@ const _planPerks = {
 };
 
 /// `/vendor/subscription` and `/supplier/subscription` — Free vs Seller
-/// Premium (shows "Coming soon" while MVEC's paid plans are off).
+/// Premium (shows "Coming soon" while Ikiguzi's paid plans are off).
 class SellerSubscriptionPage extends StatefulWidget {
   const SellerSubscriptionPage({super.key, this.endpoint = '/vendor/subscription', this.balanceLink = '/vendor/payouts'});
   final String endpoint;
@@ -603,7 +603,7 @@ class _SellerSubscriptionPageState extends State<SellerSubscriptionPage> {
     return PortalPage(
       eyebrow: 'Seller platform',
       title: 'Subscription',
-      subtitle: 'Selling on MVEC is free. Premium adds visibility and advanced tools, paid monthly from your sales balance.',
+      subtitle: 'Selling on Ikiguzi is free. Premium adds visibility and advanced tools, paid monthly from your sales balance.',
       onRefresh: _data.reload,
       children: [
         LoadView(
@@ -628,7 +628,7 @@ class _SellerSubscriptionPageState extends State<SellerSubscriptionPage> {
                 if (!programActive)
                   const InfoBox(
                     title: 'Every tool is free for now',
-                    text: "While MVEC grows, you have everything, including the Premium tools, at no cost. Paid plans will start later, and you'll be told well before anything changes.",
+                    text: "While Ikiguzi grows, you have everything, including the Premium tools, at no cost. Paid plans will start later, and you'll be told well before anything changes.",
                   ),
                 MetricGrid(
                   children: [

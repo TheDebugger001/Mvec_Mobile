@@ -154,7 +154,7 @@ class _AdminOverviewPageState extends ConsumerState<AdminOverviewPage> {
                 ),
                 const SizedBox(height: 14),
                 Section(
-                  title: 'MVEC revenue',
+                  title: 'Ikiguzi revenue',
                   subtitle: 'Platform commission earned across all vendors',
                   children: [
                     MetricGrid(
@@ -287,7 +287,7 @@ class _AdminRecordsPageState extends ConsumerState<AdminRecordsPage> {
       context,
       title: admin ? 'Add an admin' : 'Add a courier',
       subtitle: admin
-          ? 'Admins can see and change everything on MVEC. Only add MVEC staff, with their work email. This creates a new account; they choose their password from the email we send.'
+          ? 'Admins can see and change everything on Ikiguzi. Only add Ikiguzi staff, with their work email. This creates a new account; they choose their password from the email we send.'
           : 'Couriers deliver paid orders and confirm them with the buyer\'s code. This creates a new account for the delivery partner; they choose their password from the email we send.',
       submitLabel: admin ? 'Add admin' : 'Add courier',
       fields: [
@@ -311,7 +311,7 @@ class _AdminRecordsPageState extends ConsumerState<AdminRecordsPage> {
     final message = await showFormSheet<String>(
       context,
       title: restore ? 'Restore admin access' : 'Remove admin access',
-      subtitle: restore ? '$name will be able to sign in and manage MVEC again.' : '$name will no longer be able to sign in. Everything they did stays in the activity log.',
+      subtitle: restore ? '$name will be able to sign in and manage Ikiguzi again.' : '$name will no longer be able to sign in. Everything they did stays in the activity log.',
       submitLabel: restore ? 'Restore access' : 'Remove access',
       danger: !restore,
       fields: const [FieldSpec('currentPassword', 'Your password (to confirm)', type: FieldType.password, required: true)],
@@ -460,7 +460,7 @@ class _AdminRecordsPageState extends ConsumerState<AdminRecordsPage> {
         if (widget.type == 'users')
           InfoBox(
             title: 'Who gets which role',
-            text: 'Buyers sign up or check out as guests. Sellers, suppliers and affiliates choose their role when they sign up, and MVEC verifies sellers and suppliers on their own pages. Couriers and admins are added here as new accounts — a shopper\'s account is never turned into one, and roles are never switched.',
+            text: 'Buyers sign up or check out as guests. Sellers, suppliers and affiliates choose their role when they sign up, and Ikiguzi verifies sellers and suppliers on their own pages. Couriers and admins are added here as new accounts — a shopper\'s account is never turned into one, and roles are never switched.',
             child: Padding(
               padding: const EdgeInsets.only(top: 10),
               child: Wrap(
@@ -474,7 +474,7 @@ class _AdminRecordsPageState extends ConsumerState<AdminRecordsPage> {
             ),
           )
         else
-          const InfoBox(title: 'Live marketplace data', text: 'This list is read directly from the MVEC database. User actions update the account record and take effect across the marketplace.'),
+          const InfoBox(title: 'Live marketplace data', text: 'This list is read directly from the Ikiguzi database. User actions update the account record and take effect across the marketplace.'),
         if (widget.type == 'users')
           FilterSelect(
             label: 'Filter by role',
@@ -944,7 +944,7 @@ class _WholesaleOversightState extends State<_WholesaleOversight> {
   Widget build(BuildContext context) {
     return Section(
       title: 'Wholesale orders',
-      subtitle: 'Vendors buying stock from suppliers. MVEC holds the money until the vendor confirms receipt; problems are decided here.',
+      subtitle: 'Vendors buying stock from suppliers. Ikiguzi holds the money until the vendor confirms receipt; problems are decided here.',
       children: [
         FilterSelect(
           label: 'Show',
@@ -1109,7 +1109,7 @@ class _SupplierPayoutsState extends State<_SupplierPayouts> {
   Widget build(BuildContext context) {
     return Section(
       title: 'Supplier bank payouts',
-      subtitle: "Mobile money payouts are sent automatically. Bank transfers: send from MVEC's account, then mark paid. The supplier is notified.",
+      subtitle: "Mobile money payouts are sent automatically. Bank transfers: send from Ikiguzi's account, then mark paid. The supplier is notified.",
       trailing: IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh_rounded), onPressed: _data.reload),
       children: [
         LoadView(

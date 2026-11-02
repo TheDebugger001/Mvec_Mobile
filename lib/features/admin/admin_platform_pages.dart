@@ -237,7 +237,7 @@ class _AdminPlatformPageState extends State<AdminPlatformPage> {
       context,
       () => jput('/admin/operations-settings', {'autoReleaseDays': days, 'disputeResponseDays': reply}),
       success:
-          'Saved. ${days > 0 ? 'Sellers are paid automatically ${_days.text} day${days == 1 ? '' : 's'} after shipping if no problem is reported.' : 'Automatic release is off.'} Sellers have ${_reply.text} day${reply == 1 ? '' : 's'} to answer a problem report before MVEC steps in.',
+          'Saved. ${days > 0 ? 'Sellers are paid automatically ${_days.text} day${days == 1 ? '' : 's'} after shipping if no problem is reported.' : 'Automatic release is off.'} Sellers have ${_reply.text} day${reply == 1 ? '' : 's'} to answer a problem report before Ikiguzi steps in.',
     );
     if (mounted) setState(() => _busy = false);
     if (ok) _data.reload();
@@ -250,7 +250,7 @@ class _AdminPlatformPageState extends State<AdminPlatformPage> {
     return PortalPage(
       eyebrow: 'Platform',
       title: 'Platform settings',
-      subtitle: 'How MVEC is set up right now, read live from the server.',
+      subtitle: 'How Ikiguzi is set up right now, read live from the server.',
       onRefresh: _data.reload,
       children: [
         LoadView(
@@ -420,7 +420,7 @@ class _AdminAuditLogPageState extends State<AdminAuditLogPage> {
 const _ruleTypes = [('CATEGORY', 'Category rate'), ('VENDOR', 'Seller override'), ('GLOBAL', 'Default rate')];
 String _typeLabel(String t, String scope) => t == 'VENDOR' && scope == 'WHOLESALE' ? 'Supplier override' : _ruleTypes.firstWhere((r) => r.$1 == t, orElse: () => (t, t)).$2;
 
-/// `/admin/commission-rules` — MVEC's commission per category and overrides.
+/// `/admin/commission-rules` — Ikiguzi's commission per category and overrides.
 class AdminCommissionRulesPage extends StatefulWidget {
   const AdminCommissionRulesPage({super.key});
 
@@ -483,7 +483,7 @@ class _AdminCommissionRulesPageState extends State<AdminCommissionRulesPage> {
                 placeholderOption: v['ruleType'] == 'VENDOR' ? 'All categories' : 'Choose a category',
                 options: categoryOptions(d.categories),
               ),
-            FieldSpec('rateValue', 'MVEC commission (%)', type: FieldType.number, required: true, help: '0 to $maxRate%'),
+            FieldSpec('rateValue', 'Ikiguzi commission (%)', type: FieldType.number, required: true, help: '0 to $maxRate%'),
             const FieldSpec(
               'priority',
               'Priority',
@@ -547,7 +547,7 @@ class _AdminCommissionRulesPageState extends State<AdminCommissionRulesPage> {
         return PortalPage(
           eyebrow: 'Money',
           title: 'Commission rules',
-          subtitle: "MVEC's commission per category, with optional special rates for individual sellers (retail) or suppliers (wholesale). Changes apply to new orders; paid orders keep their rate.",
+          subtitle: "Ikiguzi's commission per category, with optional special rates for individual sellers (retail) or suppliers (wholesale). Changes apply to new orders; paid orders keep their rate.",
           onRefresh: _data.reload,
           action: GradientButton(label: 'New rule', icon: Icons.add_rounded, compact: true, onPressed: () => _edit(null, d, type: _tab)),
           children: [
@@ -682,13 +682,13 @@ class _CommissionSettingsState extends State<_CommissionSettings> {
         FilterSelect(
           label: 'Payment provider fees paid by',
           value: _payer,
-          options: const [('MVEC', 'MVEC (out of the commission)'), ('SELLER', 'The seller (out of their share)')],
+          options: const [('MVEC', 'Ikiguzi (out of the commission)'), ('SELLER', 'The seller (out of their share)')],
           onChanged: (v) => setState(() => _payer = v),
         ),
         const SizedBox(height: 10),
         TextField(controller: _affiliate, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Affiliate share (% of the commission)'), onChanged: (_) => setState(() {})),
         Tiny(
-          'Example, 100,000 RWF sale at the default rate: MVEC commission ${money(example)} → affiliate ${money(example * numOf(_affiliate.text) / 100)} (only if the buyer came through an affiliate link), MVEC keeps the rest${_payer == 'MVEC' ? ' minus the payment provider fee' : ''}.',
+          'Example, 100,000 RWF sale at the default rate: Ikiguzi commission ${money(example)} → affiliate ${money(example * numOf(_affiliate.text) / 100)} (only if the buyer came through an affiliate link), Ikiguzi keeps the rest${_payer == 'Ikiguzi' ? ' minus the payment provider fee' : ''}.',
         ),
         const SizedBox(height: 8),
         GradientButton(label: 'Save settings', loading: _busy, onPressed: _save),
@@ -806,11 +806,11 @@ class _SplitPreviewState extends State<_SplitPreview> {
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           KV(widget.scope == 'WHOLESALE' ? 'Supplier receives' : 'Seller receives', money(d['vendorNet'])),
-          KV('MVEC commission', money(d['totalPlatformFee'])),
-          KV('  → Affiliate (paid by MVEC)', money(d['platformAffiliateShare'])),
-          KV('  → MVEC keeps', money(numOf(d['adminShare']) + numOf(d['developerShare']))),
+          KV('Ikiguzi commission', money(d['totalPlatformFee'])),
+          KV('  → Affiliate (paid by Ikiguzi)', money(d['platformAffiliateShare'])),
+          KV('  → Ikiguzi keeps', money(numOf(d['adminShare']) + numOf(d['developerShare']))),
           KV('Payment provider fee', money(d['gatewayFee'])),
-          Tiny('Provider fee paid by ${d['gatewayFeePayer'] == 'SELLER' ? 'the seller' : 'MVEC'}.'),
+          Tiny('Provider fee paid by ${d['gatewayFeePayer'] == 'SELLER' ? 'the seller' : 'Ikiguzi'}.'),
         ],
       ],
     );
@@ -952,7 +952,7 @@ class _AdminTransfersPageState extends State<AdminTransfersPage> {
     setState(() => _busy = idOf(p));
     final ok = await runAction(
       context,
-      () => jpost('/affiliates/payouts/${idOf(p)}/process', {'status': status, if (ref != null) 'transactionReference': ref.trim(), if (status == 'REJECTED') 'rejectionReason': 'Rejected by MVEC'}),
+      () => jpost('/affiliates/payouts/${idOf(p)}/process', {'status': status, if (ref != null) 'transactionReference': ref.trim(), if (status == 'REJECTED') 'rejectionReason': 'Rejected by Ikiguzi'}),
       success:
           status == 'REJECTED'
               ? 'Withdrawal rejected.'
@@ -1330,7 +1330,7 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
   @override
   Widget build(BuildContext context) {
     return PortalPage(
-      eyebrow: 'MVEC operations',
+      eyebrow: 'Ikiguzi operations',
       title: 'Affiliates',
       subtitle: 'Manage affiliates using live marketplace account records.',
       onRefresh: _data.reload,
@@ -1438,11 +1438,11 @@ class _AdminBecomeSellerPageState extends ConsumerState<AdminBecomeSellerPage> {
     return PortalPage(
       eyebrow: 'Seller mode',
       title: 'Become a Seller',
-      subtitle: 'Open your own vendor storefront on MVEC while keeping full Super Administrator access. Your admin role and permissions never change.',
+      subtitle: 'Open your own vendor storefront on Ikiguzi while keeping full Super Administrator access. Your admin role and permissions never change.',
       children: [
         if (already)
           InfoBox(
-            title: "You're already selling on MVEC",
+            title: "You're already selling on Ikiguzi",
             text: 'Your vendor storefront is active. Jump into your seller dashboard to manage products, orders and payouts.',
             child: GradientButton(label: 'Go to my Seller Dashboard', icon: Icons.grid_view_rounded, compact: true, onPressed: () => context.go('/vendor')),
           )
@@ -1452,7 +1452,7 @@ class _AdminBecomeSellerPageState extends ConsumerState<AdminBecomeSellerPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_error.isNotEmpty) Notice(text: _error),
-                TextField(controller: _c['businessName'], decoration: const InputDecoration(labelText: 'Business / store name', hintText: 'e.g. MVEC Official Store')),
+                TextField(controller: _c['businessName'], decoration: const InputDecoration(labelText: 'Business / store name', hintText: 'e.g. Ikiguzi Official Store')),
                 const SizedBox(height: 10),
                 TextField(controller: _c['phone'], keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Business phone', hintText: '0788123456')),
                 const SizedBox(height: 10),
@@ -1462,7 +1462,7 @@ class _AdminBecomeSellerPageState extends ConsumerState<AdminBecomeSellerPage> {
                   controller: _c['description'],
                   minLines: 3,
                   maxLines: 5,
-                  decoration: const InputDecoration(labelText: 'Short description (optional)', hintText: 'What will you sell on MVEC?'),
+                  decoration: const InputDecoration(labelText: 'Short description (optional)', hintText: 'What will you sell on Ikiguzi?'),
                 ),
                 const SizedBox(height: 12),
                 GradientButton(label: 'Activate Seller Mode', loading: _busy, onPressed: _submit),
