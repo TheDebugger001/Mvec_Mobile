@@ -38,6 +38,7 @@ const adminNavGroups = <NavGroup>[
     NavItem('/admin/vendors', 'Sellers', 'shop'),
     NavItem('/admin/suppliers', 'Suppliers', 'shop'),
     NavItem('/admin/affiliates', 'Affiliates', 'users'),
+    NavItem('/admin/riders', 'Riders', 'box'),
     NavItem('/admin/users', 'Users', 'users'),
   ]),
   NavGroup('Orders', [
@@ -168,8 +169,8 @@ const affiliateNavGroups = <NavGroup>[
 const deliveryNavGroups = <NavGroup>[
   NavGroup('Overview', [NavItem('/delivery', 'Dashboard', 'grid')]),
   NavGroup('Work', [
-    NavItem('/delivery/deliveries', 'My Deliveries', 'box'),
-    NavItem('/delivery/history', 'Delivered', 'chart'),
+    NavItem('/delivery/trip', 'Current delivery', 'box'),
+    NavItem('/delivery/earnings', 'Earnings', 'wallet'),
   ]),
   NavGroup('Support', [
     NavItem('/delivery/messages', 'Messages', 'users'),

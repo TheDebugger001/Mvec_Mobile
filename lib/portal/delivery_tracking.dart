@@ -11,7 +11,7 @@ import '../widgets/common.dart';
 import 'api.dart';
 import 'kit.dart';
 
-// Deliveries for the seller, supplier, courier and admin (`DeliveryTracking`).
+// Deliveries for the seller, supplier and admin (`DeliveryTracking`).
 // The last step is reached only with the buyer's 6-digit delivery code, which
 // also releases the held payment.
 
@@ -66,11 +66,8 @@ class _Delivery {
     this.place = '',
     this.eta = '',
     this.method = '',
-    this.courier,
     this.link,
     this.next,
-    this.canPickUp = false,
-    this.canAssign = false,
     this.canConfirm = false,
     this.handedOver = false,
     this.canShip = false,
@@ -83,8 +80,7 @@ class _Delivery {
   final List<String> steps;
   final int step;
   final (String, StatusTone, String) settlement;
-  final bool closed, done, held, relevant, pickup, canPickUp, canAssign, canConfirm, handedOver, canShip;
-  final dynamic courier;
+  final bool closed, done, held, relevant, pickup, canConfirm, handedOver, canShip;
   final String? link;
   final (String, String)? next;
 }
@@ -151,7 +147,6 @@ _Delivery _retail(Map<String, dynamic> o, String role, String userId) {
     place: pickup ? 'Buyer collects from the store' : [address['street'], address['sector'], address['district'] ?? address['city'], address['province']].where((x) => strOf(x).isNotEmpty).join(', '),
     eta: strOf(parcel?['eta']),
     method: titleCase(o['shippingMethod'] ?? o['deliveryMethod'] ?? 'STANDARD'),
-    courier: o['courier'],
     amount: role == 'vendor' ? numOf(o['vendorSubtotal']) + numOf(o['vendorShippingFee']) : numOf(o['totalAmount']),
     status: status,
     date: o['createdAt'],
@@ -170,9 +165,7 @@ _Delivery _retail(Map<String, dynamic> o, String role, String userId) {
             ? '/admin/orders/${idOf(o)}'
             : null,
     next: active && !handedOver && (role == 'vendor' || role == 'admin') ? next : null,
-    canPickUp: active && !pickup && role == 'delivery' && status != 'OUT_FOR_DELIVERY',
-    canAssign: active && role == 'admin',
-    canConfirm: active && !handedOver && ['vendor', 'admin', 'delivery'].contains(role),
+    canConfirm: active && !handedOver && ['vendor', 'admin'].contains(role),
   );
 }
 
@@ -213,19 +206,15 @@ const _copy = {
   'supplier': ('Delivery & settlement', 'Ship paid wholesale orders. Funds are released when the vendor confirms receipt.'),
   'admin': (
     'Deliveries',
-    'Orders that need action first: stuck on the way, paid but not shipped, or waiting for pickup. Sellers deliver their own orders; assign an Ikiguzi courier here once you have courier accounts.',
+    'Orders that need action first: stuck on the way, paid but not shipped, or waiting for pickup. Parcels of stores using Ikiguzi riders are offered to riders automatically.',
   ),
-  'delivery': ('My deliveries', 'Deliveries assigned to you. Ask the buyer for their 6-digit code when you hand over the items.'),
 };
 
 /// Delivery list with steps, settlement state and each role's actions.
 class DeliveryTrackingPage extends ConsumerStatefulWidget {
-  const DeliveryTrackingPage({super.key, required this.role, this.initialTab = 'active', this.header});
+  const DeliveryTrackingPage({super.key, required this.role, this.initialTab = 'active'});
   final String role;
   final String initialTab;
-
-  /// Shown above the list (the courier dashboard's intro card).
-  final Widget? header;
 
   @override
   ConsumerState<DeliveryTrackingPage> createState() => _DeliveryTrackingPageState();
@@ -240,14 +229,11 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
             ? '/wholesale/orders/mine'
             : widget.role == 'vendor'
             ? '/orders/vendor/orders'
-            : widget.role == 'admin'
-            ? '/orders'
-            : '/orders/deliverable';
+            : '/orders';
     final res = await jget(path);
     final list = asMaps(res['orders'] ?? res['data']);
     final balance = widget.role == 'vendor' ? asMap((await jget('/payouts/balance').catchError((_) => <String, dynamic>{}))['balance']) : <String, dynamic>{};
-    final couriers = widget.role == 'admin' ? await jlist('/users', 'data', {'role': 'delivery', 'status': 'ACTIVE', 'limit': 100}).catchError((_) => <Map<String, dynamic>>[]) : <Map<String, dynamic>>[];
-    return (orders: [for (final o in list) _wholesaleRole ? _wholesale(o) : _retail(o, widget.role, userId)], balance: balance, couriers: couriers);
+    return (orders: [for (final o in list) _wholesaleRole ? _wholesale(o) : _retail(o, widget.role, userId)], balance: balance);
   });
   late String _tab = widget.role == 'admin' ? 'attention' : widget.initialTab;
   String _q = '';
@@ -291,7 +277,6 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
       subtitle: desc,
       onRefresh: _data.reload,
       children: [
-        if (widget.header != null) widget.header!,
         LoadView(
           loader: _data,
           loadingLabel: 'Loading deliveries…',
@@ -383,7 +368,7 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
                             : 'No deliveries in progress',
                     message: _wholesaleRole ? 'Paid wholesale orders you need to ship will appear here.' : 'Paid orders appear here as they move towards the buyer.',
                   ),
-                  itemBuilder: (o) => _card(o, d.couriers),
+                  itemBuilder: _card,
                 ),
               ],
             );
@@ -393,7 +378,7 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
     );
   }
 
-  Widget _card(_Delivery o, List<Map<String, dynamic>> couriers) {
+  Widget _card(_Delivery o) {
     final mv = context.mv;
     final busy = _busy == o.id;
     final note = _feedback[o.id];
@@ -417,7 +402,6 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
                     Tiny('${o.party}${o.phone.isNotEmpty ? ' · ${o.phone}' : ''} · ${formatDate(o.date)}'),
                     if (o.place.isNotEmpty) Tiny('Deliver to: ${o.place}'),
                     if (o.sellers.isNotEmpty && widget.role != 'vendor') Tiny('Seller: ${o.sellers}'),
-                    if (o.courier != null && widget.role == 'admin') Tiny('Courier: ${_nameOf(o.courier, 'Assigned')}'),
                   ],
                 ),
               ),
@@ -467,7 +451,7 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
               ],
             ),
           if (!o.closed && (o.eta.isNotEmpty || (!_wholesaleRole && o.method.isNotEmpty))) Tiny([if (!_wholesaleRole) o.method, if (o.eta.isNotEmpty) 'Promised: ${o.eta}'].join(' · ')),
-          if (o.next != null || o.canPickUp || (o.canAssign && couriers.isNotEmpty)) ...[
+          if (o.next != null) ...[
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -479,22 +463,6 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
                     o.next!.$2,
                     busy: busy,
                     onPressed: () => _act(o, () => jpatch('/orders/vendor/status', {'orderId': o.id, 'status': o.next!.$1}), 'Updated. The buyer has been notified.'),
-                  ),
-                if (o.canPickUp)
-                  ActionChipBtn(
-                    'Picked up · out for delivery',
-                    busy: busy,
-                    onPressed: () => _act(o, () => jpatch('/orders/${o.id}/out-for-delivery'), 'Marked as out for delivery. The buyer has been notified.'),
-                  ),
-                if (o.canAssign && couriers.isNotEmpty)
-                  SizedBox(
-                    width: 220,
-                    child: FilterSelect(
-                      label: 'Courier',
-                      value: idOf(o.courier),
-                      options: [('', 'Assign a courier…'), for (final c in couriers) (idOf(c), strOf(c['Fullname'] ?? c['fullName'] ?? c['phone']))],
-                      onChanged: (v) => _act(o, () => jpatch('/orders/${o.id}/courier', {'courierId': v.isEmpty ? null : v}), 'Courier updated.'),
-                    ),
                   ),
               ],
             ),

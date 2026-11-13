@@ -6,7 +6,7 @@ import '../../core/format.dart';
 import '../../portal/api.dart';
 import '../../portal/kit.dart';
 import '../../widgets/common.dart';
-import 'products_pages.dart' show productImage;
+import 'products_shared.dart';
 
 const _steps = [
   ('You open your products', 'Turn the program on for all your products or only the ones you choose, and set the commission you add.'),

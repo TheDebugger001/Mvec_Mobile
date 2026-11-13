@@ -166,6 +166,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           action: 'Create one',
           onTap: () => context.push('/signup${_returnTo.isEmpty ? '' : '?next=${Uri.encodeQueryComponent(_returnTo)}'}'),
         ),
+        SwitchLine(text: 'Deliver parcels?', action: 'Rider sign in', onTap: () => context.push('/rider')),
       ],
     );
   }

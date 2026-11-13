@@ -12,7 +12,7 @@ import '../../portal/kit.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
 import '../seller/seller_common.dart';
-import '../wholesale/wholesale_pages.dart' show units;
+import '../wholesale/wholesale_shared.dart';
 
 // The supplier dashboard (web: pages/SupplierDashboard.jsx).
 

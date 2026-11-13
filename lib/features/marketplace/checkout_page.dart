@@ -17,6 +17,7 @@ import '../../state/catalog_state.dart';
 import '../../widgets/brand_panel.dart';
 import '../../widgets/checkout_steps.dart';
 import '../../widgets/common.dart';
+import '../../widgets/pin_picker.dart';
 import '../common/page_frame.dart';
 
 class _Line {
@@ -57,6 +58,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   String _speed = 'standard';
   String _province = 'Kigali City';
   String _district = '';
+  (double, double)? _pin;
 
   _Line? _buyNow;
   bool _loadingProduct = false;
@@ -136,7 +138,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   List<({String productId, int qty})> get _quoteItems => [for (final l in _items) (productId: l.id, qty: l.qty)];
 
   void _scheduleQuote() {
-    final key = '$_fulfilment|$_province|$_district|${_quoteItems.map((e) => '${e.productId}x${e.qty}').join(',')}';
+    final key = '$_fulfilment|$_province|$_district|$_pin|${_quoteItems.map((e) => '${e.productId}x${e.qty}').join(',')}';
     if (key == _lastQuoteKey) return;
     _lastQuoteKey = key;
     _quoteTimer?.cancel();
@@ -155,8 +157,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           next = {'standard': null, 'express': null, 'pickup': await CheckoutApi.quote(method: 'PICKUP', items: _quoteItems)};
         } else {
           final res = await Future.wait([
-            CheckoutApi.quote(method: 'STANDARD', items: _quoteItems, province: _province, district: _district),
-            CheckoutApi.quote(method: 'EXPRESS', items: _quoteItems, province: _province, district: _district),
+            CheckoutApi.quote(method: 'STANDARD', items: _quoteItems, province: _province, district: _district, pin: _pin),
+            CheckoutApi.quote(method: 'EXPRESS', items: _quoteItems, province: _province, district: _district, pin: _pin),
           ]);
           next = {'standard': res[0], 'express': res[1], 'pickup': null};
         }
@@ -203,6 +205,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       _sector.text = strOf(a['sector']);
       _street.text = [a['street'], a['building'], a['apartment']].where((e) => strOf(e).isNotEmpty).join(', ');
       if (_phone.text.isEmpty) _phone.text = strOf(a['phone']);
+      _pin = a['lat'] == null ? null : (numOf(a['lat']).toDouble(), numOf(a['lng']).toDouble());
     });
     _scheduleQuote();
   }
@@ -265,6 +268,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         district: _district,
         sector: _sector.text,
         street: _street.text,
+        pin: _pin,
         couponCode: _couponResult?['code'] as String?,
       );
 
@@ -283,6 +287,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         'sector': _sector.text.trim(),
         'street': _street.text.trim(),
         'phone': _phone.text.trim(),
+        if (_pin != null) ...{'lat': _pin!.$1, 'lng': _pin!.$2},
       }).catchError((_) {});
     }
     ref.invalidate(catalogProvider); // stock changed
@@ -539,6 +544,17 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                     _addressId = '';
                     setState(() => _errors.remove('street'));
                   }),
+                  PinPicker(
+                    label: 'Pin your door (recommended)',
+                    help: 'Stores using Ikiguzi riders deliver to this pin, often the same day, priced by distance.',
+                    allowGps: true,
+                    value: _pin,
+                    onChanged: (p) {
+                      setState(() => _pin = p);
+                      _addressId = '';
+                      _scheduleQuote();
+                    },
+                  ),
                   if (auth.user != null && _addressId.isEmpty)
                     CheckboxListTile(
                       value: _saveAddress,

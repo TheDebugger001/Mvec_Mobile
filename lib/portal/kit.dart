@@ -9,6 +9,7 @@ import '../core/format.dart';
 import '../core/theme.dart';
 import '../core/upload.dart';
 import '../widgets/common.dart';
+import '../widgets/pin_picker.dart';
 import '../widgets/motion.dart';
 
 // Building blocks shared by every dashboard (seller, supplier, affiliate,
@@ -574,7 +575,7 @@ class _PagedState<T> extends State<Paged<T>> {
 
 // ─── Forms ───────────────────────────────────────────────────────────────────
 
-enum FieldType { text, number, email, phone, password, textarea, select, checkboxes, toggle, date, image }
+enum FieldType { text, number, email, phone, password, textarea, select, checkboxes, toggle, date, image, pin }
 
 /// One input in a [FormSheet] (the web `FormModal` field config).
 class FieldSpec {
@@ -760,6 +761,15 @@ class _FormSheetState<R> extends State<_FormSheet<R>> {
           title: Text(f.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           subtitle: f.help == null ? null : Text(f.help!, style: const TextStyle(fontSize: 12)),
           onChanged: (on) => _set(f.name, on),
+        );
+      case FieldType.pin:
+        // Stored as { lat, lng } (what the API takes), or null.
+        final pin = asMap(_v[f.name]);
+        return PinPicker(
+          label: f.label,
+          help: f.help,
+          value: pin.isEmpty ? null : (numOf(pin['lat']).toDouble(), numOf(pin['lng']).toDouble()),
+          onChanged: (p) => _set(f.name, p == null ? null : {'lat': p.$1, 'lng': p.$2}),
         );
       case FieldType.image:
         final url = '${_v[f.name] ?? ''}';

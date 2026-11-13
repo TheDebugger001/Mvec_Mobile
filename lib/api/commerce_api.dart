@@ -56,6 +56,7 @@ class CheckoutRequest {
     this.district = '',
     this.sector = '',
     this.street = '',
+    this.pin,
     this.couponCode,
   });
 
@@ -71,6 +72,9 @@ class CheckoutRequest {
   final String district;
   final String sector;
   final String street;
+
+  /// The buyer's map pin `(lat, lng)`, needed for Ikiguzi rider delivery.
+  final (double, double)? pin;
   final String? couponCode;
 
   bool get isDelivery => fulfilment == 'delivery';
@@ -85,6 +89,7 @@ class CheckoutRequest {
               'sector': sector.trim(),
               'province': province,
               'country': 'Rwanda',
+              if (pin != null) ...{'lat': pin!.$1, 'lng': pin!.$2},
             }
           : <String, dynamic>{},
       'recipient': {
@@ -193,9 +198,11 @@ class CheckoutApi {
     required List<({String productId, int qty})> items,
     String? province,
     String? district,
+    (double, double)? pin,
   }) async =>
       asMap(await _api.post('/shipping/quote', body: {
-        if (province != null && district != null) 'address': {'province': province, 'district': district},
+        if (province != null && district != null)
+          'address': {'province': province, 'district': district, if (pin != null) ...{'lat': pin.$1, 'lng': pin.$2}},
         'method': method,
         'items': [
           for (final i in items) {'productId': i.productId, 'qty': i.qty},

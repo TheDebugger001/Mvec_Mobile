@@ -21,16 +21,48 @@ import 'features/marketplace/product_page.dart';
 import 'features/marketplace/shop_page.dart';
 import 'features/marketplace/wishlist_page.dart';
 import 'features/admin/admin_money_pages.dart';
-import 'features/admin/admin_people_pages.dart';
-import 'features/admin/admin_platform_pages.dart';
+import 'features/admin/admin_overview_page.dart';
+import 'features/admin/admin_records_page.dart';
+import 'features/admin/admin_sellers_page.dart';
+import 'features/admin/admin_suppliers_page.dart';
+import 'features/admin/admin_advertising_page.dart';
+import 'features/admin/admin_affiliates_page.dart';
+import 'features/admin/admin_riders_page.dart';
+import 'features/admin/admin_audit_log_page.dart';
+import 'features/admin/admin_become_seller_page.dart';
+import 'features/admin/admin_commission_rules_page.dart';
+import 'features/admin/admin_platform_page.dart';
+import 'features/admin/admin_subscriptions_page.dart';
+import 'features/admin/admin_support_inbox_page.dart';
+import 'features/admin/admin_transfers_page.dart';
+import 'features/admin/admin_vendor_payouts_page.dart';
 import 'features/affiliate/affiliate_pages.dart';
+import 'features/rider/rider_auth_page.dart';
+import 'features/rider/rider_earnings_page.dart';
+import 'features/rider/rider_home_page.dart';
+import 'features/rider/rider_trip_page.dart';
 import 'features/seller/affiliate_program_page.dart';
 import 'features/seller/finance_pages.dart';
 import 'features/seller/orders_pages.dart';
-import 'features/seller/products_pages.dart';
-import 'features/seller/store_pages.dart';
+import 'features/seller/seller_inventory_page.dart';
+import 'features/seller/seller_overview_page.dart';
+import 'features/seller/seller_products_page.dart';
+import 'features/seller/seller_analytics_page.dart';
+import 'features/seller/seller_categories_page.dart';
+import 'features/seller/seller_customers_page.dart';
+import 'features/seller/seller_promotions_page.dart';
+import 'features/seller/seller_reports_page.dart';
+import 'features/seller/seller_reviews_page.dart';
+import 'features/seller/seller_settings_page.dart';
+import 'features/seller/seller_shipping_page.dart';
+import 'features/seller/seller_stores_page.dart';
+import 'features/seller/seller_team_page.dart';
+import 'features/seller/staff_gate.dart';
 import 'features/supplier/supplier_pages.dart';
-import 'features/wholesale/wholesale_pages.dart';
+import 'features/wholesale/find_suppliers_page.dart';
+import 'features/wholesale/supplier_quotes_page.dart';
+import 'features/wholesale/vendor_quotes_page.dart';
+import 'features/wholesale/wholesale_orders_page.dart';
 import 'portal/delivery_tracking.dart';
 import 'portal/portal_shell.dart';
 import 'portal/shared_pages.dart';
@@ -107,6 +139,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, s) => LoginPage(next: s.uri.queryParameters['next'] ?? '', checkout: s.uri.queryParameters['checkout'] == '1')),
       GoRoute(path: '/signup', builder: (_, s) => SignupPage(role: s.uri.queryParameters['role'], next: s.uri.queryParameters['next'] ?? '')),
       GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordPage()),
+      GoRoute(path: '/rider', builder: (_, __) => const RiderAuthPage()),
       GoRoute(path: '/track/:code', builder: (_, s) => AffiliateTrackPage(code: s.pathParameters['code']!)),
       // Full-screen pages (own back arrow, no marketplace bars).
       GoRoute(path: '/product/:id', builder: (_, s) => ProductPage(id: s.pathParameters['id']!)),
@@ -228,20 +261,9 @@ final _affiliateRoutes = <GoRoute>[
 ];
 
 final _deliveryRoutes = <GoRoute>[
-  GoRoute(
-    path: '/delivery',
-    builder:
-        (_, __) => const DeliveryTrackingPage(
-          role: 'delivery',
-          header: InfoBox(
-            title: 'Delivery confirmation',
-            text:
-                "When you hand the items to the buyer, ask for the 6-digit code shown on their order. The correct code completes the delivery and releases the seller's payment. Five wrong codes lock the delivery for Ikiguzi support.",
-          ),
-        ),
-  ),
-  GoRoute(path: '/delivery/deliveries', builder: (_, __) => const DeliveryTrackingPage(role: 'delivery')),
-  GoRoute(path: '/delivery/history', builder: (_, __) => const DeliveryTrackingPage(role: 'delivery', initialTab: 'done')),
+  GoRoute(path: '/delivery', builder: (_, __) => const RiderHomePage()),
+  GoRoute(path: '/delivery/trip', builder: (_, __) => const RiderTripPage()),
+  GoRoute(path: '/delivery/earnings', builder: (_, __) => const RiderEarningsPage()),
   GoRoute(path: '/delivery/messages', builder: (_, __) => const MessagesPage()),
   GoRoute(path: '/delivery/notifications', builder: (_, __) => const NotificationsPage()),
   GoRoute(path: '/delivery/support', builder: (_, __) => const SupportPage(role: 'delivery')),
@@ -259,6 +281,7 @@ final _adminRoutes = <GoRoute>[
   GoRoute(path: '/admin/vendors', builder: (_, __) => const AdminSellersPage()),
   GoRoute(path: '/admin/suppliers', builder: (_, s) => AdminSuppliersPage(tab: s.uri.queryParameters['tab'])),
   GoRoute(path: '/admin/affiliates', builder: (_, __) => const AdminAffiliatesPage()),
+  GoRoute(path: '/admin/riders', builder: (_, __) => const AdminRidersPage()),
   GoRoute(path: '/admin/deliveries', builder: (_, __) => const DeliveryTrackingPage(role: 'admin')),
   GoRoute(path: '/admin/disputes', builder: (_, s) => DisputesListPage(role: 'admin', openCase: s.uri.queryParameters['case'])),
   GoRoute(path: '/admin/payments', builder: (_, s) => AdminPaymentsPage(status: s.uri.queryParameters['status'] ?? '')),

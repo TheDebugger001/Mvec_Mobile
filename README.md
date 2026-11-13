@@ -16,8 +16,8 @@ flutter pub get
 flutter run --dart-define=API_BASE_URL=http://<host>:4000/api
 ```
 
-`API_BASE_URL` resolves in this order: `--dart-define`, `API_BASE_URL` in `.env`,
-then `http://localhost:4000/api`. On the Android emulator a `localhost` URL is
+`API_BASE_URL` comes from `--dart-define`; without it the app uses
+`http://localhost:4000/api`. On the Android emulator a `localhost` URL is
 rewritten to `10.0.2.2` automatically; on a real phone use your machine's LAN
 IP or the hosted URL.
 
@@ -57,7 +57,7 @@ plus "More". Vendor staff only see the sections their role allows.
 Routes use the same paths as the web app (`/shop`, `/product/:id`, `/orders/:id`,
 `/vendor/orders/:id`, `/admin/...`), so links in notifications open the same page.
 
-Set `WEB_URL` (dart-define or `.env`) to the website address so shared links
+Set `WEB_URL` (`--dart-define`) to the website address so shared links
 (affiliate links, payment links) point to it.
 
 ## Not built yet

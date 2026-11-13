@@ -7,7 +7,7 @@ import '../../core/theme.dart';
 import '../../portal/api.dart';
 import '../../portal/kit.dart';
 import '../../widgets/common.dart';
-import 'products_pages.dart' show productImage;
+import 'products_shared.dart';
 
 const _payoutTabs = <(String, String, List<String>?)>[
   ('ALL', 'All', null),
