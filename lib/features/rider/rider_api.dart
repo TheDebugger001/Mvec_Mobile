@@ -125,9 +125,13 @@ class RiderApi {
   RiderApi._();
   static final _api = Api.instance;
 
-  /// Step 1 of signing up: a code to the phone.
-  static Future<void> sendCode(String phone, {required bool signUp}) async =>
-      _api.post('/auth/send-otp', body: {'phone': phone, 'purpose': signUp ? 'registration' : 'login'});
+  /// Step 1: a code to the phone. Until SMS is set up, the server may send the
+  /// code back to show on screen (`devCode`); null when it went by text.
+  static Future<String?> sendCode(String phone, {required bool signUp}) async {
+    final reply = asMap(await _api.post('/auth/send-otp', body: {'phone': phone, 'purpose': signUp ? 'registration' : 'login', if (signUp) 'role': 'delivery'}));
+    final code = strOf(reply['devCode']);
+    return code.isEmpty ? null : code;
+  }
 
   /// Sign in with the code: returns the raw `{ token, user }` reply.
   static Future<Map<String, dynamic>> signIn(String phone, String code) async =>

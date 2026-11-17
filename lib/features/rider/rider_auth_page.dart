@@ -30,6 +30,8 @@ class RiderAuthPage extends ConsumerStatefulWidget {
 class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
   late bool _signUp = widget.signUp;
   bool _codeSent = false;
+  // Until SMS is set up, the server shows the code instead of texting it.
+  String? _shownCode;
   bool _busy = false;
   String? _error;
   String _vehicle = 'MOTORBIKE';
@@ -64,8 +66,12 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
 
   Future<void> _sendCode() => _go(() async {
         if (_signUp && _name.text.trim().length < 3) throw ApiException('Enter your full name.');
-        await RiderApi.sendCode(_phone.text.trim(), signUp: _signUp);
-        setState(() => _codeSent = true);
+        final shown = await RiderApi.sendCode(_phone.text.trim(), signUp: _signUp);
+        if (shown != null) _code.text = shown;
+        setState(() {
+          _codeSent = true;
+          _shownCode = shown;
+        });
       });
 
   Future<void> _verify() => _go(() async {
@@ -96,6 +102,7 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
             ),
             const SizedBox(height: 16),
             if (_error != null) Notice(text: _error!),
+            if (_codeSent && _shownCode != null) Notice(info: true, text: "Text messages aren't set up yet. Your code is $_shownCode."),
             if (_signUp) ...[
               TextField(controller: _name, enabled: !_codeSent, decoration: const InputDecoration(labelText: 'Full name')),
               const SizedBox(height: 10),
