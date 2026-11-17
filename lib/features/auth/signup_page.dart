@@ -16,6 +16,7 @@ const _roles = <String, (String, String)>{
   'vendor': ('Vendor account', 'Create a store, sell products and reach customers.'),
   'supplier': ('Supplier account', 'List wholesale products and reach customers.'),
   'affiliate': ('Affiliate account', 'Promote products and earn commission on qualifying sales.'),
+  'delivery': ('Delivery worker', 'Carry parcels from sellers to buyers and earn the delivery fee. Next you add your vehicle and confirm your phone with a code; Ikiguzi checks your details before your first job.'),
 };
 
 /// `/signup` — phone-first registration (`pages/Signup.jsx`).
@@ -59,6 +60,12 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   }
 
   Future<void> _submit() async {
+    // Delivery workers sign up on the rider screen: vehicle, plate and a phone code, no password.
+    if (_role == 'delivery') {
+      final q = {'signup': '1', 'name': _name.text.trim(), 'phone': _phone.text.trim()};
+      context.push(Uri(path: '/rider', queryParameters: q).toString());
+      return;
+    }
     final problem = _validate();
     if (problem != null) {
       setState(() => _error = problem);
@@ -129,6 +136,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             DropdownMenuItem(value: 'vendor', child: Text('Vendor')),
             DropdownMenuItem(value: 'supplier', child: Text('Supplier')),
             DropdownMenuItem(value: 'affiliate', child: Text('Affiliate marketer')),
+            DropdownMenuItem(value: 'delivery', child: Text('Delivery worker')),
           ],
           onChanged: (v) => setState(() => _role = v ?? 'buyer'),
         ),
@@ -153,10 +161,12 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             decoration: InputDecoration(labelText: _role == 'supplier' ? 'Business name' : 'Store / company name', hintText: 'Enter business name'),
           ),
         ],
-        const SizedBox(height: 12),
-        PasswordField(controller: _password, label: 'Create password', hint: 'At least 8 characters', autofill: AutofillHints.newPassword, action: TextInputAction.next),
-        const SizedBox(height: 12),
-        PasswordField(controller: _confirm, label: 'Verify password', hint: 'Confirm your password', autofill: AutofillHints.newPassword, onSubmitted: _submit),
+        if (_role != 'delivery') ...[
+          const SizedBox(height: 12),
+          PasswordField(controller: _password, label: 'Create password', hint: 'At least 8 characters', autofill: AutofillHints.newPassword, action: TextInputAction.next),
+          const SizedBox(height: 12),
+          PasswordField(controller: _confirm, label: 'Verify password', hint: 'Confirm your password', autofill: AutofillHints.newPassword, onSubmitted: _submit),
+        ],
         Container(
           margin: const EdgeInsets.only(top: 14, bottom: 14),
           padding: const EdgeInsets.all(12),
@@ -179,7 +189,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             ],
           ),
         ),
-        GradientButton(label: 'Create account', expand: true, loading: _busy, onPressed: _submit),
+        GradientButton(label: _role == 'delivery' ? 'Continue' : 'Create account', expand: true, loading: _busy, onPressed: _submit),
         SwitchLine(
           text: 'Already have an account?',
           action: 'Log in',

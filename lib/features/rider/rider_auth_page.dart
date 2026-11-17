@@ -16,21 +16,26 @@ import 'rider_api.dart';
 /// code (as KitchenLink's delivery workers do). A new rider waits for Ikiguzi's
 /// approval before taking deliveries.
 class RiderAuthPage extends ConsumerStatefulWidget {
-  const RiderAuthPage({super.key});
+  const RiderAuthPage({super.key, this.signUp = false, this.name = '', this.phone = ''});
+
+  /// Opened from the sign-up page's "Delivery worker" choice: sign-up mode, details carried over.
+  final bool signUp;
+  final String name;
+  final String phone;
 
   @override
   ConsumerState<RiderAuthPage> createState() => _RiderAuthPageState();
 }
 
 class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
-  bool _signUp = false;
+  late bool _signUp = widget.signUp;
   bool _codeSent = false;
   bool _busy = false;
   String? _error;
   String _vehicle = 'MOTORBIKE';
-  final _phone = TextEditingController();
+  late final _phone = TextEditingController(text: widget.phone);
   final _code = TextEditingController();
-  final _name = TextEditingController();
+  late final _name = TextEditingController(text: widget.name);
   final _plate = TextEditingController();
 
   static const _vehicles = {'MOTORBIKE': 'Motorbike', 'BICYCLE': 'Bicycle', 'CAR': 'Car', 'ON_FOOT': 'On foot'};

@@ -139,7 +139,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, s) => LoginPage(next: s.uri.queryParameters['next'] ?? '', checkout: s.uri.queryParameters['checkout'] == '1')),
       GoRoute(path: '/signup', builder: (_, s) => SignupPage(role: s.uri.queryParameters['role'], next: s.uri.queryParameters['next'] ?? '')),
       GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordPage()),
-      GoRoute(path: '/rider', builder: (_, __) => const RiderAuthPage()),
+      GoRoute(
+        path: '/rider',
+        builder: (_, s) => RiderAuthPage(
+          signUp: s.uri.queryParameters['signup'] == '1',
+          name: s.uri.queryParameters['name'] ?? '',
+          phone: s.uri.queryParameters['phone'] ?? '',
+        ),
+      ),
       GoRoute(path: '/track/:code', builder: (_, s) => AffiliateTrackPage(code: s.pathParameters['code']!)),
       // Full-screen pages (own back arrow, no marketplace bars).
       GoRoute(path: '/product/:id', builder: (_, s) => ProductPage(id: s.pathParameters['id']!)),
