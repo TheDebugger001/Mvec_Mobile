@@ -13,6 +13,7 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../common/page_frame.dart';
 import '../../portal/shared_pages.dart';
+import '../tracking/live_tracking.dart';
 
 const _steps = <({String label, String by, List<String> statuses, String text})>[
   (label: 'Order placed', by: 'You', statuses: ['PENDING'], text: 'The items are reserved for you for 30 minutes while you pay.'),
@@ -292,6 +293,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
               ],
             ),
           ),
+          if (!delivered && !cancelled) OrderLiveTracking(orderId: widget.id),
           if (remaining > Duration.zero && canCancel(o, _now))
             DataCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

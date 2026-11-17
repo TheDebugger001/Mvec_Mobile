@@ -15,6 +15,7 @@ import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
 import '../common/page_frame.dart';
 import 'seller_common.dart';
+import '../tracking/live_tracking.dart';
 
 String _customerOf(Map<String, dynamic> o) => strOf(asMap(o['customer'])['name'], personName(o['user']));
 num _orderTotal(Map<String, dynamic> o) => numOf(o['vendorSubtotal']) + numOf(o['vendorShippingFee']);
@@ -244,6 +245,7 @@ class _SellerOrderDetailPageState extends ConsumerState<SellerOrderDetailPage> {
                 subtitle:
                     '${manual ? 'Recorded' : 'Placed'} ${formatDate(o['createdAt'])} · ${o['paidOffline'] == true ? 'Paid offline (${titleCase(o['offlinePaymentMethod'])})' : titleCase(o['paymentMethod'])}',
               ),
+              if (!['DELIVERED', 'CANCELLED'].contains(o['orderStatus'])) OrderLiveTracking(orderId: widget.id, seller: true),
               Section(
                 title: widget.admin ? 'Order items' : 'Your items',
                 subtitle: '${items.length} item${items.length == 1 ? '' : 's'}',

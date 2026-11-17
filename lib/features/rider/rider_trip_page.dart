@@ -11,6 +11,7 @@ import '../../widgets/common.dart';
 import 'rider_api.dart';
 import 'rider_state.dart';
 import 'slide_to_confirm.dart';
+import '../tracking/live_tracking.dart';
 
 /// `/delivery/trip`: the parcel being delivered. Each step is a slide (it
 /// can't be undone), offered only when the server allows it.
@@ -42,6 +43,7 @@ class RiderTripPage extends ConsumerWidget {
       subtitle: 'You earn ${money(job.fee)} for this parcel (${job.distanceKm} km).',
       onRefresh: () => ref.read(riderBoardProvider.notifier).refresh(),
       children: [
+        RiderNavigation(key: ValueKey(job.id), deliveryId: job.id),
         Section(
           title: atStore ? 'Pick up here' : 'Picked up from',
           children: [

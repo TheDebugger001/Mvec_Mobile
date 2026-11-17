@@ -120,7 +120,14 @@ bool shouldSendLiveFix({required GeoFix fix, GeoFix? lastSent}) {
 /// minute while waiting for offers, and a live stream during a trip.
 class RiderLocation {
   RiderLocation(this.send);
-  final Future<void> Function(double lat, double lng) send;
+  final Future<void> Function(double lat, double lng, {double? heading, double? speedMps, double? accuracyM}) send;
+
+  /// Heading only means something while moving; negative values mean "unknown".
+  static ({double? heading, double? speedMps, double? accuracyM}) readings(Position p) => (
+        heading: p.speed > 0.5 && p.heading >= 0 ? p.heading : null,
+        speedMps: p.speed >= 0 ? p.speed : null,
+        accuracyM: p.accuracy >= 0 ? p.accuracy : null,
+      );
   Timer? _timer;
   StreamSubscription<Position>? _live;
   GeoFix? _lastSent;
@@ -153,7 +160,8 @@ class RiderLocation {
   Future<void> _sendNow() async {
     try {
       final p = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 10)));
-      await send(p.latitude, p.longitude);
+      final r = readings(p);
+      await send(p.latitude, p.longitude, heading: r.heading, speedMps: r.speedMps, accuracyM: r.accuracyM);
       _lastSent = GeoFix(p.latitude, p.longitude, DateTime.now());
     } catch (_) {
       // No fix this time; the next tick tries again.
@@ -179,7 +187,8 @@ class RiderLocation {
       final fix = GeoFix(p.latitude, p.longitude, DateTime.now());
       if (!shouldSendLiveFix(fix: fix, lastSent: _lastSent)) return;
       _lastSent = fix;
-      send(fix.lat, fix.lng).catchError((_) {});
+      final r = readings(p);
+      send(fix.lat, fix.lng, heading: r.heading, speedMps: r.speedMps, accuracyM: r.accuracyM).catchError((_) {});
     });
   }
 

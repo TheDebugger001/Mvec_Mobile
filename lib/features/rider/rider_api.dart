@@ -155,7 +155,9 @@ class RiderApi {
   static Future<RiderAccount> setOnline(bool online) async =>
       RiderAccount.fromJson(asMap(asMap(await _api.patch('/rider/availability', body: {'isOnline': online}))['rider']));
 
-  static Future<void> sendLocation(double lat, double lng) async => _api.patch('/rider/location', body: {'lat': lat, 'lng': lng});
+  /// A GPS fix; heading, speed and accuracy when the phone has them.
+  static Future<void> sendLocation(double lat, double lng, {double? heading, double? speedMps, double? accuracyM}) async =>
+      _api.patch('/rider/location', body: {'lat': lat, 'lng': lng, 'heading': heading, 'speedMps': speedMps, 'accuracyM': accuracyM});
 
   static Future<RiderStats> stats() async => RiderStats.fromJson(asMap(await _api.get('/rider/stats')));
 
