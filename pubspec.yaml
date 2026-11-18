@@ -93,6 +93,16 @@ flutter:
     - family: Kaushan Script
       fonts:
         - asset: assets/fonts/kaushan/KaushanScript-Regular.ttf
+    # The web hero heading font (`--site-serif` in Mvec_frontend/src/site.css:
+    # Playfair Display 500, italic for the emphasised line). Bundled (SIL OFL),
+    # the very files the web page loads, so the two heroes share one typeface.
+    - family: Playfair Display
+      fonts:
+        - asset: assets/fonts/playfair/PlayfairDisplay-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/playfair/PlayfairDisplay-MediumItalic.ttf
+          weight: 500
+          style: italic
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

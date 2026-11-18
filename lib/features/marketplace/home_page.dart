@@ -469,16 +469,7 @@ class _HeroCard extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              Text(
-                                s.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: context.mvH1.copyWith(
-                                  fontSize: 21,
-                                  height: 1.15,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
+                              _HeroTitle(s.title),
                               const SizedBox(height: 6),
                               Text(
                                 s.line,
@@ -501,6 +492,46 @@ class _HeroCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The hero heading, set like the web hero (`.home-hero h1`): Playfair Display
+/// 500, -.01em tracking, line height 1.05. As on the web, the first line is
+/// upright and any following line is the italic brand-deep emphasis; a sponsored
+/// product name has one line and stays upright.
+class _HeroTitle extends StatelessWidget {
+  const _HeroTitle(this.title);
+  final String title;
+
+  static const double _size = 21;
+
+  @override
+  Widget build(BuildContext context) {
+    final mv = context.mv;
+    final base = TextStyle(
+      fontFamily: 'Playfair Display',
+      fontWeight: FontWeight.w500,
+      fontSize: _size,
+      height: 1.05,
+      letterSpacing: -.01 * _size,
+      color: mv.text,
+    );
+    final lines = title.split('\n');
+    return Text.rich(
+      TextSpan(
+        style: base,
+        children: [
+          TextSpan(text: lines.first),
+          if (lines.length > 1)
+            TextSpan(
+              text: '\n${lines.skip(1).join('\n')}',
+              style: TextStyle(fontStyle: FontStyle.italic, color: mv.accentDeep),
+            ),
+        ],
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

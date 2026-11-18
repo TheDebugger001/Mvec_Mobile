@@ -3,11 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'helpers/fake_backend.dart';
 
 void main() {
-  testWidgets('bottom bar has exactly Home, Shop, For You, Deals, Orders', (tester) async {
+  testWidgets('bottom bar has exactly Home, Shop, Saved, Orders, Profile', (tester) async {
     await pumpApp(tester, FakeBackend(baseRoutes()));
-    for (final label in ['Home', 'Shop', 'For You', 'Deals', 'Orders']) {
+    for (final label in ['Home', 'Shop', 'Saved', 'Orders', 'Profile']) {
       expect(find.byTooltip(label), findsOneWidget, reason: label);
     }
+    // For You and Deals moved to the sidebar.
+    expect(find.byTooltip('For You'), findsNothing);
+    expect(find.byTooltip('Deals'), findsNothing);
     expect(find.byTooltip('Cart'), findsNothing);
     expect(find.byTooltip('Wishlist'), findsNothing);
   });
@@ -46,9 +49,11 @@ void main() {
     expect(find.byTooltip('Sign in or create an account'), findsOneWidget);
   });
 
-  testWidgets('tapping Deals opens the sale-only shop', (tester) async {
+  testWidgets('Deals (in the sidebar) opens the sale-only shop', (tester) async {
     await pumpApp(tester, FakeBackend(baseRoutes()));
-    await tester.tap(find.byTooltip('Deals'));
+    await tester.tap(find.byTooltip('Open menu'));
+    await settle(tester);
+    await tester.tap(find.text('Deals').first);
     await settle(tester);
     expect(find.text('Deals'), findsWidgets);
     expect(find.text('Wireless Headphones'), findsWidgets);
