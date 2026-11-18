@@ -48,7 +48,7 @@ class _VerificationBanner extends ConsumerWidget {
         ),
       );
     }
-    if (user?.verificationStatus == 'PENDING') return const Notice(info: true, text: 'Ikiguzi is reviewing your profile. You will get a message, SMS and email when it is done.');
+    if (user?.verificationStatus == 'PENDING') return const Notice(info: true, text: 'Ikiguzi is reviewing your profile. You can add products and put stock on the marketplace now; buyers see it once you are verified. You will get a message, SMS and email when it is done.');
     return const SizedBox.shrink();
   }
 }

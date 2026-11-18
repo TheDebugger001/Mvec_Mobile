@@ -77,7 +77,9 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
     if (widget.product == null) _c['lowStockThreshold']!.text = '5';
     _categoryId = idOf(p['category']).isNotEmpty ? idOf(p['category']) : strOf(p['categoryId']);
     _storeId = idOf(p['store']);
-    _status = strOf(p['status'], 'DRAFT');
+    // A product waiting for approval (or sold out) is meant to be live; the server keeps it waiting.
+    final status = strOf(p['status'], 'DRAFT');
+    _status = const ['PENDING_APPROVAL', 'OUT_OF_STOCK'].contains(status) ? 'ACTIVE' : status;
     final media = asMap(p['media']);
     _gallery = [for (final g in (media['gallery'] is List ? media['gallery'] as List : const [])) '$g'];
     final main = strOf(media['mainImage'] ?? p['mainImage']);
@@ -177,13 +179,18 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
     setState(() => _saving = true);
     try {
       final id = idOf(widget.product);
+      final Object? saved;
       if (widget.product == null) {
-        await jpost('/products', productPayload(form));
+        saved = await jpost('/products', productPayload(form));
       } else {
         if (id.isEmpty) throw ApiException('This product no longer exists. Refresh the page.');
-        await jput('/products/$id', productPayload(form));
+        saved = await jput('/products/$id', productPayload(form));
       }
-      if (mounted) Navigator.of(context).pop(true);
+      if (!mounted) return;
+      // Before Ikiguzi approves the store, buyers don't see it yet: say so.
+      final res = asMap(saved);
+      if (res['waitingForApproval'] == true) toast(context, strOf(res['message'], 'Product saved. Buyers will see it once Ikiguzi approves your store.'));
+      Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorText(e));

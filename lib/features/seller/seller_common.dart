@@ -319,7 +319,7 @@ class OnboardingBanner extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Tiny('Complete your business profile and wait for Ikiguzi verification before publishing products, creating a store, or placing supply orders.'),
+          const Tiny('Complete your business profile to add products, create a store and place supply orders. Buyers see your products once Ikiguzi approves your store.'),
           ActionChipBtn('Complete onboarding', primary: true, onPressed: () => showOnboarding(context, ref)),
         ],
       ),

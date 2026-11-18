@@ -111,6 +111,8 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (d.products.any((p) => p['status'] == 'PENDING_APPROVAL'))
+                  const Notice(info: true, text: 'Waiting for approval. You can add and edit products now. Buyers see them on the marketplace once Ikiguzi approves your store.'),
                 SearchBox(hint: 'Search products, SKU, brand or category', onChanged: (v) => setState(() => _q = v)),
                 FilterRow(
                   children: [
@@ -147,7 +149,7 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                             : money(p['price']),
                         'Stock: ${p['stockQuantity']}',
                       ],
-                      status: Pill(p['status']),
+                      status: Pill(p['status'], label: p['status'] == 'PENDING_APPROVAL' ? 'Waiting for approval' : null),
                       actions: [
                         ActionChipBtn('Edit', icon: Icons.edit_outlined, onPressed: () => _edit(p)),
                         ActionChipBtn(
