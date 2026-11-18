@@ -19,8 +19,9 @@ import '../widgets/motion.dart';
 import '../widgets/mv_icon.dart';
 import '../widgets/theme_switch.dart';
 
-/// The five primary marketplace destinations, in the required order.
-/// (The web storefront's `main-nav-links`: Home, Shop, For You, Deals, Orders.)
+/// The bottom bar's five destinations, in the reference design's order:
+/// Home, Shop, Saved, Orders, Profile. (For You and Deals stay one tap away in
+/// the sidebar.)
 class _Dest {
   const _Dest(this.label, this.icon, this.location);
   final String label;
@@ -30,13 +31,24 @@ class _Dest {
 
 const _destinations = <_Dest>[
   _Dest('Home', 'home', '/'),
-  _Dest('Shop', 'shop', '/shop'),
-  _Dest('For You', 'heart', '/buyer/recommendations'),
-  _Dest('Deals', 'tag', '/shop?deal=true'),
+  _Dest('Shop', 'grid', '/shop'),
+  _Dest('Saved', 'heart', '/wishlist'),
   _Dest('Orders', 'box', '/orders'),
+  _Dest('Profile', 'user', '/profile'),
 ];
 
 /// Which bottom-bar item the current location belongs to, or -1.
+int _barIndex(Uri uri) {
+  final path = uri.path;
+  if (path == '/') return 0;
+  if (path == '/shop') return 1;
+  if (path == '/wishlist') return 2;
+  if (path.startsWith('/orders')) return 3;
+  if (path == '/profile') return 4;
+  return -1;
+}
+
+/// Which sidebar "Shop" / "My Ikiguzi" link the current location belongs to, or -1.
 int _activeIndex(Uri uri) {
   final path = uri.path;
   if (path == '/') return 0;
@@ -106,7 +118,7 @@ class _MarketplaceShellState extends ConsumerState<MarketplaceShell> with Single
                 Expanded(child: widget.child),
               ],
             ),
-            bottomNavigationBar: keyboard ? null : MarketBottomBar(activeIndex: _activeIndex(widget.uri)),
+            bottomNavigationBar: keyboard ? null : MarketBottomBar(activeIndex: _barIndex(widget.uri)),
           ),
           _SidebarLayer(controller: _drawer, location: widget.uri, onClose: _close),
         ],
@@ -366,47 +378,54 @@ String _here(BuildContext context) {
 
 // ─── Bottom navigation ───────────────────────────────────────────────────────
 
-/// A floating dark pill (the reference design): icons only, the active
-/// destination sits in a teal circle. Labels live in the tooltip and the
-/// semantics tree, so screen readers still announce each destination.
+/// The bottom bar from the reference design: a full-width surface with rounded
+/// top corners, five items with the icon over its label, the active one drawn
+/// with a solid icon and an accent-coloured label. Every colour is read from
+/// the theme palette, so light and dark mode both follow the app.
 class MarketBottomBar extends StatelessWidget {
   const MarketBottomBar({super.key, required this.activeIndex});
   final int activeIndex;
 
   @override
   Widget build(BuildContext context) {
+    final mv = context.mv;
     final dark = context.isDarkMode;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 6, 22, 12),
-        child: Container(
-          height: 64,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          decoration: BoxDecoration(
-            // The app's own dark-mode surface (not black), outlined in dark mode so it still lifts off the page.
-            color: MvColors.darkSurface2,
-            borderRadius: BorderRadius.circular(32),
-            border: dark ? Border.all(color: MvColors.darkBorder) : null,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: dark ? .5 : .22),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
+    // The bar has a fixed height: cap the system text scale so labels never overflow it.
+    final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: scaler),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: mv.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(top: BorderSide(color: mv.border)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: dark ? .45 : .08),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 68,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Row(
+                children: [
+                  for (var i = 0; i < _destinations.length; i++)
+                    Expanded(
+                      child: _BarItem(
+                        dest: _destinations[i],
+                        active: i == activeIndex,
+                        onTap: () => context.go(_destinations[i].location),
+                      ),
+                    ),
+                ],
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              for (var i = 0; i < _destinations.length; i++)
-                Expanded(
-                  child: _BarItem(
-                    dest: _destinations[i],
-                    active: i == activeIndex,
-                    onTap: () => context.go(_destinations[i].location),
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -426,6 +445,10 @@ class _BarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mv = context.mv;
+    // Active: the brand teal (lighter in dark mode, from the palette).
+    // Inactive: the muted text colour, so the two states read apart.
+    final color = active ? mv.accent : mv.textMuted;
     return Semantics(
       button: true,
       selected: active,
@@ -434,36 +457,39 @@ class _BarItem extends StatelessWidget {
       child: Tooltip(
         message: dest.label,
         child: Pressable(
-          scale: .9,
+          scale: .94,
           child: InkResponse(
             onTap: onTap,
-            radius: 28,
-            child: Center(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                width: 46,
-                height: 46,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: active ? MvColors.brandOnDark : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: AnimatedScale(
+            radius: 34,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
                   scale: active ? 1.06 : 1,
                   duration: Motion.quick,
                   curve: Motion.spring,
                   child: MvIcon(
-                    dest.icon,
-                    size: 22,
-                    color:
-                        active
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: .62),
+                    // Solid house for the active Home, as in the reference.
+                    active && dest.icon == 'home' ? 'home-solid' : dest.icon,
+                    size: 24,
+                    color: color,
+                    fill: active && (dest.icon == 'home' || dest.icon == 'heart') ? color : null,
                     strokeWidth: active ? 1.7 : 1.5,
                   ),
                 ),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  dest.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.1,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                    color: color,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
