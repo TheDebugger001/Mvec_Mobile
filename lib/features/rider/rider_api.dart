@@ -63,6 +63,9 @@ class DeliveryJob {
     required this.items,
     required this.offerExpiresAt,
     required this.deliveredAt,
+    this.ready = true,
+    this.waitingForSeller = false,
+    this.progress = const [],
   });
 
   final String id;
@@ -81,6 +84,14 @@ class DeliveryJob {
   final List<String> items;
   final DateTime? offerExpiresAt;
   final DateTime? deliveredAt;
+
+  /// Offered when the buyer pays: false while the seller is still preparing it
+  /// (collecting waits for ready; the rider gets a message when it is).
+  final bool ready;
+  final bool waitingForSeller;
+
+  /// From order placed to delivered, as the server tells it.
+  final List<ParcelStep> progress;
 
   factory DeliveryJob.fromJson(Map<String, dynamic> d) {
     final customer = asMap(d['customer']);
@@ -101,8 +112,23 @@ class DeliveryJob {
       items: [for (final i in asMaps(d['items'])) '${numOf(i['quantity']).toInt()} × ${strOf(i['name'])}'],
       offerExpiresAt: parseDate(d['offerExpiresAt']),
       deliveredAt: parseDate(d['deliveredAt']),
+      ready: d['ready'] != false,
+      waitingForSeller: d['waitingForSeller'] == true,
+      progress: [for (final p in asMaps(d['progress'])) ParcelStep.fromJson(p)],
     );
   }
+}
+
+/// One step of a parcel's story (order placed … delivered).
+class ParcelStep {
+  const ParcelStep({required this.key, required this.label, required this.done, this.at});
+  final String key;
+  final String label;
+  final bool done;
+  final DateTime? at;
+
+  factory ParcelStep.fromJson(Map<String, dynamic> p) =>
+      ParcelStep(key: strOf(p['key']), label: strOf(p['label']), done: p['done'] == true, at: parseDate(p['at']));
 }
 
 class RiderStats {
@@ -180,6 +206,9 @@ class RiderApi {
       DeliveryJob.fromJson(asMap(asMap(await _api.post('/rider/deliveries/$id/accept'))['delivery']));
 
   static Future<void> decline(String id) async => _api.post('/rider/deliveries/$id/reject');
+
+  /// Before pickup: give the parcel back to other riders.
+  static Future<void> handBack(String id) async => _api.post('/rider/deliveries/$id/release');
 
   static Future<DeliveryJob> step(String id, String status) async =>
       DeliveryJob.fromJson(asMap(asMap(await _api.patch('/rider/deliveries/$id/status', body: {'status': status}))['delivery']));

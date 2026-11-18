@@ -75,6 +75,11 @@ class RiderBoardNotifier extends AsyncNotifier<RiderBoard> {
     state = AsyncData(state.requireValue.copyWith(offers: state.requireValue.offers.where((o) => o.id != id).toList()));
   }
 
+  Future<void> handBack(String id) async {
+    await RiderApi.handBack(id);
+    await refresh();
+  }
+
   Future<void> step(String id, String status) async {
     final job = await RiderApi.step(id, status);
     state = AsyncData(state.requireValue.copyWith(active: job));

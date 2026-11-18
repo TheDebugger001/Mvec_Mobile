@@ -203,6 +203,7 @@ class _OfferCardState extends ConsumerState<_OfferCard> {
       ].join(' · '),
       amount: money(o.fee),
       lines: [
+        if (o.waitingForSeller) 'The seller is still preparing it',
         if (o.items.isNotEmpty) o.items.join(', '),
         if (left != null && left > 0) 'Answer within ${left}s',
       ],

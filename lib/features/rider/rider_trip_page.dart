@@ -43,7 +43,10 @@ class RiderTripPage extends ConsumerWidget {
       subtitle: 'You earn ${money(job.fee)} for this parcel (${job.distanceKm} km).',
       onRefresh: () => ref.read(riderBoardProvider.notifier).refresh(),
       children: [
+        if (job.waitingForSeller)
+          const Notice(info: true, text: "The seller is still preparing this parcel. Head over if you like: you'll get a message the moment it's ready to collect."),
         RiderNavigation(key: ValueKey(job.id), deliveryId: job.id),
+        if (job.progress.isNotEmpty) Section(title: 'Order progress', children: [ParcelProgress(steps: job.progress)]),
         Section(
           title: atStore ? 'Pick up here' : 'Picked up from',
           children: [
@@ -76,6 +79,10 @@ class RiderTripPage extends ConsumerWidget {
           const InfoBox(title: "The buyer's code", text: 'Ask for the 6-digit code on their order only when the parcel is in their hands. Five wrong codes lock the delivery for Ikiguzi support.'),
           GradientButton(label: "Enter the buyer's code", icon: Icons.pin_outlined, expand: true, onPressed: () => _confirm(context, ref, job)),
         ],
+        if (atStore) ...[
+          const SizedBox(height: 8),
+          OutlineBtn(label: 'Hand it back', icon: Icons.undo_rounded, expand: true, onPressed: () => _handBack(context, ref, job)),
+        ],
       ],
     );
   }
@@ -86,6 +93,25 @@ class RiderTripPage extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(e))));
     }
+  }
+
+  static Future<void> _handBack(BuildContext context, WidgetRef ref, DeliveryJob job) async {
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Hand this parcel back?'),
+        content: const Text("Another rider will get it, and it won't be offered to you again."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep it')),
+          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Hand it back')),
+        ],
+      ),
+    );
+    if (sure != true || !context.mounted) return;
+    await _run(context, () async {
+      await ref.read(riderBoardProvider.notifier).handBack(job.id);
+      if (context.mounted) context.go('/delivery');
+    });
   }
 
   static Future<void> _confirm(BuildContext context, WidgetRef ref, DeliveryJob job) async {
@@ -181,4 +207,51 @@ class _CodeSheetState extends ConsumerState<_CodeSheet> {
           GradientButton(label: 'Confirm delivery', expand: true, loading: _busy, onPressed: _busy ? null : _submit),
         ]),
       );
+}
+
+/// The parcel's story as a vertical timeline: done steps in the brand colour.
+class ParcelProgress extends StatelessWidget {
+  const ParcelProgress({super.key, required this.steps});
+  final List<ParcelStep> steps;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final brand = theme.colorScheme.primary;
+    final muted = theme.colorScheme.outline;
+    String time(DateTime d) => '${d.toLocal().hour.toString().padLeft(2, '0')}:${d.toLocal().minute.toString().padLeft(2, '0')}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, s) in steps.indexed)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 22,
+                  child: Column(children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: s.done ? brand : null, border: Border.all(color: s.done ? brand : muted, width: 2)),
+                    ),
+                    if (i < steps.length - 1) Expanded(child: Container(width: 2, color: (s.done ? brand : muted).withValues(alpha: 0.35))),
+                  ]),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(s.label, style: TextStyle(fontWeight: s.done ? FontWeight.w600 : FontWeight.w400, color: s.done ? null : muted)),
+                  ),
+                ),
+                if (s.done && s.at != null) Text(time(s.at!), style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }
