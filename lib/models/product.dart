@@ -22,6 +22,12 @@ class Product {
     required this.status,
     required this.slug,
     required this.attributes,
+    this.deal,
+    this.variants = const [],
+    this.variantOptions = const [],
+    this.sellerBadges = const [],
+    this.productId = '',
+    this.variantLabel = '',
   });
 
   final String id;
@@ -48,7 +54,22 @@ class Product {
   final String slug;
   final Map<String, String> attributes;
 
-  bool get soldOut => stock <= 0;
+  /// The flash deal as buyers see it now (null: none on or coming).
+  final Deal? deal;
+
+  /// Sizes/colours, each with its own stock and price; buyers choose one.
+  final List<ProductVariant> variants;
+  final List<({String name, List<String> values})> variantOptions;
+
+  /// Earned seller badges: [(code, label, hint)].
+  final List<({String code, String label, String hint})> sellerBadges;
+
+  /// For one size/colour as a cart line: the product's own id and "Red / M".
+  final String productId;
+  final String variantLabel;
+
+  bool get hasVariants => variants.isNotEmpty;
+  bool get soldOut => hasVariants ? variants.every((v) => v.stock <= 0) : stock <= 0;
   bool get onSale => oldPrice > price;
   int get percentOff => onSale ? ((1 - price / oldPrice) * 100).round() : 0;
 
@@ -56,7 +77,9 @@ class Product {
     final vendor = p['vendor'] is Map ? asMap(p['vendor']) : <String, dynamic>{};
     final category = p['category'] is Map ? asMap(p['category']) : <String, dynamic>{};
     final rawPrice = numOf(p['price']);
-    final discount = numOf(p['discountPrice']);
+    // A live flash deal wins over a regular discount.
+    final deal = p['deal'] is Map ? Deal.fromJson(asMap(p['deal'])) : null;
+    final discount = deal != null && deal.live ? deal.price : numOf(p['discountPrice']);
     final active = discount > 0 && discount < rawPrice ? discount : rawPrice;
     final media = asMap(p['media']);
     final attrs = asMap(p['attributes']);
@@ -100,8 +123,44 @@ class Product {
         'Capacity': attr('capacity'),
         'Model': attr('model'),
       },
+      deal: deal,
+      variants: [for (final v in asMaps(p['variants'])) ProductVariant.fromJson(v)],
+      variantOptions: [
+        for (final o in asMaps(p['variantOptions']))
+          (name: strOf(o['name']), values: [for (final v in (o['values'] as List? ?? const [])) '$v']),
+      ],
+      sellerBadges: [
+        for (final b in asMaps(p['sellerBadges'])) (code: strOf(b['code']), label: strOf(b['label']), hint: strOf(b['hint'])),
+      ],
     );
   }
+
+  /// One size/colour of this product as something to put in the cart.
+  Product forVariant(ProductVariant v) => Product(
+        id: v.key,
+        publicId: publicId,
+        name: name,
+        category: category,
+        brand: brand,
+        vendor: vendor,
+        vendorId: vendorId,
+        price: v.price,
+        oldPrice: v.ownPrice == null ? oldPrice : 0,
+        rating: rating,
+        reviews: reviews,
+        stock: v.stock,
+        sku: v.sku.isEmpty ? sku : v.sku,
+        image: v.image.isEmpty ? image : v.image,
+        gallery: gallery,
+        description: description,
+        status: status,
+        slug: slug,
+        attributes: attributes,
+        deal: deal,
+        sellerBadges: sellerBadges,
+        productId: id,
+        variantLabel: v.label,
+      );
 
   /// Fields the cart/wishlist need from a product.
   Map<String, dynamic> toSnapshot() => {
@@ -113,7 +172,59 @@ class Product {
         'sku': sku,
         'vendor': vendor,
         'vendorId': vendorId,
+        if (variantLabel.isNotEmpty) 'variantLabel': variantLabel,
+        if (productId.isNotEmpty) 'productId': productId,
       };
+}
+
+/// A flash deal: a lower price for a while, maybe for a limited number of units.
+class Deal {
+  const Deal({required this.price, required this.startsAt, required this.endsAt, required this.live, required this.left, required this.percentOff});
+  final num price;
+  final DateTime? startsAt;
+  final DateTime? endsAt;
+  final bool live;
+
+  /// Units left at the deal price; null when there's no limit.
+  final int? left;
+  final int percentOff;
+
+  factory Deal.fromJson(Map<String, dynamic> d) => Deal(
+        price: numOf(d['price']),
+        startsAt: parseDate(d['startsAt']),
+        endsAt: parseDate(d['endsAt']),
+        live: d['live'] == true,
+        left: d['left'] == null ? null : numOf(d['left']).toInt(),
+        percentOff: numOf(d['percentOff']).toInt(),
+      );
+}
+
+/// One size/colour of a product.
+class ProductVariant {
+  const ProductVariant({required this.id, required this.key, required this.label, required this.options, required this.price, required this.ownPrice, required this.stock, required this.image, required this.sku});
+  final String id;
+
+  /// "productId~variantId": what the cart and checkout take.
+  final String key;
+  final String label;
+  final Map<String, String> options;
+  final num price;
+  final num? ownPrice;
+  final int stock;
+  final String image;
+  final String sku;
+
+  factory ProductVariant.fromJson(Map<String, dynamic> v) => ProductVariant(
+        id: strOf(v['id']),
+        key: strOf(v['key']),
+        label: strOf(v['label']),
+        options: {for (final e in asMap(v['options']).entries) e.key: '${e.value}'},
+        price: numOf(v['price']),
+        ownPrice: v['ownPrice'] == null ? null : numOf(v['ownPrice']),
+        stock: numOf(v['stockQuantity']).toInt(),
+        image: resolveImageUrl(v['image']),
+        sku: strOf(v['sku']),
+      );
 }
 
 /// A store as listed in `/vendors`.

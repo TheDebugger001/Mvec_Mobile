@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../returns/returns_pages.dart';
 import '../../api/catalog_api.dart';
 import '../../api/commerce_api.dart';
 import '../../core/api_client.dart';
@@ -355,6 +356,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                 ],
               ),
             ),
+          if (delivered) ReturnRequestSection(orderId: widget.id),
           if (delivered && reviewable.isNotEmpty)
             DataCard(
               child: Column(

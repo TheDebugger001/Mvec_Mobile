@@ -3,6 +3,8 @@
          profile manifests already ask for this, so without it here only release
          builds (the APK installed on real phones) lose all network access. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Push notifications (Android 13+ asks the user once). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <!-- Product photos are picked off the device, so the app needs to be able to

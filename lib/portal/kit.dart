@@ -902,15 +902,16 @@ Future<bool> runAction(BuildContext context, Future<dynamic> Function() action, 
 
 /// Picks images from the gallery and uploads them (`uploadsApi.uploadImages`).
 /// Returns the uploaded URLs (empty when the person cancelled).
-Future<List<String>> pickAndUploadImages({bool multiple = true}) async {
+/// Buyers' photos (a return's proof) go to `/uploads/photos` with `field: 'photos'`.
+Future<List<String>> pickAndUploadImages({bool multiple = true, String path = '/uploads/images', String field = 'images'}) async {
   final picker = ImagePicker();
   final files = multiple ? await picker.pickMultiImage(maxWidth: 1600, imageQuality: 85) : [if (await picker.pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85) case final f?) f];
   if (files.isEmpty) return const [];
   final form = FormData();
   for (final f in files) {
-    form.files.add(MapEntry('images', await imagePart(f)));
+    form.files.add(MapEntry(field, await imagePart(f)));
   }
-  final res = asMap(await Api.instance.upload('/uploads/images', form));
+  final res = asMap(await Api.instance.upload(path, form));
   return [for (final u in (res['urls'] is List ? res['urls'] as List : const [])) '$u'];
 }
 

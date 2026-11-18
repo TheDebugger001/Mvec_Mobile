@@ -15,6 +15,7 @@ import '../../widgets/motion.dart';
 import '../../widgets/mv_icon.dart';
 import '../common/page_frame.dart';
 import 'product_card.dart';
+import 'product_extras.dart';
 
 /// `/product/:id` — gallery, price, stock, vendor, reviews, add to cart, buy
 /// now, wishlist and compare (`pages/ProductDetails.jsx`).
@@ -37,6 +38,8 @@ class _ProductPageState extends ConsumerState<ProductPage> {
   bool _adding = false;
   // True for a moment after the cart confirms an add: the button shows a check.
   bool _added = false;
+  // The size/colour chosen, for products that have them.
+  ProductVariant? _variant;
 
   @override
   void initState() {
@@ -89,7 +92,11 @@ class _ProductPageState extends ConsumerState<ProductPage> {
     final user = ref.watch(authProvider.select((a) => a.user));
     final compare = ref.watch(compareProvider);
     final comparing = compare.contains(p.id);
-    final stock = p.stock;
+    // A product with sizes/colours is bought as one of them: price and stock follow the choice.
+    final line = _variant != null ? p.forVariant(_variant!) : p;
+    final needsChoice = p.hasVariants && _variant == null;
+    final soldOut = p.soldOut || (_variant != null && _variant!.stock <= 0);
+    final stock = line.stock;
     final maxQty = stock.clamp(1, 100);
     final images = {p.image, ...p.gallery}.where((e) => e.isNotEmpty).toList();
     final attrs = p.attributes.entries.where((e) => e.value.isNotEmpty).toList();
@@ -108,7 +115,7 @@ class _ProductPageState extends ConsumerState<ProductPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Total price', style: TextStyle(color: mv.textMuted, fontSize: 11)),
-                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(money(p.price * _qty), style: context.mvH1.copyWith(fontSize: 16))),
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(money(line.price * _qty), style: context.mvH1.copyWith(fontSize: 16))),
               ],
             ),
           ),
@@ -117,13 +124,13 @@ class _ProductPageState extends ConsumerState<ProductPage> {
             flex: 4,
             child: GradientButton(
               label: _added ? 'Added' : (_adding ? 'Adding…' : 'Add to cart'),
-              onPressed: p.soldOut ? null : _addToCart,
+              onPressed: soldOut ? null : () => needsChoice ? _askChoice(p) : _addToCart(line),
               loading: _adding,
               success: _added,
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(flex: 3, child: SolidButton(label: 'Buy now', onPressed: p.soldOut ? null : () => context.push('/checkout?product=${Uri.encodeQueryComponent(p.id)}&qty=$_qty'))),
+          Expanded(flex: 3, child: SolidButton(label: 'Buy now', onPressed: soldOut ? null : () => needsChoice ? _askChoice(p) : context.push('/checkout?product=${Uri.encodeQueryComponent(line.id)}&qty=$_qty'))),
         ],
       ),
       body: ListView(
@@ -208,13 +215,29 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                   spacing: 10,
                   runSpacing: 4,
                   children: [
-                    Text(money(p.price), style: context.mvH1.copyWith(fontSize: 24, color: mv.accentDeep, fontWeight: FontWeight.w800)),
-                    if (p.onSale) Text(money(p.oldPrice), style: TextStyle(color: mv.textMuted, decoration: TextDecoration.lineThrough, fontSize: 13.5)),
-                    if (p.onSale) DiscountChip(p.percentOff),
+                    Text(money(line.price), style: context.mvH1.copyWith(fontSize: 24, color: mv.accentDeep, fontWeight: FontWeight.w800)),
+                    if (line.onSale) Text(money(line.oldPrice), style: TextStyle(color: mv.textMuted, decoration: TextDecoration.lineThrough, fontSize: 13.5)),
+                    if (line.onSale) DiscountChip(line.percentOff),
                   ],
                 ),
+                if (p.deal != null) DealTag(deal: p.deal!),
+                if (p.hasVariants)
+                  VariantPicker(
+                    product: p,
+                    onChanged: (v) => setState(() {
+                      _variant = v;
+                      _qty = 1;
+                      _feedback = null;
+                      if (v != null && v.image.isNotEmpty) _image = v.image;
+                    }),
+                  ),
                 const SizedBox(height: 8),
-                _StockPill(soldOut: p.soldOut, low: stock <= 5, stock: stock),
+                if (needsChoice && !soldOut)
+                  Text('Choose ${p.variantOptions.map((o) => o.name.toLowerCase()).join(' and ')}', style: TextStyle(color: mv.textMuted, fontSize: 12.5))
+                else
+                  _StockPill(soldOut: soldOut, low: stock <= 5, stock: stock),
+                const SizedBox(height: 10),
+                StockAlertButtons(productId: p.id, soldOut: soldOut, signedIn: user != null, onSignIn: () => context.push('/login')),
                 if (p.description.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   Text('Product Details', style: context.mvH1.copyWith(fontSize: 16, fontWeight: FontWeight.w800)),
@@ -229,7 +252,7 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                     children: [
                       Avatar(name: p.vendor, radius: 20),
                       const SizedBox(width: 12),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sold by', style: TextStyle(color: mv.textMuted, fontSize: 11)), Text(p.vendor, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 14))])),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sold by', style: TextStyle(color: mv.textMuted, fontSize: 11)), Text(p.vendor, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 14)), SellerBadgeRow(badges: p.sellerBadges)])),
                     ],
                   ),
                 ),
@@ -263,7 +286,7 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    QtyStepper(value: _qty, max: maxQty, onChanged: p.soldOut ? (_) {} : (v) => setState(() => _qty = v)),
+                    QtyStepper(value: _qty, max: maxQty, onChanged: soldOut ? (_) {} : (v) => setState(() => _qty = v)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: OutlineBtn(
@@ -286,7 +309,7 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final t in const ['Mobile money or card', 'Payment held until delivery', 'Delivery code at your door'])
+                      for (final t in const ['Mobile money or card', 'Payment held until delivery', 'Delivery code at your door', 'Returns after delivery'])
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 3),
                           child: Row(children: [const MvIcon('check', size: 15, color: MvColors.successText, strokeWidth: 2.2), const SizedBox(width: 8), Expanded(child: Text(t, style: TextStyle(color: mv.text, fontSize: 12.5)))]),
@@ -309,9 +332,11 @@ class _ProductPageState extends ConsumerState<ProductPage> {
     );
   }
 
-  Future<void> _addToCart() async {
+  void _askChoice(Product p) => setState(() => _feedback = (ok: false, message: 'Choose ${p.variantOptions.map((o) => o.name.toLowerCase()).join(' and ')} first.'));
+
+  Future<void> _addToCart(Product line) async {
     setState(() => _adding = true);
-    final r = await ref.read(cartProvider.notifier).add(_p!, _qty);
+    final r = await ref.read(cartProvider.notifier).add(line, _qty);
     if (mounted) {
       setState(() {
         _adding = false;

@@ -1,3 +1,4 @@
+import '../core/push.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,6 +51,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final me = await AuthApi.me();
       state = AuthState(user: me, restoring: false);
+      PushService.instance.register();
     } catch (e) {
       // A 401 already cleared the token; a network failure keeps it so the next
       // launch can try again, but this launch starts signed out.
@@ -61,6 +63,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> _start(AuthSession s) async {
     await TokenStore.instance.write(s.token);
     state = AuthState(user: s.user, restoring: false);
+    PushService.instance.register();
   }
 
   Future<AppUser> login(String identity, String password) async {
@@ -98,6 +101,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    await PushService.instance.unregister();
     await TokenStore.instance.clear();
     state = const AuthState(restoring: false);
   }

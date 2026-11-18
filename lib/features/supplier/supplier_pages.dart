@@ -1,3 +1,4 @@
+import '../seller/seller_documents.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -866,6 +867,7 @@ class _SupplierSettingsPageState extends ConsumerState<SupplierSettingsPage> {
               children: [
                 if (_status['verificationStatus'] == 'REJECTED')
                   Notice(text: 'Ikiguzi asked for changes: ${strOf(_status['verificationNote'], 'Check your details.')} Saving sends your profile back for review.'),
+                SellerDocumentsSection(documents: asMaps(p['documents']), profilePath: '/suppliers/me/profile', onSaved: _data.reload),
                 DataCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

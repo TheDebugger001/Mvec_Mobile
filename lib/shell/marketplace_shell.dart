@@ -720,6 +720,7 @@ class _MarketplaceDrawerState extends ConsumerState<MarketplaceDrawer> {
                       link('Notifications', 'bell', '/buyer/notifications', selected: path == '/buyer/notifications', badge: unread),
                       link('Messages', 'users', '/buyer/messages', selected: path == '/buyer/messages'),
                       link('Refunds', 'wallet', '/buyer/refunds', selected: path == '/buyer/refunds'),
+                      link('Returns', 'box', '/account/returns', selected: path == '/account/returns'),
                       if (user.role == 'buyer') link('Subscription', 'wallet', '/buyer/subscription', selected: path == '/buyer/subscription'),
                       link('My account', 'user', '/profile', selected: path == '/profile'),
                     ],

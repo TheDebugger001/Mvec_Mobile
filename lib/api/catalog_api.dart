@@ -20,6 +20,20 @@ class CatalogApi {
     return Product.fromJson(asMap(res['product']));
   }
 
+  /// Flash deals on now, and those starting within a day.
+  static Future<({List<Product> live, List<Product> upcoming})> deals() async {
+    final res = asMap(await _api.get('/products/deals'));
+    return (live: asMaps(res['live']).map(Product.fromJson).toList(), upcoming: asMaps(res['upcoming']).map(Product.fromJson).toList());
+  }
+
+  /// Which alerts the buyer has on a product: {BACK_IN_STOCK: bool, PRICE_DROP: bool}.
+  static Future<Map<String, bool>> alertsOn(String id) async =>
+      {for (final e in asMap(await _api.get('/products/$id/alerts')).entries) e.key: e.value == true};
+
+  /// Turns an alert on (returns what to tell the buyer).
+  static Future<String> watch(String id, String kind) async => strOf(asMap(await _api.post('/products/$id/alerts', body: {'kind': kind}))['message']);
+  static Future<void> unwatch(String id, String kind) async => _api.delete('/products/$id/alerts/$kind');
+
   /// Personalised picks; `personalized` is true when based on past orders.
   static Future<({List<Product> products, bool personalized})> recommendations({int limit = 8}) async {
     final res = asMap(await _api.get('/products/recommendations', query: {'limit': limit}));

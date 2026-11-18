@@ -1,3 +1,4 @@
+import 'seller_documents.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -141,6 +142,7 @@ class _SellerSettingsPageState extends ConsumerState<SellerSettingsPage> {
                     KV('Rating', '${numOf(v['ratingAvg']).toStringAsFixed(1)} / 5'),
                   ],
                 ),
+                SellerDocumentsSection(documents: asMaps(v['documents']), profilePath: '/vendors/me/profile', onSaved: _data.reload),
                 if (defaultPercent != null && cats.any((c) => c['percent'] != defaultPercent))
                   Section(
                     title: 'Your Ikiguzi commission by category',

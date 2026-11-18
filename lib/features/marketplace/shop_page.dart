@@ -1,3 +1,4 @@
+import 'flash_deals_strip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -115,6 +116,8 @@ class ShopPage extends ConsumerWidget {
                   ),
                 ),
               ),
+              // Flash deals with their countdowns (live and starting soon).
+              if (dealsOnly) const SliverToBoxAdapter(child: FlashDealsStrip()),
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: 40,

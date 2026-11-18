@@ -135,7 +135,7 @@ class _CartTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => context.push('/product/${i.id}'),
+            onTap: () => context.push('/product/${i.productRef}'),
             child: Container(
               width: 84,
               height: 84,
@@ -154,10 +154,10 @@ class _CartTile extends StatelessWidget {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => context.push('/product/${i.id}'),
+                        onTap: () => context.push('/product/${i.productRef}'),
                         child: Padding(
                           padding: const EdgeInsets.only(top: 2),
-                          child: Text(i.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 13.5, height: 1.25)),
+                          child: Text(i.variantLabel.isEmpty ? i.name : '${i.name} · ${i.variantLabel}', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 13.5, height: 1.25)),
                         ),
                       ),
                     ),

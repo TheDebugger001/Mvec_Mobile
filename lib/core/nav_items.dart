@@ -45,6 +45,7 @@ const adminNavGroups = <NavGroup>[
     NavItem('/admin/orders', 'Orders', 'cart'),
     NavItem('/admin/deliveries', 'Deliveries', 'box'),
     NavItem('/admin/disputes', 'Disputes', 'bell'),
+    NavItem('/admin/returns', 'Returns', 'receipt'),
   ]),
   NavGroup('Money', [
     NavItem('/admin/payments', 'Payments', 'wallet'),
@@ -94,6 +95,7 @@ const sellerNavGroups = <NavGroup>[
     NavItem('/vendor/customers', 'Customers', 'users'),
     NavItem('/vendor/delivery', 'Delivery & Settlement', 'box'),
     NavItem('/vendor/refunds', 'Refunds', 'wallet'),
+    NavItem('/vendor/returns', 'Returns', 'receipt'),
   ]),
   NavGroup('Finance', [
     NavItem('/vendor/payouts', 'Payouts', 'wallet'),
@@ -126,6 +128,7 @@ const supplierNavGroups = <NavGroup>[
     NavItem('/supplier/products', 'Wholesale Products', 'box'),
     NavItem('/supplier/inventory', 'Inventory', 'grid'),
     NavItem('/supplier/orders', 'Orders', 'cart'),
+    NavItem('/supplier/returns', 'Returns', 'receipt'),
     NavItem('/supplier/quotes', 'Quote Requests', 'receipt'),
   ]),
   NavGroup('Finance & Insights', [
@@ -211,6 +214,7 @@ const _vendorStaffPermission = <String, String>{
   '/vendor/quotes': 'canManageOrders',
   '/vendor/customers': 'canManageOrders',
   '/vendor/refunds': 'canManageOrders',
+  '/vendor/returns': 'canManageOrders',
   '/vendor/delivery': 'canManageOrders',
   '/vendor/payouts': 'canManagePayouts',
   '/vendor/transactions': 'canManagePayouts',

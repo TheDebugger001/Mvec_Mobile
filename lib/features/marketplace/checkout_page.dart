@@ -101,10 +101,15 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   Future<void> _loadProduct() async {
     setState(() => _loadingProduct = true);
     try {
-      final p = await CatalogApi.product(widget.productId!);
+      // "productId~variantId" buys one size/colour.
+      final key = widget.productId!.split('~');
+      final product = await CatalogApi.product(key.first);
+      final variant = key.length > 1 ? product.variants.where((v) => v.id == key[1]).firstOrNull : null;
+      if (key.length > 1 && variant == null) throw ApiException('gone');
+      final p = variant == null ? product : product.forVariant(variant);
       final qty = widget.qty.clamp(1, p.stock <= 0 ? 1 : p.stock);
       if (mounted) {
-        setState(() => _buyNow = _Line(id: p.id, name: p.name, image: p.image, vendor: p.vendor, price: p.price, qty: qty, stock: p.stock, status: p.status));
+        setState(() => _buyNow = _Line(id: p.id, name: p.variantLabel.isEmpty ? p.name : '${p.name} (${p.variantLabel})', image: p.image, vendor: p.vendor, price: p.price, qty: qty, stock: p.stock, status: p.status));
       }
     } catch (_) {
       if (mounted) setState(() => _productError = 'This product is no longer available.');
@@ -118,7 +123,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     if (widget.productId != null) return _buyNow == null ? const [] : [_buyNow!];
     return [
       for (final l in ref.read(cartProvider).lines)
-        _Line(id: l.id, name: l.name, image: l.image, vendor: l.vendor, price: l.price, qty: l.qty, stock: l.stock < 0 ? 999999 : l.stock, status: l.status),
+        _Line(id: l.id, name: l.variantLabel.isEmpty ? l.name : '${l.name} (${l.variantLabel})', image: l.image, vendor: l.vendor, price: l.price, qty: l.qty, stock: l.stock < 0 ? 999999 : l.stock, status: l.status),
     ];
   }
 

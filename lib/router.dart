@@ -1,8 +1,10 @@
+import 'core/push.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/nav_items.dart';
+import 'features/returns/returns_pages.dart';
 import 'features/auth/forgot_password_page.dart';
 import 'features/auth/login_page.dart';
 import 'features/auth/signup_page.dart';
@@ -77,7 +79,7 @@ bool _needsLogin(String path) =>
     path == '/profile' ||
     path.startsWith('/orders') ||
     path.startsWith('/payment') ||
-    const ['/buyer/refunds', '/buyer/messages', '/buyer/notifications', '/buyer/subscription'].contains(path) ||
+    const ['/buyer/refunds', '/buyer/messages', '/buyer/notifications', '/buyer/subscription', '/account/returns'].contains(path) ||
     path.startsWith('/vendor') ||
     path.startsWith('/supplier') ||
     path.startsWith('/admin') ||
@@ -94,7 +96,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     if (prev?.user?.id != next.user?.id || prev?.restoring != next.restoring) gate.value++;
   });
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/',
     errorBuilder: (context, state) {
       final path = state.uri.path;
@@ -189,6 +191,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/buyer/support', builder: (_, __) => const HelpPage()),
           GoRoute(path: '/buyer/compare', builder: (_, __) => const ComparePage()),
           GoRoute(path: '/buyer/refunds', builder: (_, __) => const RefundsPage()),
+          GoRoute(path: '/account/returns', builder: (_, __) => const MyReturnsPage()),
           GoRoute(path: '/buyer/messages', builder: (_, __) => const MessagesPage()),
           GoRoute(path: '/buyer/notifications', builder: (_, __) => const NotificationsPage()),
           GoRoute(path: '/buyer/subscription', builder: (_, __) => const SubscriptionPage()),
@@ -196,6 +199,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  // A tapped push notification opens its page.
+  final pushLinks = PushService.instance.links.stream.listen(router.go);
+  ref.onDispose(pushLinks.cancel);
+  return router;
 });
 
 /// Seller dashboard pages, each behind the staff permission for its section.
@@ -225,6 +232,7 @@ final _sellerRoutes = <GoRoute>[
   _seller('/vendor/suppliers', (_) => const FindSuppliersPage()),
   _seller('/vendor/affiliates', (_) => const SellerAffiliateProgramPage()),
   _seller('/vendor/delivery', (_) => const DeliveryTrackingPage(role: 'vendor')),
+  _seller('/vendor/returns', (_) => const ReturnsBoardPage()),
   _seller('/vendor/refunds', (s) => DisputesListPage(role: 'vendor', openCase: s.uri.queryParameters['case'])),
   GoRoute(path: '/vendor/support', builder: (_, __) => const SupportPage(role: 'vendor')),
   GoRoute(path: '/vendor/notifications', builder: (_, __) => const NotificationsPage()),
@@ -237,6 +245,7 @@ final _supplierRoutes = <GoRoute>[
   GoRoute(path: '/supplier/products', builder: (_, __) => const SupplierProductsPage()),
   GoRoute(path: '/supplier/inventory', builder: (_, __) => const SupplierInventoryPage()),
   GoRoute(path: '/supplier/orders', builder: (_, __) => const WholesaleOrdersPage(supplier: true)),
+  GoRoute(path: '/supplier/returns', builder: (_, __) => const ReturnsBoardPage()),
   GoRoute(path: '/supplier/delivery', redirect: (_, __) => '/supplier/orders'),
   GoRoute(path: '/supplier/supply-requests', redirect: (_, __) => '/supplier/quotes'),
   GoRoute(path: '/supplier/quotes', builder: (_, __) => const SupplierQuotesPage()),
@@ -290,6 +299,7 @@ final _adminRoutes = <GoRoute>[
   GoRoute(path: '/admin/affiliates', builder: (_, __) => const AdminAffiliatesPage()),
   GoRoute(path: '/admin/riders', builder: (_, __) => const AdminRidersPage()),
   GoRoute(path: '/admin/deliveries', builder: (_, __) => const DeliveryTrackingPage(role: 'admin')),
+  GoRoute(path: '/admin/returns', builder: (_, __) => const ReturnsBoardPage(admin: true)),
   GoRoute(path: '/admin/disputes', builder: (_, s) => DisputesListPage(role: 'admin', openCase: s.uri.queryParameters['case'])),
   GoRoute(path: '/admin/payments', builder: (_, s) => AdminPaymentsPage(status: s.uri.queryParameters['status'] ?? '')),
   GoRoute(path: '/admin/vendor-payouts', builder: (_, __) => const AdminVendorPayoutsPage()),

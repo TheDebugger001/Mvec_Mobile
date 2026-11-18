@@ -54,6 +54,8 @@ dependencies:
   url_launcher: ^6.3.1           # Opens the card-payment page and external links
   http_parser: ^4.1.0            # MIME types for multipart image uploads
   share_plus: ^12.0.2            # Shares affiliate links through the phone share sheet
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
 
 dev_dependencies:
   flutter_test:

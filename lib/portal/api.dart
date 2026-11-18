@@ -38,6 +38,11 @@ Map<String, dynamic> productPayload(Map<String, dynamic> f) {
     'lowStockThreshold',
     'status',
     'storeId',
+    // Flash deal (dealPrice null ends it).
+    'dealPrice',
+    'dealStartsAt',
+    'dealEndsAt',
+    'dealQuantity',
   ]) {
     if (f.containsKey(k)) out[k] = f[k];
   }

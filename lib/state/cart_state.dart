@@ -27,9 +27,17 @@ class CartLine {
     required this.sku,
     required this.vendor,
     required this.vendorId,
+    this.variantLabel = '',
+    this.productId = '',
   });
 
+  /// "productId", or "productId~variantId" for one size/colour.
   final String id;
+
+  /// "Red / M" for a size/colour, and the product's own id (for its page).
+  final String variantLabel;
+  final String productId;
+  String get productRef => productId.isEmpty ? id.split('~').first : productId;
   final String name;
   final String image;
   final num price;
@@ -57,9 +65,13 @@ class CartLine {
         sku: sku,
         vendor: vendor,
         vendorId: vendorId,
+        variantLabel: variantLabel,
+        productId: productId,
       );
 
   Map<String, dynamic> toJson() => {
+        'variantLabel': variantLabel,
+        'productId': productId,
         'id': id,
         'name': name,
         'image': image,
@@ -82,6 +94,8 @@ class CartLine {
         sku: strOf(m['sku']),
         vendor: _vendorName(m['vendor']),
         vendorId: strOf(m['vendorId']),
+        variantLabel: strOf(m['variantLabel']),
+        productId: strOf(m['productId']),
       );
 
   static CartLine? fromServer(Map<String, dynamic> item) {
@@ -94,12 +108,15 @@ class CartLine {
     final effective = discount > 0 && discount < price ? discount : price;
     final vendor = p['vendor'];
     return CartLine(
-      id: strOf(p['_id'] ?? p['id']),
+      // The server's line key: "productId~variantId" for a size/colour.
+      id: strOf(item['lineId'] ?? p['_id'] ?? p['id']),
+      productId: strOf(p['_id'] ?? p['id']),
+      variantLabel: strOf(item['variantLabel']),
       name: strOf(p['name'], 'Product'),
-      image: resolveImageUrl(media['mainImage'] ?? p['image']),
+      image: resolveImageUrl(item['image'] ?? media['mainImage'] ?? p['image']),
       price: numOf(item['price']) > 0 ? numOf(item['price']) : effective,
       qty: numOf(item['quantity'], 1).toInt().clamp(1, _maxQty),
-      stock: numOf(p['stockQuantity']).toInt(),
+      stock: item['variantStock'] != null ? numOf(item['variantStock']).toInt() : numOf(p['stockQuantity']).toInt(),
       status: strOf(p['status'], 'ACTIVE'),
       sku: strOf(p['sku']),
       vendor: _vendorName(vendor),
@@ -219,6 +236,7 @@ class CartNotifier extends Notifier<CartState> {
     final id = p.id;
     final amount = qty.clamp(1, _maxQty);
     if (id.isEmpty) return (ok: false, message: 'This product cannot be added right now.');
+    if (p.hasVariants) return (ok: false, message: 'Choose a size or colour first.');
     if (p.stock <= 0) return (ok: false, message: 'This product is out of stock.');
 
     if (!_signedIn) {
@@ -238,6 +256,8 @@ class CartNotifier extends Notifier<CartState> {
         sku: p.sku,
         vendor: p.vendor,
         vendorId: p.vendorId,
+        variantLabel: p.variantLabel,
+        productId: p.productId,
       );
       if (i >= 0) {
         lines[i] = line;

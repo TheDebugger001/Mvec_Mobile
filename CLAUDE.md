@@ -30,6 +30,12 @@ Settings come only from `--dart-define` (`lib/core/config.dart`). Nothing secret
 - A 401 with no token (a wrong password) and any 5xx keep the session.
 - Show the server's message as is.
 
+## Marketplace features
+
+- **Products:** `Product` carries `deal`, `variants`, `variantOptions` and `sellerBadges`. `forVariant()` makes the cart line for one size or colour, with its id as `"productId~variantId"`. The UI bits are in `features/marketplace/product_extras.dart`.
+- **Returns:** `features/returns/returns_pages.dart` covers the order section, `/account/returns`, and `ReturnsBoardPage` for sellers, suppliers and admins.
+- **Push:** `core/push.dart` uses `firebase_messaging` and is off unless the build sets `FIREBASE_API_KEY`, `FIREBASE_APP_ID`, `FIREBASE_SENDER_ID` and `FIREBASE_PROJECT_ID`. It registers after sign-in and unregisters before sign-out. A tap opens the notification's `link`.
+
 ## Riders (`lib/features/rider/`)
 
 This is KitchenLink's delivery-worker app, adapted to Ikiguzi parcels.

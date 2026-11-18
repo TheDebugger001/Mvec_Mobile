@@ -1,3 +1,4 @@
+import 'variant_deal_editor.dart';
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/format.dart';
@@ -64,6 +65,7 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
   bool _saving = false;
   bool _uploading = false;
   String _error = '';
+  late final VariantDealState _vd = VariantDealState(widget.product ?? const <String, dynamic>{});
 
   @override
   void initState() {
@@ -99,6 +101,7 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
     for (final c in _c.values) {
       c.dispose();
     }
+    _vd.dispose();
     super.dispose();
   }
 
@@ -148,7 +151,7 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
   Future<void> _save() async {
     FocusScope.of(context).unfocus();
     setState(() => _error = '');
-    if (_t('name').isEmpty || _categoryId.isEmpty || _t('price').isEmpty || _t('stockQuantity').isEmpty || _gallery.isEmpty) {
+    if (_t('name').isEmpty || _categoryId.isEmpty || _t('price').isEmpty || (_t('stockQuantity').isEmpty && !_vd.hasVariants) || _gallery.isEmpty) {
       setState(() => _error = 'Please complete the required fields and add at least one image.');
       return;
     }
@@ -170,7 +173,9 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
       'discountValue': _discountType.isEmpty ? null : num.parse(_t('discountValue')),
       if (_discountType.isEmpty) 'discountPrice': null,
       'costPrice': _t('costPrice').isEmpty ? null : num.parse(_t('costPrice')),
-      'stockQuantity': num.parse(_t('stockQuantity')).toInt(),
+      // With sizes/colours, the stock is their sum.
+      'stockQuantity': _vd.hasVariants ? _vd.totalStock : num.parse(_t('stockQuantity')).toInt(),
+      ..._vd.dealPayload(),
       'lowStockThreshold': int.tryParse(_t('lowStockThreshold')) ?? 5,
       'status': _status,
       'mainImage': _gallery.first,
@@ -186,6 +191,10 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
         if (id.isEmpty) throw ApiException('This product no longer exists. Refresh the page.');
         saved = await jput('/products/$id', productPayload(form));
       }
+      // Sizes/colours are saved on the product once it exists.
+      final variants = _vd.variantsPayload();
+      final savedId = idOf(asMap(asMap(saved)['product'])).isNotEmpty ? idOf(asMap(asMap(saved)['product'])) : id;
+      if (variants != null && savedId.isNotEmpty) await jput('/products/$savedId/variants', {'variants': variants});
       if (!mounted) return;
       // Before Ikiguzi approves the store, buyers don't see it yet: say so.
       final res = asMap(saved);
@@ -322,11 +331,16 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
             _field('costPrice', 'Cost price', number: true),
             Row(
               children: [
-                Expanded(child: _field('stockQuantity', 'Stock quantity *', number: true)),
+                Expanded(child: _vd.hasVariants ? Padding(padding: const EdgeInsets.only(bottom: 12), child: Tiny('Stock: ${_vd.totalStock} (sum of sizes/colours)')) : _field('stockQuantity', 'Stock quantity *', number: true)),
                 const SizedBox(width: 10),
                 Expanded(child: _field('lowStockThreshold', 'Low stock threshold', number: true)),
               ],
             ),
+            _heading('Sizes & colours'),
+            VariantEditor(state: _vd, onChanged: () => setState(() {})),
+            _heading('Flash deal'),
+            DealEditor(state: _vd, onChanged: () => setState(() {})),
+            const SizedBox(height: 8),
             FilterSelect(label: 'Status', value: _status, options: const [('DRAFT', 'Draft'), ('ACTIVE', 'Active'), ('INACTIVE', 'Inactive')], onChanged: (v) => setState(() => _status = v)),
             const SizedBox(height: 8),
             _heading('Product attributes'),
