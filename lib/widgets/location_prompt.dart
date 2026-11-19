@@ -17,6 +17,9 @@ const _why = {
   'delivery': 'so you get parcels near you',
 };
 
+/// Whether the sign-in location question is asked (tests turn it off; one test checks it).
+final locationPromptEnabledProvider = Provider<bool>((ref) => true);
+
 /// The position this phone last shared, as checkout's starting pin.
 class LastPin {
   static const _key = 'ikiguzi.lastPin';
@@ -59,7 +62,8 @@ class _LocationPromptState extends ConsumerState<LocationPrompt> {
     if (id == _userId) return;
     _userId = id;
     final prefs = ref.read(sharedPreferencesProvider);
-    final ask = user != null && _why.containsKey(user.role) && prefs != null && !prefs.containsKey(_askedKey(id));
+    final ask = ref.read(locationPromptEnabledProvider) &&
+        user != null && _why.containsKey(user.role) && prefs != null && !prefs.containsKey(_askedKey(id));
     setState(() {
       _open = ask;
       _text = null;

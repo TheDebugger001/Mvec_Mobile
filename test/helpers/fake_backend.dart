@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mvec_mobile/widgets/location_prompt.dart';
 import 'package:mvec_mobile/widgets/splash_gate.dart';
 import 'package:mvec_mobile/core/api_client.dart';
 import 'package:mvec_mobile/core/theme.dart';
@@ -90,7 +91,7 @@ Map<String, Handler> baseRoutes() => {
     };
 
 /// Boots the real app on a phone-sized screen with [backend] answering the API.
-Future<void> pumpApp(WidgetTester tester, FakeBackend backend, {Size size = const Size(390, 844), double textScale = 1, String? token}) async {
+Future<void> pumpApp(WidgetTester tester, FakeBackend backend, {Size size = const Size(390, 844), double textScale = 1, String? token, bool locationPrompt = false}) async {
   GoogleFonts.config.allowRuntimeFetching = false;
   // Secure storage has no platform side in tests: keep it in memory.
   final store = <String, String>{};
@@ -124,7 +125,11 @@ Future<void> pumpApp(WidgetTester tester, FakeBackend backend, {Size size = cons
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   await tester.pumpWidget(ProviderScope(
-    overrides: [sharedPreferencesProvider.overrideWithValue(prefs), splashDurationProvider.overrideWithValue(Duration.zero)],
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      splashDurationProvider.overrideWithValue(Duration.zero),
+      locationPromptEnabledProvider.overrideWithValue(locationPrompt),
+    ],
     child: const MvecApp(),
   ));
   await settle(tester);

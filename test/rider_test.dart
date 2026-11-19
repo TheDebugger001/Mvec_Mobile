@@ -91,4 +91,56 @@ void main() {
       expect(shouldSendLiveFix(fix: GeoFix(lat, lng, t0.add(const Duration(seconds: 15))), lastSent: sent), isTrue);
     });
   });
+
+  testWidgets('a notification opens the parcel; an offline rider goes online and accepts it there', (tester) async {
+    var online = false;
+    final backend = FakeBackend({
+      ...baseRoutes(),
+      'GET /auth/me': (_) => (200, {'user': userJson('delivery', name: 'Eric Moto')}),
+      'GET /rider/me': (_) => (200, _rider(online: online)),
+      'GET /rider/stats': (_) => (200, {'todayDeliveries': 0, 'todayEarnings': 0, 'totalDeliveries': 0, 'totalEarnings': 0}),
+      'GET /rider/deliveries/active': (_) => (200, {'delivery': null}),
+      'GET /rider/deliveries/available': (_) => (200, {'deliveries': []}),
+      'PATCH /rider/availability': (_) {
+        online = true;
+        return (200, _rider(online: true));
+      },
+      'GET /rider/deliveries/d1': (_) => (200, {'delivery': _job(), 'mine': false, 'canTake': true, 'online': online}),
+      'POST /rider/deliveries/d1/accept': (_) => (200, {'delivery': _job(status: 'ASSIGNED', next: ['PICKED_UP'])}),
+    });
+    await _openDashboard(tester, backend);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/delivery/offers/d1');
+    await settle(tester);
+
+    expect(find.textContaining('Kigali Gadgets'), findsWidgets);
+    expect(find.text('Accept'), findsNothing);
+    await tester.tap(find.text('Go online to take it'));
+    await settle(tester);
+    await tester.tap(find.text('Accept'));
+    await settle(tester);
+    expect(backend.where('POST', '/rider/deliveries/d1/accept'), hasLength(1));
+    expect(find.text('Slide when you have the parcel'), findsOneWidget);
+    // The location timers stop with the app.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 15));
+  });
+
+  testWidgets('a parcel another rider took says so', (tester) async {
+    final backend = FakeBackend({
+      ...baseRoutes(),
+      'GET /auth/me': (_) => (200, {'user': userJson('delivery', name: 'Eric Moto')}),
+      'GET /rider/me': (_) => (200, _rider()),
+      'GET /rider/stats': (_) => (200, {'todayDeliveries': 0, 'todayEarnings': 0, 'totalDeliveries': 0, 'totalEarnings': 0}),
+      'GET /rider/deliveries/active': (_) => (200, {'delivery': null}),
+      'GET /rider/deliveries/available': (_) => (200, {'deliveries': []}),
+      'GET /rider/deliveries/d1': (_) => (410, {'message': 'Another rider already took this parcel.'}),
+    });
+    await _openDashboard(tester, backend);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/delivery/offers/d1');
+    await settle(tester);
+    expect(find.text('Another rider already took this parcel.'), findsOneWidget);
+    expect(find.text('See parcels near you'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 15));
+  });
 }

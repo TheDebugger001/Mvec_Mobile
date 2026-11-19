@@ -13,7 +13,7 @@ Future<void> openLogin(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('guest tapping Orders is sent to sign in, and a buyer can log in', (tester) async {
+  testWidgets('guest tapping Orders can follow by phone or sign in, and a buyer can log in', (tester) async {
     final backend = FakeBackend({
       ...baseRoutes(),
       'POST /auth/login': (c) => (200, {'token': 'jwt-1', 'user': userJson('buyer')}),
@@ -23,6 +23,10 @@ void main() {
     await pumpApp(tester, backend);
 
     await tester.tap(find.byTooltip('Orders'));
+    await settle(tester);
+    // Signed out, Orders offers a phone code first, and signing in instead.
+    expect(find.text('Follow your order'), findsOneWidget);
+    await tester.tap(find.text('Have a password? Sign in instead'));
     await settle(tester);
     expect(find.text('Welcome back'), findsOneWidget);
 
@@ -141,5 +145,38 @@ void main() {
     await settle(tester, frames: 25);
     expect(backend.where('POST', '/auth/reset-password').single.body, {'resetToken': 'tok-1', 'newPassword': 'Brand@New1'});
     expect(find.text('Welcome back'), findsOneWidget);
+  });
+
+  testWidgets('a signed-out buyer follows their orders with a phone code', (tester) async {
+    final backend = FakeBackend({
+      ...baseRoutes(),
+      'POST /auth/guest/send-code': (_) => (200, {'message': 'We sent a code to 0788 123 456.'}),
+      'POST /auth/guest/verify': (_) => (200, {'token': 'jwt-g', 'user': userJson('buyer'), 'guest': true}),
+      'GET /auth/me': (_) => (200, {'user': userJson('buyer')}),
+      'GET /orders/my-orders': (_) => (200, {'orders': []}),
+    });
+    await pumpApp(tester, backend);
+    await tester.tap(find.byTooltip('Orders'));
+    await settle(tester);
+    await tester.enterText(field('Phone number'), '0788123456');
+    await tester.tap(find.text('Text me a code'));
+    await settle(tester);
+    await tester.enterText(field('6-digit code'), '123456');
+    await tester.tap(find.text('Show my orders'));
+    await settle(tester, frames: 20);
+    expect((backend.where('POST', '/auth/guest/verify').single.body as Map)['track'], true);
+    expect(find.text('My orders'), findsOneWidget);
+  });
+
+  testWidgets('after sign-in a buyer is asked once to share their location', (tester) async {
+    final backend = FakeBackend({
+      ...baseRoutes(),
+      'GET /auth/me': (_) => (200, {'user': userJson('buyer')}),
+    });
+    await pumpApp(tester, backend, token: 'jwt-1', locationPrompt: true);
+    expect(find.text('Share your location?'), findsOneWidget);
+    await tester.tap(find.text('Not now'));
+    await settle(tester);
+    expect(find.text('Share your location?'), findsNothing);
   });
 }
