@@ -77,6 +77,32 @@ class _PinPickerState extends State<PinPicker> {
     });
   }
 
+  /// "Find on map": pins the typed address now, even over a pin placed by hand.
+  bool _finding = false;
+  Future<void> _findTyped() async {
+    setState(() {
+      _finding = true;
+      _status = null;
+    });
+    try {
+      final results = asMaps(asMap(await Api.instance.get('/geo/search', query: {'q': widget.searchText}))['results']);
+      if (!mounted) return;
+      if (results.isEmpty) {
+        setState(() => _status = "We couldn't find that address on the map. Add the sector, or tap the spot on the map.");
+        return;
+      }
+      final best = results.first;
+      final here = LatLng(numOf(best['lat']).toDouble(), numOf(best['lng']).toDouble());
+      _byHand = false;
+      setState(() => _found = strOf(best['label']));
+      widget.onChanged((_round(here.latitude), _round(here.longitude)));
+    } catch (_) {
+      if (mounted) setState(() => _status = "The map search isn't answering. Tap the spot on the map instead.");
+    } finally {
+      if (mounted) setState(() => _finding = false);
+    }
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -135,6 +161,12 @@ class _PinPickerState extends State<PinPicker> {
         ),
         const SizedBox(height: 6),
         Wrap(spacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          if (_query(widget.searchText).length >= 4)
+            FilledButton.tonalIcon(
+              onPressed: _finding ? null : _findTyped,
+              icon: _finding ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.travel_explore_rounded, size: 18),
+              label: Text(_finding ? 'Finding…' : 'Find on map'),
+            ),
           if (widget.allowGps) TextButton.icon(onPressed: _useMyLocation, icon: const Icon(Icons.my_location_rounded, size: 18), label: const Text('Use my location')),
           if (v != null)
             TextButton(

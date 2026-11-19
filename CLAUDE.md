@@ -56,7 +56,7 @@ This is KitchenLink's delivery-worker app, adapted to Ikiguzi parcels.
 - `widgets/auto_payout_card.dart` ("Get paid automatically", `/api/auto-payouts`) is on the seller, supplier, affiliate and rider payout pages.
 - `widgets/district_dropdown.dart` lists Rwanda's districts under their province. It's used for rider sign-up, the rider's "Where you deliver" card and onboarding.
 - Every `FieldType.pin` and the address sheet offer "Use my location". Products from suppliers show `BulkFlag` ("Supplier · bulk").
-- `PinPicker(searchText:)` follows the typed street (`/api/geo/search`) until the pin is placed by hand (checkout and saved addresses).
+- `PinPicker(searchText:)` shows "Find on map" and follows the typed street (`/api/geo/search`) until the pin is placed by hand (checkout and saved addresses).
 - `widgets/location_prompt.dart`: once per account after sign-in, buyers, sellers, suppliers and riders are asked to share their location (`POST /api/geo/me` fills empty pins). `LastPin` keeps it for checkout's starting pin.
 - `/orders` and `/orders/:id` signed out show `FollowOrders` (`features/marketplace/follow_orders.dart`): phone, then a text code, then the orders.
 - A seller's parcel that no rider took shows "Deliver it myself" (`OrderLiveTracking`, `POST /orders/vendor/:id/self-deliver`).
