@@ -5,6 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 /// (24x24 grid, stroke only), so the app draws the same thin line icons.
 const Map<String, String> _paths = {
   'home': '<path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/>',
+  // Solid house (the active Home tab): one closed outline with the door cut out.
+  'home-solid': '<path d="M12 3 3 10.2V21h6v-6h6v6h6V10.2L12 3Z"/>',
   'grid': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
   'shop': '<path d="M4 9h16l-1 11H5L4 9Z"/><path d="M3 9 5 4h14l2 5"/><path d="M9 9a3 3 0 0 0 6 0"/>',
   'tag': '<path d="m20 13-7 7L3 10V3h7l10 10Z"/><circle cx="7.5" cy="7.5" r="1"/>',
