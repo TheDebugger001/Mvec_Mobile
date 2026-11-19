@@ -18,6 +18,8 @@ class LiveParcel {
     required this.active,
     required this.status,
     required this.statusLabel,
+    this.waitingForRider = false,
+    this.offeredAt,
     required this.phase,
     required this.phaseLabel,
     required this.target,
@@ -42,6 +44,10 @@ class LiveParcel {
 
   final String deliveryId, status, statusLabel, phase, phaseLabel, target;
   final bool active;
+
+  /// No rider took it yet: the seller may deliver it instead.
+  final bool waitingForRider;
+  final DateTime? offeredAt;
   final String storeName, riderName, riderPhone, vehicle, plateNumber;
   final LatLng? store, destination, rider;
   final double? heading;
@@ -69,6 +75,8 @@ class LiveParcel {
       active: j['active'] == true,
       status: strOf(j['status']),
       statusLabel: strOf(j['statusLabel']),
+      waitingForRider: j['waitingForRider'] == true,
+      offeredAt: DateTime.tryParse(strOf(j['offeredAt'])),
       phase: strOf(j['phase']),
       phaseLabel: strOf(j['phaseLabel']),
       target: strOf(j['target']),
@@ -220,17 +228,58 @@ mixin _Polling<T extends StatefulWidget, R> on State<T> {
 /// The buyer's (or seller's) view of an order's riders; nothing when no
 /// parcel goes with an Ikiguzi rider.
 class OrderLiveTracking extends StatefulWidget {
-  const OrderLiveTracking({super.key, required this.orderId, this.seller = false});
+  const OrderLiveTracking({super.key, required this.orderId, this.seller = false, this.onChanged});
   final String orderId;
   final bool seller;
+
+  /// After the seller takes a parcel over (the order page reloads).
+  final VoidCallback? onChanged;
 
   @override
   State<OrderLiveTracking> createState() => _OrderLiveTrackingState();
 }
 
 class _OrderLiveTrackingState extends State<OrderLiveTracking> with _Polling<OrderLiveTracking, List<LiveParcel>> {
+  bool _takingOver = false;
+
   @override
   Future<List<LiveParcel>> load() => LiveTrackingApi.order(widget.orderId);
+
+  String _waited(LiveParcel p) {
+    final at = p.offeredAt;
+    if (at == null) return '';
+    final m = DateTime.now().difference(at).inMinutes;
+    return m > 0 ? ' ($m min so far)' : '';
+  }
+
+  /// The seller delivers a parcel no rider has taken (and keeps the fee).
+  Future<void> _takeOver() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Deliver it yourself?'),
+        content: const Text("Ikiguzi stops looking for a rider, the delivery fee goes to you, and you confirm the hand-over with the buyer's 6-digit code."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep waiting')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Deliver it myself')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _takingOver = true);
+    try {
+      final r = asMap(await Api.instance.post('/orders/vendor/${widget.orderId}/self-deliver'));
+      messenger.showSnackBar(SnackBar(content: Text(strOf(r['message'], "You're delivering this parcel."))));
+      final fresh = await load();
+      if (mounted) setState(() => data = fresh);
+      widget.onChanged?.call();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorText(e))));
+    } finally {
+      if (mounted) setState(() => _takingOver = false);
+    }
+  }
 
   @override
   Duration nextAfter(List<LiveParcel> value) {
@@ -280,8 +329,18 @@ class _OrderLiveTrackingState extends State<OrderLiveTracking> with _Polling<Ord
         DataCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(p.statusLabel, style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
-            Text('Ikiguzi is finding a rider for the parcel from ${p.storeName}.', style: TextStyle(color: mv.textMuted, fontSize: 12)),
+            Text(widget.seller ? 'Looking for a rider' : p.statusLabel, style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
+            const SizedBox(height: 2),
+            Text(
+              widget.seller
+                  ? 'Ikiguzi is offering the parcel from ${p.storeName} to riders near your store${_waited(p)}. Riders who come online nearby get it too.'
+                  : 'Ikiguzi is finding a rider for the parcel from ${p.storeName}.',
+              style: TextStyle(color: mv.textMuted, fontSize: 12),
+            ),
+            if (widget.seller && p.waitingForRider) ...[
+              const SizedBox(height: 10),
+              OutlineBtn(label: 'Deliver it myself', icon: Icons.delivery_dining_outlined, compact: true, loading: _takingOver, onPressed: _takingOver ? null : _takeOver),
+            ],
           ]),
         ),
     ]);

@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../portal/kit.dart';
 import '../../widgets/common.dart';
 import 'rider_api.dart';
+import '../../widgets/district_dropdown.dart';
 import 'rider_state.dart';
 
 /// `/delivery`: go online, see today's numbers, and take the offers nearby.
@@ -58,8 +59,63 @@ class RiderHomePage extends ConsumerWidget {
               ),
             ],
           ],
+          const SizedBox(height: 16),
+          _DistrictCard(b.account),
         ],
       ),
+    );
+  }
+}
+
+/// The district the rider works in (one of Rwanda's 30).
+class _DistrictCard extends ConsumerStatefulWidget {
+  const _DistrictCard(this.account);
+  final RiderAccount account;
+
+  @override
+  ConsumerState<_DistrictCard> createState() => _DistrictCardState();
+}
+
+class _DistrictCardState extends ConsumerState<_DistrictCard> {
+  late List<String> _districts = [...widget.account.districts];
+  bool _busy = false;
+  String? _message;
+  bool _ok = false;
+
+  Future<void> _save() async {
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final a = await RiderApi.setArea(_districts);
+      setState(() {
+        _ok = true;
+        _message = 'You now deliver in ${a.districts.join(', ')}.';
+      });
+      await ref.read(riderBoardProvider.notifier).refresh();
+    } catch (e) {
+      setState(() {
+        _ok = false;
+        _message = errorText(e);
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final a = widget.account;
+    return Section(
+      title: 'Where you deliver',
+      subtitle: '${a.districts.isEmpty ? 'Choose the districts you work in.' : '${a.districts.join(', ')}.'} You hear about parcels waiting there, and offers also come by your live location.',
+      children: [
+        if (_message != null) Notice(text: _message!, ok: _ok),
+        DistrictsPicker(value: _districts, onChanged: (v) => setState(() => _districts = v)),
+        const SizedBox(height: 10),
+        GradientButton(label: 'Save districts', expand: true, loading: _busy, onPressed: _busy || _districts.isEmpty || _districts.join('|') == a.districts.join('|') ? null : _save),
+      ],
     );
   }
 }
@@ -196,6 +252,7 @@ class _OfferCardState extends ConsumerState<_OfferCard> {
     final left = o.offerExpiresAt?.difference(DateTime.now()).inSeconds;
     return RecordCard(
       title: o.pickup.name,
+      onTap: () => context.push('/delivery/offers/${o.id}'),
       subtitle: [
         if (o.distanceToPickupKm != null) '${o.distanceToPickupKm} km from you',
         '${o.distanceKm} km trip',

@@ -1,3 +1,4 @@
+import '../marketplace/advertise_page.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/format.dart';
@@ -58,6 +59,7 @@ class _AdminAdvertisingPageState extends State<AdminAdvertisingPage> {
           subtitle: 'Review seller campaigns. Budgets are prepaid from seller balances; each click costs ${money(ads.isEmpty ? 100 : numOf(ads.first['costPerClick'], 100))}.',
           onRefresh: _data.reload,
           children: [
+            const AdBookingsAdminSection(),
             MetricGrid(
               children: [
                 MetricCard(label: 'To review', value: '${count('PENDING')}', icon: 'bell', sub: '${money(sum(ads.where((a) => a['statusKey'] == 'PENDING'), 'budget'))} in budgets'),

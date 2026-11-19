@@ -768,6 +768,8 @@ class _FormSheetState<R> extends State<_FormSheet<R>> {
         return PinPicker(
           label: f.label,
           help: f.help,
+          // Sellers at their store, buyers at home: drop the pin where the phone is.
+          allowGps: true,
           value: pin.isEmpty ? null : (numOf(pin['lat']).toDouble(), numOf(pin['lng']).toDouble()),
           onChanged: (p) => _set(f.name, p == null ? null : {'lat': p.$1, 'lng': p.$2}),
         );

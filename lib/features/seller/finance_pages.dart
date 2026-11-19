@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../portal/api.dart';
 import '../../portal/kit.dart';
 import '../../widgets/common.dart';
+import '../../widgets/auto_payout_card.dart';
 import 'products_shared.dart';
 
 const _payoutTabs = <(String, String, List<String>?)>[
@@ -138,6 +139,8 @@ class _SellerPayoutsPageState extends State<SellerPayoutsPage> {
                 const SizedBox(height: 14),
                 if (numOf(s['frozen']) > 0)
                   Notice(info: true, text: '${money(s['frozen'])} from ${s['frozenOrders']} order${numOf(s['frozenOrders']) == 1 ? '' : 's'} is on hold because of an open dispute.'),
+                AutoPayoutCard(onSaved: _data.reload),
+                const SizedBox(height: 14),
                 Section(
                   title: 'Request payout',
                   children: [

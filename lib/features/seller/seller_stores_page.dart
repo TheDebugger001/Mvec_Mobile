@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../state/auth_state.dart';
 import '../../core/format.dart';
 import '../../portal/api.dart';
 import '../../portal/kit.dart';
@@ -49,7 +51,7 @@ class _SellerStoresPageState extends State<SellerStoresPage> {
         const FieldSpec('contactEmail', 'Contact email', type: FieldType.email, required: true),
         const FieldSpec('contactPhone', 'Contact phone', type: FieldType.phone, required: true, hint: '07xx xxx xxx'),
         const FieldSpec('businessAddress', 'Business address', hint: 'Street, building'),
-        const FieldSpec('pickup', 'Pickup pin', type: FieldType.pin, help: 'Where Ikiguzi riders collect your parcels. Tap the exact spot of the store.'),
+        const FieldSpec('pickup', 'Pickup pin', type: FieldType.pin, help: 'Where Ikiguzi riders collect your parcels. At the store now? Use your location. Otherwise tap the exact spot.'),
         FieldSpec(
           'riderDelivery',
           'Deliver with Ikiguzi riders',
@@ -60,7 +62,8 @@ class _SellerStoresPageState extends State<SellerStoresPage> {
       ],
       initial:
           s == null
-              ? {}
+              // The business category was asked at sign-up: a new store starts with it.
+              ? {'businessCategory': ProviderScope.containerOf(context, listen: false).read(authProvider).user?.category ?? ''}
               : {
                 'storeName': strOf(s['storeName']),
                 'businessCategory': strOf(s['businessCategory']),

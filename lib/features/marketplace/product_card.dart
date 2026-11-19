@@ -9,6 +9,7 @@ import '../../state/cart_state.dart';
 import '../../widgets/common.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/mv_icon.dart';
+import 'product_extras.dart';
 
 /// Heart in a white circle on a product image (saves to the wishlist).
 class WishHeart extends ConsumerWidget {
@@ -167,6 +168,8 @@ class ProductCard extends ConsumerWidget {
                       else if (p.onSale)
                         Positioned(left: 8, top: 8, child: DiscountChip(p.percentOff)),
                       Positioned(right: 6, top: 6, child: WishHeart(product: p)),
+                      // Sold by a supplier (wholesaler).
+                      if (p.bulkSeller) const Positioned(right: 8, bottom: 8, child: BulkFlag()),
                       // No buyer reviews yet: a "New" pill on the image, as in the reference design.
                       if (p.reviews == 0)
                         Positioned(

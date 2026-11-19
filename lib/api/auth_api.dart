@@ -66,8 +66,11 @@ class AuthApi {
     required String code,
     String? fullName,
     String? email,
+    bool track = false,
   }) async {
     final res = await _api.post('/auth/guest/verify', body: {
+      // "Follow my order" while signed out: only numbers that already ordered.
+      if (track) 'track': true,
       'phone': phone,
       'code': code,
       if (fullName != null && fullName.isNotEmpty) 'fullName': fullName,
@@ -94,7 +97,7 @@ class AuthApi {
   /// fresh token for this one.
   static Future<String?> changePassword(String current, String next) async {
     final res = await _api.post('/auth/change-password', body: {
-      'currentPassword': current,
+      if (current.isNotEmpty) 'currentPassword': current,
       'newPassword': next,
     });
     final token = asMap(res)['token'];

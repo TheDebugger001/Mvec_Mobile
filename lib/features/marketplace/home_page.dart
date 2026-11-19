@@ -285,7 +285,7 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
       final count = _slides().length;
       if (!mounted || count < 2 || !_controller.hasClients) return;
       _controller.animateToPage(
@@ -315,6 +315,17 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
         onTap: () => context.go('/shop'),
       ),
     ];
+    // "Advertise here": sellers and suppliers book a spot in this banner.
+    slides.add(
+      _HeroSlide(
+        eyebrow: 'YOUR PRODUCTS HERE',
+        title: 'Advertise\non Ikiguzi',
+        line: 'From 1,000 RWF per product',
+        cta: 'Get started',
+        imageAsset: 'assets/images/hero-standin.jpg',
+        onTap: () => context.push('/advertise'),
+      ),
+    );
     for (final p in ads.take(5)) {
       slides.add(
         _HeroSlide(

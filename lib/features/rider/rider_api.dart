@@ -3,12 +3,19 @@ import '../../core/format.dart';
 
 /// The rider's own account (`/api/rider/me`).
 class RiderAccount {
-  const RiderAccount({required this.name, required this.phone, required this.vehicleType, required this.plateNumber, required this.status, required this.reviewNote, required this.isOnline});
+  const RiderAccount({required this.name, required this.phone, required this.vehicleType, required this.plateNumber, required this.status, required this.reviewNote, required this.isOnline, this.district = '', this.province = '', this.districts = const []});
 
   final String name;
   final String phone;
   final String vehicleType;
   final String plateNumber;
+
+  /// The district the rider works in (one of Rwanda's 30), '' when not set.
+  final String district;
+  final String province;
+
+  /// Every district the rider delivers in ([district] is the first).
+  final List<String> districts;
 
   /// PENDING, APPROVED, REJECTED or SUSPENDED.
   final String status;
@@ -25,6 +32,12 @@ class RiderAccount {
         status: strOf(r['status'], 'PENDING'),
         reviewNote: strOf(r['reviewNote']),
         isOnline: r['isOnline'] == true,
+        district: strOf(r['district']),
+        province: strOf(r['province']),
+        districts: [
+          for (final d in (r['districts'] as List? ?? const [])) '$d',
+          if ((r['districts'] as List? ?? const []).isEmpty && strOf(r['district']).isNotEmpty) strOf(r['district']),
+        ],
       );
 }
 
@@ -120,6 +133,22 @@ class DeliveryJob {
 }
 
 /// One step of a parcel's story (order placed … delivered).
+/// A parcel opened from its notification (`GET /rider/deliveries/:id`).
+class ParcelOffer {
+  const ParcelOffer({required this.job, required this.mine, required this.canTake, required this.online});
+  final DeliveryJob job;
+  final bool mine;
+  final bool canTake;
+  final bool online;
+
+  factory ParcelOffer.fromJson(Map<String, dynamic> m) => ParcelOffer(
+        job: DeliveryJob.fromJson(asMap(m['delivery'])),
+        mine: m['mine'] == true,
+        canTake: m['canTake'] == true,
+        online: m['online'] == true,
+      );
+}
+
 class ParcelStep {
   const ParcelStep({required this.key, required this.label, required this.done, this.at});
   final String key;
@@ -170,6 +199,8 @@ class RiderApi {
     required String fullName,
     required String vehicleType,
     required String plateNumber,
+    required String password,
+    List<String> districts = const [],
   }) async {
     final verified = asMap(await _api.post('/auth/verify-otp', body: {'phone': phone, 'code': code, 'purpose': 'registration', 'role': 'delivery'}));
     return asMap(await _api.post('/rider/register', body: {
@@ -177,10 +208,20 @@ class RiderApi {
       'fullName': fullName,
       'vehicleType': vehicleType,
       'plateNumber': plateNumber,
+      if (districts.isNotEmpty) 'districts': districts,
+      // Signs in later with phone + password (a code still works too).
+      'password': password,
     }));
   }
 
   static Future<RiderAccount> me() async => RiderAccount.fromJson(asMap(asMap(await _api.get('/rider/me'))['rider']));
+
+  /// The districts the rider works in.
+  static Future<RiderAccount> setArea(List<String> districts) async =>
+      RiderAccount.fromJson(asMap(asMap(await _api.patch('/rider/area', body: {'districts': districts}))['rider']));
+
+  /// One parcel, as its notification opens it.
+  static Future<ParcelOffer> offer(String id) async => ParcelOffer.fromJson(asMap(await _api.get('/rider/deliveries/$id')));
 
   static Future<RiderAccount> setOnline(bool online) async =>
       RiderAccount.fromJson(asMap(asMap(await _api.patch('/rider/availability', body: {'isOnline': online}))['rider']));

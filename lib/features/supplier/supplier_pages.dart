@@ -12,6 +12,7 @@ import '../../portal/api.dart';
 import '../../portal/kit.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/auto_payout_card.dart';
 import '../seller/seller_common.dart';
 import '../wholesale/wholesale_shared.dart';
 
@@ -536,6 +537,8 @@ class _SupplierPaymentsPageState extends State<SupplierPaymentsPage> with _Polli
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                AutoPayoutCard(onSaved: _data.reload),
+                const SizedBox(height: 14),
                 MetricGrid(
                   children: [
                     MetricCard(icon: 'wallet', label: 'Available to withdraw', value: money(available), sub: 'Released after vendors confirm receipt'),

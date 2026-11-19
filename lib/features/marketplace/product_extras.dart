@@ -73,16 +73,20 @@ class _DealTagState extends State<DealTag> {
 
 /// Earned seller badges (Verified, Top rated, Ships fast, New seller).
 class SellerBadgeRow extends StatelessWidget {
-  const SellerBadgeRow({super.key, required this.badges});
+  const SellerBadgeRow({super.key, required this.badges, this.bulk = false});
   final List<({String code, String label, String hint})> badges;
+
+  /// The seller is a supplier: adds "Supplier · sells in bulk".
+  final bool bulk;
 
   @override
   Widget build(BuildContext context) {
-    if (badges.isEmpty) return const SizedBox.shrink();
+    if (badges.isEmpty && !bulk) return const SizedBox.shrink();
     final mv = context.mv;
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Wrap(spacing: 6, runSpacing: 4, children: [
+        if (bulk) const BulkFlag(long: true),
         for (final b in badges)
           Tooltip(
             message: b.hint,
@@ -97,6 +101,25 @@ class SellerBadgeRow extends StatelessWidget {
             ),
           ),
       ]),
+    );
+  }
+}
+
+/// "Supplier · bulk": the product is sold by a supplier (wholesaler).
+class BulkFlag extends StatelessWidget {
+  const BulkFlag({super.key, this.long = false});
+  final bool long;
+
+  @override
+  Widget build(BuildContext context) {
+    final mv = context.mv;
+    return Tooltip(
+      message: 'Sold by a supplier: good for buying in large quantities',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: mv.soft, border: Border.all(color: mv.accent), borderRadius: BorderRadius.circular(999)),
+        child: Text(long ? 'Supplier · sells in bulk' : 'Supplier · bulk', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: mv.accentDeep)),
+      ),
     );
   }
 }

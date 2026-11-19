@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/nav_items.dart';
+import 'features/marketplace/advertise_page.dart';
 import 'features/returns/returns_pages.dart';
 import 'features/auth/forgot_password_page.dart';
 import 'features/auth/login_page.dart';
@@ -39,6 +40,8 @@ import 'features/admin/admin_support_inbox_page.dart';
 import 'features/admin/admin_transfers_page.dart';
 import 'features/admin/admin_vendor_payouts_page.dart';
 import 'features/affiliate/affiliate_pages.dart';
+import 'features/marketplace/follow_orders.dart';
+import 'features/rider/rider_offer_page.dart';
 import 'features/rider/rider_auth_page.dart';
 import 'features/rider/rider_earnings_page.dart';
 import 'features/rider/rider_home_page.dart';
@@ -77,7 +80,6 @@ bool _needsLogin(String path) =>
     path == '/wishlist' ||
     path == '/buyer/support/requests' ||
     path == '/profile' ||
-    path.startsWith('/orders') ||
     path.startsWith('/payment') ||
     const ['/buyer/refunds', '/buyer/messages', '/buyer/notifications', '/buyer/subscription', '/account/returns'].contains(path) ||
     path.startsWith('/vendor') ||
@@ -157,7 +159,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => CheckoutPage(productId: s.uri.queryParameters['product'], qty: int.tryParse(s.uri.queryParameters['qty'] ?? '') ?? 1),
       ),
       GoRoute(path: '/payment/:id', builder: (_, s) => PaymentPage(orderId: s.pathParameters['id']!)),
-      GoRoute(path: '/orders/:id', builder: (_, s) => OrderDetailPage(id: s.pathParameters['id']!)),
+      GoRoute(path: '/orders/:id', builder: (_, s) => OrdersGate(framed: true, child: OrderDetailPage(id: s.pathParameters['id']!))),
       GoRoute(path: '/buyer/messages/:id', builder: (_, s) => ChatPage(id: s.pathParameters['id']!)),
       GoRoute(path: '/buyer/support/requests', builder: (_, __) => const PageFrame(title: 'Ikiguzi Support', fallback: '/buyer/support', body: SupportPage(role: 'buyer'))),
       GoRoute(path: '/vendor/orders/:id', builder: (_, s) => SellerOrderDetailPage(id: s.pathParameters['id']!)),
@@ -182,7 +184,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/', builder: (_, __) => const HomePage()),
           GoRoute(path: '/shop', builder: (_, s) => ShopPage(params: s.uri.queryParameters)),
           GoRoute(path: '/buyer/recommendations', builder: (_, __) => const RecommendationsPage()),
-          GoRoute(path: '/orders', builder: (_, __) => const OrdersPage()),
+          GoRoute(path: '/orders', builder: (_, __) => const OrdersGate(child: OrdersPage())),
           GoRoute(path: '/cart', builder: (_, __) => const CartPage()),
           GoRoute(path: '/wishlist', builder: (_, __) => const WishlistPage()),
           GoRoute(path: '/vendors', builder: (_, __) => const StoresPage()),
@@ -192,6 +194,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/buyer/compare', builder: (_, __) => const ComparePage()),
           GoRoute(path: '/buyer/refunds', builder: (_, __) => const RefundsPage()),
           GoRoute(path: '/account/returns', builder: (_, __) => const MyReturnsPage()),
+          GoRoute(path: '/advertise', builder: (_, __) => const AdvertisePage()),
           GoRoute(path: '/buyer/messages', builder: (_, __) => const MessagesPage()),
           GoRoute(path: '/buyer/notifications', builder: (_, __) => const NotificationsPage()),
           GoRoute(path: '/buyer/subscription', builder: (_, __) => const SubscriptionPage()),
@@ -279,6 +282,7 @@ final _affiliateRoutes = <GoRoute>[
 final _deliveryRoutes = <GoRoute>[
   GoRoute(path: '/delivery', builder: (_, __) => const RiderHomePage()),
   GoRoute(path: '/delivery/trip', builder: (_, __) => const RiderTripPage()),
+  GoRoute(path: '/delivery/offers/:id', builder: (_, s) => RiderOfferPage(id: s.pathParameters['id']!)),
   GoRoute(path: '/delivery/earnings', builder: (_, __) => const RiderEarningsPage()),
   GoRoute(path: '/delivery/messages', builder: (_, __) => const MessagesPage()),
   GoRoute(path: '/delivery/notifications', builder: (_, __) => const NotificationsPage()),

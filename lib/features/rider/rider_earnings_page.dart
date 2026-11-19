@@ -6,6 +6,7 @@ import '../../core/format.dart';
 import '../../portal/kit.dart';
 import '../../widgets/common.dart';
 import 'rider_api.dart';
+import '../../widgets/auto_payout_card.dart';
 import 'rider_state.dart';
 
 final _walletProvider = FutureProvider.autoDispose((ref) async {
@@ -26,6 +27,7 @@ class RiderEarningsPage extends ConsumerWidget {
       error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(_walletProvider)),
       data: (d) {
         final available = numOf(d.wallet['available']);
+        final account = ref.watch(riderBoardProvider).valueOrNull?.account;
         return PortalPage(
           eyebrow: 'DELIVERY',
           title: 'Earnings',
@@ -36,6 +38,8 @@ class RiderEarningsPage extends ConsumerWidget {
               MetricCard(label: 'Available', value: money(available), icon: 'wallet'),
               MetricCard(label: 'Earned in total', value: money(d.wallet['totalEarned']), sub: '${money(d.wallet['totalWithdrawn'])} withdrawn', icon: 'chart'),
             ]),
+            const SizedBox(height: 12),
+            AutoPayoutCard(defaultName: account?.name ?? '', defaultPhone: account?.phone ?? '', onSaved: () => ref.invalidate(_walletProvider)),
             const SizedBox(height: 12),
             _WithdrawForm(available: available, minimum: numOf(d.wallet['minimumWithdrawal'], 1000)),
             Section(title: 'Withdrawals', children: [

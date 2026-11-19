@@ -14,6 +14,7 @@ import '../../core/theme.dart';
 import '../../state/auth_state.dart';
 import '../../state/cart_state.dart';
 import '../../state/catalog_state.dart';
+import '../../widgets/location_prompt.dart' show LastPin;
 import '../../widgets/brand_panel.dart';
 import '../../widgets/checkout_steps.dart';
 import '../../widgets/common.dart';
@@ -86,6 +87,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   @override
   void initState() {
     super.initState();
+    // Starts at the position this phone last shared (asked at sign-in), if any.
+    _pin = LastPin.read(ref.read(sharedPreferencesProvider));
     if (widget.productId != null) _loadProduct();
   }
 
@@ -553,6 +556,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                     label: 'Pin your door (recommended)',
                     help: 'Stores using Ikiguzi riders deliver to this pin, often the same day, priced by distance.',
                     allowGps: true,
+                    searchText: _street.text.trim().isEmpty ? '' : [_street.text.trim(), _sector.text.trim(), _district].where((x) => x.isNotEmpty).join(', '),
                     value: _pin,
                     onChanged: (p) {
                       setState(() => _pin = p);

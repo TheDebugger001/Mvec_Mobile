@@ -245,7 +245,7 @@ class _SellerOrderDetailPageState extends ConsumerState<SellerOrderDetailPage> {
                 subtitle:
                     '${manual ? 'Recorded' : 'Placed'} ${formatDate(o['createdAt'])} · ${o['paidOffline'] == true ? 'Paid offline (${titleCase(o['offlinePaymentMethod'])})' : titleCase(o['paymentMethod'])}',
               ),
-              if (!['DELIVERED', 'CANCELLED'].contains(o['orderStatus'])) OrderLiveTracking(orderId: widget.id, seller: true),
+              if (!['DELIVERED', 'CANCELLED'].contains(o['orderStatus'])) OrderLiveTracking(orderId: widget.id, seller: true, onChanged: _data.reload),
               Section(
                 title: widget.admin ? 'Order items' : 'Your items',
                 subtitle: '${items.length} item${items.length == 1 ? '' : 's'}',

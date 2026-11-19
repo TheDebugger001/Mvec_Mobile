@@ -11,6 +11,7 @@ import '../../portal/kit.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
 import 'rider_api.dart';
+import '../../widgets/district_dropdown.dart';
 
 /// `/rider`: riders sign in, or sign up, with their phone and a text-message
 /// code (as KitchenLink's delivery workers do). A new rider waits for Ikiguzi's
@@ -35,16 +36,19 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
   bool _busy = false;
   String? _error;
   String _vehicle = 'MOTORBIKE';
+  List<String> _districts = const [];
   late final _phone = TextEditingController(text: widget.phone);
   final _code = TextEditingController();
   late final _name = TextEditingController(text: widget.name);
   final _plate = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
 
   static const _vehicles = {'MOTORBIKE': 'Motorbike', 'BICYCLE': 'Bicycle', 'CAR': 'Car', 'ON_FOOT': 'On foot'};
 
   @override
   void dispose() {
-    for (final c in [_phone, _code, _name, _plate]) {
+    for (final c in [_phone, _code, _name, _plate, _password, _confirm]) {
       c.dispose();
     }
     super.dispose();
@@ -66,6 +70,9 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
 
   Future<void> _sendCode() => _go(() async {
         if (_signUp && _name.text.trim().length < 3) throw ApiException('Enter your full name.');
+        if (_signUp && _districts.isEmpty) throw ApiException('Choose at least one district you deliver in.');
+        if (_signUp && _password.text.length < 8) throw ApiException('Choose a password of at least 8 characters.');
+        if (_signUp && _password.text != _confirm.text) throw ApiException('The passwords do not match.');
         final shown = await RiderApi.sendCode(_phone.text.trim(), signUp: _signUp);
         if (shown != null) _code.text = shown;
         setState(() {
@@ -76,7 +83,7 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
 
   Future<void> _verify() => _go(() async {
         final reply = _signUp
-            ? await RiderApi.signUp(phone: _phone.text.trim(), code: _code.text.trim(), fullName: _name.text.trim(), vehicleType: _vehicle, plateNumber: _plate.text.trim())
+            ? await RiderApi.signUp(phone: _phone.text.trim(), code: _code.text.trim(), fullName: _name.text.trim(), vehicleType: _vehicle, plateNumber: _plate.text.trim(), password: _password.text, districts: _districts)
             : await RiderApi.signIn(_phone.text.trim(), _code.text.trim());
         final user = AppUser.fromJson(asMap(reply['user']));
         if (user.role != 'delivery') throw ApiException('This phone number belongs to a ${user.role} account. Use the normal sign-in instead.');
@@ -89,7 +96,7 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
         appBar: AppBar(title: const Text('Deliver with Ikiguzi')),
         body: PortalPage(
           title: _signUp ? 'Become a rider' : 'Rider sign in',
-          subtitle: _signUp ? 'Deliver parcels near you and keep the whole delivery fee.' : 'We text a 6-digit code to your phone.',
+          subtitle: _signUp ? 'Deliver parcels near you and keep the whole delivery fee.' : 'We text a 6-digit code to your phone, or sign in with your password on the normal sign-in page.',
           children: [
             SegmentedButton<bool>(
               segments: const [ButtonSegment(value: false, label: Text('Sign in')), ButtonSegment(value: true, label: Text('Sign up'))],
@@ -117,8 +124,18 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
                 TextField(controller: _plate, enabled: !_codeSent, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Plate number')),
               ],
               const SizedBox(height: 10),
+              DistrictsPicker(value: _districts, enabled: !_codeSent, onChanged: (v) => setState(() => _districts = v)),
+              const SizedBox(height: 10),
             ],
             TextField(controller: _phone, enabled: !_codeSent, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number', hintText: '07xx xxx xxx')),
+            if (_signUp && !_codeSent) ...[
+              const SizedBox(height: 10),
+              TextField(controller: _password, obscureText: true, autofillHints: const [AutofillHints.newPassword], decoration: const InputDecoration(labelText: 'Create password', hintText: 'At least 8 characters')),
+              const SizedBox(height: 10),
+              TextField(controller: _confirm, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm password')),
+              const SizedBox(height: 4),
+              const Tiny('Next time, sign in with your phone number and this password on the normal sign-in page.'),
+            ],
             if (_codeSent) ...[
               const SizedBox(height: 10),
               TextField(

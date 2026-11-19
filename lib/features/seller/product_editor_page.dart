@@ -1,5 +1,7 @@
 import 'variant_deal_editor.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../state/auth_state.dart';
 import '../../core/api_client.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
@@ -92,7 +94,18 @@ class _ProductEditorPageState extends State<ProductEditorPage> {
       _discountType = 'FIXED';
       _c['discountValue']!.text = '${numOf(p['price']) - numOf(p['discountPrice'])}';
     }
-    jlist('/categories', 'categories').then((v) => mounted ? setState(() => _categories = v) : null).catchError((_) {});
+    jlist('/categories', 'categories').then((v) {
+      if (!mounted) return;
+      setState(() {
+        _categories = v;
+        // A new product starts in the business category chosen at sign-up (asked once).
+        if (widget.product == null && _categoryId.isEmpty) {
+          final business = (ProviderScope.containerOf(context, listen: false).read(authProvider).user?.category ?? '').trim().toLowerCase();
+          final match = business.isEmpty ? null : v.where((c) => strOf(c['name']).trim().toLowerCase() == business).firstOrNull;
+          if (match != null) _categoryId = idOf(match);
+        }
+      });
+    }).catchError((_) {});
     jlist('/stores/mine', 'stores').then((v) => mounted ? setState(() => _stores = v) : null).catchError((_) {});
   }
 

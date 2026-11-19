@@ -11,6 +11,7 @@ import '../../core/nav_items.dart';
 import '../../core/theme.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/pin_picker.dart';
 
 const _roleLabel = {'buyer': 'Buyer', 'vendor': 'Vendor', 'supplier': 'Supplier', 'affiliate': 'Affiliate', 'super_admin': 'Super Admin', 'delivery': 'Delivery'};
 const _addressTypes = [('HOME', 'Home'), ('OFFICE', 'Office'), ('PARENTS', 'Family'), ('OTHER', 'Other')];
@@ -134,12 +135,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       _notice = null;
     });
     try {
+      final first = ref.read(authProvider).user?.hasPassword == false;
       final token = await AuthApi.changePassword(_current.text, _new.text);
       if (token != null) await ref.read(authProvider.notifier).replaceToken(token);
       _current.clear();
       _new.clear();
       _confirm.clear();
-      setState(() => _notice = (ok: true, text: 'Password changed. Other devices were signed out.'));
+      if (first) await ref.read(authProvider.notifier).refresh();
+      setState(() => _notice = (ok: true, text: first ? 'Password set. You can now sign in with your phone number and password.' : 'Password changed. Other devices were signed out.'));
     } catch (e) {
       setState(() => _notice = (ok: false, text: errorText(e)));
     } finally {
@@ -231,15 +234,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ],
           ),
         ),
-        if (user.hasPassword)
-          DataCard(
+        // Accounts made with a phone code or Google have no password yet: they set a first one.
+        DataCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Change password', style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
+                Text(user.hasPassword ? 'Change password' : 'Set a password', style: TextStyle(fontWeight: FontWeight.w600, color: mv.text)),
+                if (!user.hasPassword) const Padding(padding: EdgeInsets.only(top: 4), child: Text('Then you can sign in with your phone number and password.', style: TextStyle(fontSize: 12))),
                 const SizedBox(height: 10),
-                TextField(controller: _current, obscureText: true, decoration: const InputDecoration(labelText: 'Current password')),
-                const SizedBox(height: 10),
+                if (user.hasPassword) ...[
+                  TextField(controller: _current, obscureText: true, decoration: const InputDecoration(labelText: 'Current password')),
+                  const SizedBox(height: 10),
+                ],
                 TextField(controller: _new, obscureText: true, decoration: const InputDecoration(labelText: 'New password', hintText: 'At least 8 characters')),
                 const SizedBox(height: 10),
                 TextField(controller: _confirm, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm new password')),
@@ -295,6 +301,8 @@ class _AddressSheetState extends State<_AddressSheet> {
   late final _phone = TextEditingController(text: strOf(widget.existing?['phone']));
   late final _notes = TextEditingController(text: strOf(widget.existing?['deliveryInstructions']));
   late bool _default = widget.existing?['isDefaultShipping'] == true;
+  // The door pin riders deliver to.
+  late (double, double)? _pin = widget.existing?['lat'] == null ? null : (numOf(widget.existing!['lat']).toDouble(), numOf(widget.existing!['lng']).toDouble());
   bool _busy = false;
   String _error = '';
 
@@ -334,6 +342,8 @@ class _AddressSheetState extends State<_AddressSheet> {
       'phone': _phone.text.trim(),
       'deliveryInstructions': _notes.text.trim(),
       'isDefaultShipping': _default,
+      if (_pin != null) 'lat': _pin!.$1,
+      if (_pin != null) 'lng': _pin!.$2,
     };
     try {
       if (widget.existing == null) {
@@ -382,13 +392,22 @@ class _AddressSheetState extends State<_AddressSheet> {
             const SizedBox(height: 10),
             TextField(controller: _sector, decoration: const InputDecoration(labelText: 'Sector (optional)')),
             const SizedBox(height: 10),
-            TextField(controller: _street, decoration: const InputDecoration(labelText: 'Street / landmark')),
+            TextField(controller: _street, decoration: const InputDecoration(labelText: 'Street / landmark'), onChanged: (_) => setState(() {})),
             const SizedBox(height: 10),
             TextField(controller: _building, decoration: const InputDecoration(labelText: 'Building / apartment (optional)')),
             const SizedBox(height: 10),
             TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone (optional)')),
             const SizedBox(height: 10),
             TextField(controller: _notes, decoration: const InputDecoration(labelText: 'Delivery instructions (optional)')),
+            const SizedBox(height: 10),
+            PinPicker(
+              label: 'Pin your door',
+              help: 'Riders deliver to this pin. At home now? Use your location, or tap the spot on the map.',
+              allowGps: true,
+              searchText: _street.text.trim().isEmpty ? '' : [_street.text.trim(), _sector.text.trim(), _district].where((x) => x.isNotEmpty).join(', '),
+              value: _pin,
+              onChanged: (p) => setState(() => _pin = p),
+            ),
             CheckboxListTile(value: _default, onChanged: (v) => setState(() => _default = v ?? false), contentPadding: EdgeInsets.zero, controlAffinity: ListTileControlAffinity.leading, title: const Text('Use as my default delivery address', style: TextStyle(fontSize: 13))),
             GradientButton(label: 'Save address', expand: true, loading: _busy, onPressed: _save),
           ],

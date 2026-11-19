@@ -1,17 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../core/api_client.dart';
+import '../core/format.dart';
 import '../core/theme.dart';
 import '../features/rider/rider_state.dart' show RiderLocation;
 import '../portal/kit.dart';
 
 /// A place on the map: tap where it is, pinch to zoom (the website's
-/// PinPicker). With [allowGps], a button drops it where the phone is (buyers
-/// at home); a store's pin is never taken from GPS, since the seller may be away.
+/// PinPicker). With [allowGps], a button drops it where the phone is. With
+/// [searchText] (the street, sector and district typed beside it), the pin
+/// follows the address (`/api/geo/search`) until it's placed by hand.
 class PinPicker extends StatefulWidget {
-  const PinPicker({super.key, required this.value, required this.onChanged, required this.label, this.help, this.allowGps = false});
+  const PinPicker({super.key, required this.value, required this.onChanged, required this.label, this.help, this.allowGps = false, this.searchText = ''});
+
+  final String searchText;
 
   /// `(lat, lng)` or null.
   final (double, double)? value;
@@ -30,8 +37,51 @@ double _round(double v) => (v * 1e6).roundToDouble() / 1e6;
 class _PinPickerState extends State<PinPicker> {
   final _map = MapController();
   String? _status;
+  String? _found;
+  Timer? _debounce;
+  // Placed by hand (tap, GPS): typing the address no longer moves it.
+  late bool _byHand = widget.value != null;
 
-  void _set(LatLng p) => widget.onChanged((_round(p.latitude), _round(p.longitude)));
+  void _set(LatLng p) {
+    _byHand = true;
+    _found = null;
+    widget.onChanged((_round(p.latitude), _round(p.longitude)));
+  }
+
+  String _query(String s) => s.replaceAll(RegExp(r'[\s,]+'), ' ').trim();
+
+  @override
+  void didUpdateWidget(PinPicker old) {
+    super.didUpdateWidget(old);
+    final v = widget.value;
+    if (v != null && v != old.value) {
+      try {
+        _map.move(LatLng(v.$1, v.$2), 16);
+      } catch (_) {
+        // The map isn't laid out yet; it starts on the pin.
+      }
+    }
+    final q = _query(widget.searchText);
+    if (q == _query(old.searchText) || q.length < 4 || _byHand) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 900), () async {
+      try {
+        final results = asMaps(asMap(await Api.instance.get('/geo/search', query: {'q': widget.searchText}))['results']);
+        if (!mounted || _byHand || results.isEmpty) return;
+        final best = results.first;
+        setState(() => _found = strOf(best['label']));
+        widget.onChanged((_round(numOf(best['lat']).toDouble()), _round(numOf(best['lng']).toDouble())));
+      } catch (_) {
+        // No match or no connection: the person taps the map instead.
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
 
   Future<void> _useMyLocation() async {
     final problem = await RiderLocation.ensureAccess();
@@ -86,8 +136,21 @@ class _PinPickerState extends State<PinPicker> {
         const SizedBox(height: 6),
         Wrap(spacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
           if (widget.allowGps) TextButton.icon(onPressed: _useMyLocation, icon: const Icon(Icons.my_location_rounded, size: 18), label: const Text('Use my location')),
-          if (v != null) TextButton(onPressed: () => widget.onChanged(null), child: const Text('Remove pin')),
-          Tiny(_status ?? (v == null ? 'Tap the map to drop the pin.' : 'Pin set at ${v.$1}, ${v.$2}')),
+          if (v != null)
+            TextButton(
+              onPressed: () {
+                _byHand = false;
+                _found = null;
+                widget.onChanged(null);
+              },
+              child: const Text('Remove pin'),
+            ),
+          Tiny(_status ??
+              (_found != null && v != null
+                  ? "Pinned from the address ($_found). Tap the map if it's off."
+                  : v == null
+                      ? (widget.searchText.isEmpty ? 'Tap the map to drop the pin.' : 'Type the street and the pin follows, or tap the map.')
+                      : 'Pin set at ${v.$1}, ${v.$2}')),
         ]),
       ]),
     );

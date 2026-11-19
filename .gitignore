@@ -46,3 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Build settings with keys (Firebase): kept on this computer, never in git.
+dart_defines.local.json
+google-services.json

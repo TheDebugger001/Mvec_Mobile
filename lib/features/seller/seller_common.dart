@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/locations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -341,7 +342,15 @@ Future<void> showOnboarding(BuildContext context, WidgetRef ref) async {
       FieldSpec('category', 'Category', type: FieldType.select, required: true, placeholderOption: 'Select a category', options: [for (final c in categories) (strOf(c['name']), strOf(c['name']))]),
       const FieldSpec('email', 'Email', type: FieldType.email, required: true),
       const FieldSpec('phone', 'Phone', type: FieldType.phone, required: true),
-      const FieldSpec('location', 'Location', required: true, hint: 'City, district, or address'),
+      FieldSpec(
+        'location',
+        'District',
+        type: FieldType.select,
+        required: true,
+        placeholderOption: 'Choose your district',
+        help: 'You set your exact pickup spot on the map when you register your store.',
+        options: [for (final p in provinces) for (final d in rwandaLocations[p]!) ('$d, $p', '$d ($p)')],
+      ),
       const FieldSpec('description', 'Business description', type: FieldType.textarea, required: true),
       const FieldSpec('logoUrl', 'Business logo', type: FieldType.image, required: true),
     ],

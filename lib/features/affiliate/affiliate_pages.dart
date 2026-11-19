@@ -13,6 +13,7 @@ import '../../portal/api.dart';
 import '../../portal/kit.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
+import '../../widgets/auto_payout_card.dart';
 
 // The affiliate dashboard (web: pages/AffiliateDashboard.jsx).
 
@@ -590,6 +591,8 @@ class _AffiliateWithdrawalsPageState extends State<AffiliateWithdrawalsPage> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                AutoPayoutCard(onSaved: _data.reload),
+                const SizedBox(height: 14),
                 Section(
                   title: 'Request a withdrawal',
                   children: [

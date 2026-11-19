@@ -83,7 +83,7 @@ class _AdminRidersPageState extends State<AdminRidersPage> {
                 RecordCard(
                   title: strOf(r['name']),
                   subtitle: strOf(r['phone']),
-                  lines: ['${_vehicles[r['vehicleType']] ?? strOf(r['vehicleType'])}${strOf(r['plateNumber']).isEmpty ? '' : ' · ${r['plateNumber']}'}', if (r['isOnline'] == true) 'Online now'],
+                  lines: ['${_vehicles[r['vehicleType']] ?? strOf(r['vehicleType'])}${strOf(r['plateNumber']).isEmpty ? '' : ' · ${r['plateNumber']}'}', if ((r['districts'] as List? ?? const []).isNotEmpty) (r['districts'] as List).join(', ') else if (strOf(r['district']).isNotEmpty) strOf(r['district']), if (r['isOnline'] == true) 'Online now'],
                   status: StatusChip.of(strOf(r['status'])),
                   actions: [
                     if (r['status'] != 'APPROVED') ActionChipBtn('Approve', busy: _busy == idOf(r), onPressed: () => _review(r, 'APPROVED')),

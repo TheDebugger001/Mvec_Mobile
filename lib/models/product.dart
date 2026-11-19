@@ -26,6 +26,7 @@ class Product {
     this.variants = const [],
     this.variantOptions = const [],
     this.sellerBadges = const [],
+    this.bulkSeller = false,
     this.productId = '',
     this.variantLabel = '',
   });
@@ -63,6 +64,9 @@ class Product {
 
   /// Earned seller badges: [(code, label, hint)].
   final List<({String code, String label, String hint})> sellerBadges;
+
+  /// Sold by a supplier (wholesaler): flagged "Supplier · bulk".
+  final bool bulkSeller;
 
   /// For one size/colour as a cart line: the product's own id and "Red / M".
   final String productId;
@@ -132,6 +136,7 @@ class Product {
       sellerBadges: [
         for (final b in asMaps(p['sellerBadges'])) (code: strOf(b['code']), label: strOf(b['label']), hint: strOf(b['hint'])),
       ],
+      bulkSeller: p['bulkSeller'] == true,
     );
   }
 
@@ -158,6 +163,7 @@ class Product {
         attributes: attributes,
         deal: deal,
         sellerBadges: sellerBadges,
+        bulkSeller: bulkSeller,
         productId: id,
         variantLabel: v.label,
       );

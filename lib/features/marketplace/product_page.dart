@@ -252,7 +252,7 @@ class _ProductPageState extends ConsumerState<ProductPage> {
                     children: [
                       Avatar(name: p.vendor, radius: 20),
                       const SizedBox(width: 12),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sold by', style: TextStyle(color: mv.textMuted, fontSize: 11)), Text(p.vendor, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 14)), SellerBadgeRow(badges: p.sellerBadges)])),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sold by', style: TextStyle(color: mv.textMuted, fontSize: 11)), Text(p.vendor, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: mv.text, fontWeight: FontWeight.w700, fontSize: 14)), SellerBadgeRow(badges: p.sellerBadges, bulk: p.bulkSeller)])),
                     ],
                   ),
                 ),
