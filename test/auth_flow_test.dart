@@ -179,4 +179,25 @@ void main() {
     await settle(tester);
     expect(find.text('Share your location?'), findsNothing);
   });
+
+  testWidgets('without phone codes, a guest follows orders with the phone and an order number', (tester) async {
+    final backend = FakeBackend({
+      ...baseRoutes(),
+      'GET /auth/phone-codes': (_) => (200, {'required': false}),
+      'POST /auth/guest/verify': (_) => (200, {'token': 'jwt-g', 'user': userJson('buyer'), 'guest': true}),
+      'GET /auth/me': (_) => (200, {'user': userJson('buyer')}),
+      'GET /orders/my-orders': (_) => (200, {'orders': []}),
+    });
+    await pumpApp(tester, backend);
+    await tester.tap(find.byTooltip('Orders'));
+    await settle(tester);
+    expect(find.text('Text me a code'), findsNothing);
+    await tester.enterText(field('Phone number'), '0788123456');
+    await tester.enterText(field('Order number'), 'ORD-1-0001');
+    await tester.tap(find.text('Show my orders'));
+    await settle(tester, frames: 20);
+    final body = backend.where('POST', '/auth/guest/verify').single.body as Map;
+    expect([body['track'], body['orderNumber'], body.containsKey('code')], [true, 'ORD-1-0001', false]);
+    expect(find.text('My orders'), findsOneWidget);
+  });
 }

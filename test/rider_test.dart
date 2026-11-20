@@ -5,6 +5,8 @@ import 'package:mvec_mobile/features/rider/rider_state.dart';
 
 import 'helpers/fake_backend.dart';
 
+Finder field(String label) => find.widgetWithText(TextField, label);
+
 Map<String, dynamic> _rider({String status = 'APPROVED', bool online = true}) => {
       'rider': {'name': 'Eric Moto', 'phone': '0788555222', 'vehicleType': 'MOTORBIKE', 'plateNumber': 'RAB123A', 'status': status, 'isOnline': online},
     };
@@ -140,6 +142,37 @@ void main() {
     await settle(tester);
     expect(find.text('Another rider already took this parcel.'), findsOneWidget);
     expect(find.text('See parcels near you'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 15));
+  });
+
+  testWidgets('without phone codes, a rider signs up with phone and password, no code', (tester) async {
+    final backend = FakeBackend({
+      ...baseRoutes(),
+      'GET /auth/phone-codes': (_) => (200, {'required': false}),
+      'POST /rider/register': (_) => (201, {'token': 'jwt-rider', 'user': userJson('delivery', name: 'Eric Moto')}),
+      'GET /auth/me': (_) => (200, {'user': userJson('delivery', name: 'Eric Moto')}),
+      'GET /rider/me': (_) => (200, _rider(status: 'PENDING', online: false)),
+      'GET /rider/deliveries/active': (_) => (200, {'delivery': null}),
+    });
+    await pumpApp(tester, backend);
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/rider?signup=1');
+    await settle(tester);
+    expect(find.text('Send code'), findsNothing);
+    await tester.enterText(field('Full name'), 'Eric Moto');
+    await tester.enterText(field('Plate number'), 'RAB123A');
+    await tester.enterText(field('Phone number'), '0788555222');
+    await tester.enterText(field('Create password'), 'riding-safe-1');
+    await tester.enterText(field('Confirm password'), 'riding-safe-1');
+    await tester.tap(find.byType(DropdownButtonFormField<String>).last);
+    await settle(tester);
+    await tester.tap(find.text('Gasabo').last);
+    await settle(tester);
+    await tester.ensureVisible(find.text('Create rider account'));
+    await tester.tap(find.text('Create rider account'));
+    await settle(tester, frames: 20);
+    final body = backend.where('POST', '/rider/register').single.body as Map;
+    expect([body['phone'], body['password'], body['districts'], body.containsKey('verificationToken')], ['0788555222', 'riding-safe-1', ['Gasabo'], false]);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 15));
   });

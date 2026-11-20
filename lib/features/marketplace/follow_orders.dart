@@ -8,6 +8,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
+import '../../core/phone_codes.dart';
 
 /// `/orders` and `/orders/:id` while signed out: follow an order with the
 /// phone it was placed with (guests and regular buyers). A text code proves
@@ -38,6 +39,7 @@ class FollowOrders extends ConsumerStatefulWidget {
 class _FollowOrdersState extends ConsumerState<FollowOrders> {
   final _phone = TextEditingController();
   final _code = TextEditingController();
+  final _orderNumber = TextEditingController();
   bool _sent = false;
   bool _busy = false;
   String? _note;
@@ -47,6 +49,7 @@ class _FollowOrdersState extends ConsumerState<FollowOrders> {
   void dispose() {
     _phone.dispose();
     _code.dispose();
+    _orderNumber.dispose();
     super.dispose();
   }
 
@@ -75,6 +78,16 @@ class _FollowOrdersState extends ConsumerState<FollowOrders> {
         });
       });
 
+  /// Phone codes off (no SMS yet): the phone and one of its order numbers.
+  Future<void> _lookUp() => _run(() async {
+        if (!RegExp(r'^(\+?250|0)?7[2389]\d{7}$').hasMatch(_phone.text.replaceAll(RegExp(r'[\s-]'), ''))) {
+          throw ApiException('Enter the phone number you ordered with (07…).');
+        }
+        if (_orderNumber.text.trim().length < 5) throw ApiException('Enter the order number from your confirmation (it starts with ORD-).');
+        final session = await AuthApi.guestVerify(phone: _phone.text.trim(), track: true, orderNumber: _orderNumber.text.trim());
+        await ref.read(authProvider.notifier).startSession(session);
+      });
+
   Future<void> _verify() => _run(() async {
         if (!RegExp(r'^\d{6}$').hasMatch(_code.text.trim())) throw ApiException('Enter the 6-digit code.');
         final session = await AuthApi.guestVerify(phone: _phone.text.trim(), code: _code.text.trim(), track: true);
@@ -84,6 +97,7 @@ class _FollowOrdersState extends ConsumerState<FollowOrders> {
   @override
   Widget build(BuildContext context) {
     final mv = context.mv;
+    final codes = ref.watch(phoneCodesProvider).valueOrNull ?? true;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
       children: [
@@ -91,10 +105,21 @@ class _FollowOrdersState extends ConsumerState<FollowOrders> {
         const SizedBox(height: 6),
         Text('Follow your order', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
-        Text("Enter the phone number you ordered with. We'll text you a code, then show your orders and where each parcel is.", style: TextStyle(color: mv.textMuted, height: 1.4)),
+        Text(
+          codes
+              ? "Enter the phone number you ordered with. We'll text you a code, then show your orders and where each parcel is."
+              : "Enter the phone number you ordered with and one of your order numbers. We'll show your orders and where each parcel is.",
+          style: TextStyle(color: mv.textMuted, height: 1.4),
+        ),
         const SizedBox(height: 18),
         if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Notice(text: _error!)),
-        if (!_sent) ...[
+        if (!codes) ...[
+          TextField(controller: _phone, keyboardType: TextInputType.phone, autofillHints: const [AutofillHints.telephoneNumber], decoration: const InputDecoration(labelText: 'Phone number', hintText: '07xx xxx xxx')),
+          const SizedBox(height: 10),
+          TextField(controller: _orderNumber, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Order number', hintText: 'ORD-…')),
+          const SizedBox(height: 14),
+          GradientButton(label: 'Show my orders', expand: true, loading: _busy, onPressed: _busy ? null : _lookUp),
+        ] else if (!_sent) ...[
           TextField(controller: _phone, keyboardType: TextInputType.phone, autofillHints: const [AutofillHints.telephoneNumber], decoration: const InputDecoration(labelText: 'Phone number', hintText: '07xx xxx xxx')),
           const SizedBox(height: 14),
           GradientButton(label: 'Text me a code', expand: true, loading: _busy, onPressed: _busy ? null : _send),

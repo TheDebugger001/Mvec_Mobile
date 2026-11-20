@@ -12,6 +12,7 @@ import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
 import 'rider_api.dart';
 import '../../widgets/district_dropdown.dart';
+import '../../core/phone_codes.dart';
 
 /// `/rider`: riders sign in, or sign up, with their phone and a text-message
 /// code (as KitchenLink's delivery workers do). A new rider waits for Ikiguzi's
@@ -81,6 +82,18 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
         });
       });
 
+  /// Phone codes off (no SMS yet): the account is created with the phone and password.
+  Future<void> _signUpDirect() => _go(() async {
+        if (_name.text.trim().length < 3) throw ApiException('Enter your full name.');
+        if (_districts.isEmpty) throw ApiException('Choose at least one district you deliver in.');
+        if (_password.text.length < 8) throw ApiException('Choose a password of at least 8 characters.');
+        if (_password.text != _confirm.text) throw ApiException('The passwords do not match.');
+        final reply = await RiderApi.signUpDirect(phone: _phone.text.trim(), fullName: _name.text.trim(), vehicleType: _vehicle, plateNumber: _plate.text.trim(), password: _password.text, districts: _districts);
+        final user = AppUser.fromJson(asMap(reply['user']));
+        await ref.read(authProvider.notifier).startSession(AuthSession(strOf(reply['token']), user));
+        if (mounted) context.go('/delivery');
+      });
+
   Future<void> _verify() => _go(() async {
         final reply = _signUp
             ? await RiderApi.signUp(phone: _phone.text.trim(), code: _code.text.trim(), fullName: _name.text.trim(), vehicleType: _vehicle, plateNumber: _plate.text.trim(), password: _password.text, districts: _districts)
@@ -92,12 +105,36 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
       });
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    // Until SMS is set up there are no codes: sign up straight away, sign in with the password.
+    final codes = ref.watch(phoneCodesProvider).valueOrNull ?? true;
+    return Scaffold(
         appBar: AppBar(title: const Text('Deliver with Ikiguzi')),
         body: PortalPage(
           title: _signUp ? 'Become a rider' : 'Rider sign in',
-          subtitle: _signUp ? 'Deliver parcels near you and keep the whole delivery fee.' : 'We text a 6-digit code to your phone, or sign in with your password on the normal sign-in page.',
-          children: [
+          subtitle: _signUp
+              ? 'Deliver parcels near you and keep the whole delivery fee.'
+              : codes
+                  ? 'We text a 6-digit code to your phone, or sign in with your password on the normal sign-in page.'
+                  : 'Sign in with your phone number and the password you chose when you signed up.',
+          children: codes || _signUp ? _form(codes) : [
+            SegmentedButton<bool>(
+              segments: const [ButtonSegment(value: false, label: Text('Sign in')), ButtonSegment(value: true, label: Text('Sign up'))],
+              selected: {_signUp},
+              onSelectionChanged: _busy ? null : (v) => setState(() {
+                _signUp = v.first;
+                _error = null;
+              }),
+            ),
+            const SizedBox(height: 16),
+            GradientButton(label: 'Sign in with my password', expand: true, onPressed: () => context.go('/login?next=/delivery')),
+            TextButton(onPressed: () => context.push('/forgot-password'), child: const Text('Forgot your password?')),
+          ],
+        ),
+      );
+  }
+
+  List<Widget> _form(bool codes) => [
             SegmentedButton<bool>(
               segments: const [ButtonSegment(value: false, label: Text('Sign in')), ButtonSegment(value: true, label: Text('Sign up'))],
               selected: {_signUp},
@@ -150,14 +187,12 @@ class _RiderAuthPageState extends ConsumerState<RiderAuthPage> {
             ],
             const SizedBox(height: 14),
             GradientButton(
-              label: !_codeSent ? 'Send code' : (_signUp ? 'Create rider account' : 'Sign in'),
+              label: !codes ? 'Create rider account' : !_codeSent ? 'Send code' : (_signUp ? 'Create rider account' : 'Sign in'),
               expand: true,
               loading: _busy,
-              onPressed: _busy ? null : (_codeSent ? _verify : _sendCode),
+              onPressed: _busy ? null : (!codes ? _signUpDirect : _codeSent ? _verify : _sendCode),
             ),
             if (_codeSent)
               TextButton(onPressed: _busy ? null : () => setState(() => _codeSent = false), child: const Text('Change the phone number')),
-          ],
-        ),
-      );
+          ];
 }

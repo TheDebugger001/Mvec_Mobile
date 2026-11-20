@@ -20,6 +20,7 @@ import '../../widgets/checkout_steps.dart';
 import '../../widgets/common.dart';
 import '../../widgets/pin_picker.dart';
 import '../common/page_frame.dart';
+import '../../core/phone_codes.dart';
 
 class _Line {
   const _Line({required this.id, required this.name, required this.image, required this.vendor, required this.price, required this.qty, required this.stock, required this.status});
@@ -344,6 +345,22 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   /// No account needed: confirm the phone with a code, then order.
   Future<void> _guestFlow() async {
     setState(() => _submitting = true);
+    // Phone codes off (no SMS yet): the phone number alone signs the guest in.
+    if (!await ref.read(phoneCodesProvider.future)) {
+      try {
+        final session = await AuthApi.guestVerify(phone: _phone.text.trim(), fullName: _name.text.trim(), email: _email.text.trim());
+        if (!mounted) return;
+        await _orderAsGuest(session);
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _error = errorText(e);
+            _submitting = false;
+          });
+        }
+      }
+      return;
+    }
     String sentTo = '';
     try {
       final res = await AuthApi.guestSendCode(_phone.text.trim(), email: _email.text);
@@ -358,7 +375,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       }
     }
     if (!mounted) return;
-    final basket = _items;
     final session = await showDialog<AuthSession>(
       context: context,
       barrierDismissible: false,
@@ -368,6 +384,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       setState(() => _submitting = false);
       return;
     }
+    await _orderAsGuest(session);
+  }
+
+  /// Signed in as the guest: place the order and go to payment.
+  Future<void> _orderAsGuest(AuthSession session) async {
+    final basket = _items;
     // The basket goes with the order, so don't also merge it into the account cart.
     if (widget.productId == null) ref.read(cartProvider.notifier).clearLocal();
     await ref.read(authProvider.notifier).startSession(session);

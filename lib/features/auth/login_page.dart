@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../state/auth_state.dart';
 import '../../widgets/common.dart';
 import 'auth_scaffold.dart';
+import '../../core/phone_codes.dart';
 
 /// `/login` — email or phone plus password, or a one-time code to the phone for
 /// people who ordered as a guest (`pages/Login.jsx`).
@@ -123,6 +124,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             child: TextButton(onPressed: () => context.push('/forgot-password'), child: const Text('Forgot password?')),
           ),
           GradientButton(label: 'Log in', expand: true, loading: _busy, onPressed: _login),
+          // No code sign-in until SMS is set up: guests follow orders from Orders.
+          if (ref.watch(phoneCodesProvider).valueOrNull ?? false)
           SwitchLine(
             text: 'Ordered as a guest?',
             action: 'Log in with a code',

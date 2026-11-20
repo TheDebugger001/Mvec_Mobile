@@ -63,16 +63,20 @@ class AuthApi {
 
   static Future<AuthSession> guestVerify({
     required String phone,
-    required String code,
+    String code = '',
     String? fullName,
     String? email,
     bool track = false,
+    String orderNumber = '',
   }) async {
     final res = await _api.post('/auth/guest/verify', body: {
-      // "Follow my order" while signed out: only numbers that already ordered.
+      // "Follow my order" while signed out: only numbers that already ordered
+      // (with codes off, also one of its order numbers).
       if (track) 'track': true,
+      if (track && orderNumber.isNotEmpty) 'orderNumber': orderNumber,
       'phone': phone,
-      'code': code,
+      // Empty while phone codes are off (lib/core/phone_codes.dart).
+      if (code.isNotEmpty) 'code': code,
       if (fullName != null && fullName.isNotEmpty) 'fullName': fullName,
       if (email != null && email.isNotEmpty) 'email': email,
     });

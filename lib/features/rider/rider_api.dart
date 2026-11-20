@@ -192,6 +192,24 @@ class RiderApi {
   static Future<Map<String, dynamic>> signIn(String phone, String code) async =>
       asMap(await _api.post('/auth/verify-otp', body: {'phone': phone, 'code': code, 'purpose': 'login'}));
 
+  /// Sign up without a code (phone codes off until SMS is set up).
+  static Future<Map<String, dynamic>> signUpDirect({
+    required String phone,
+    required String fullName,
+    required String vehicleType,
+    required String plateNumber,
+    required String password,
+    List<String> districts = const [],
+  }) async =>
+      asMap(await _api.post('/rider/register', body: {
+        'phone': phone,
+        'fullName': fullName,
+        'vehicleType': vehicleType,
+        'plateNumber': plateNumber,
+        if (districts.isNotEmpty) 'districts': districts,
+        'password': password,
+      }));
+
   /// Sign up: verify the code, then create the rider account.
   static Future<Map<String, dynamic>> signUp({
     required String phone,
