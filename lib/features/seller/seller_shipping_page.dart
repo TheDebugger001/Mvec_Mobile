@@ -94,7 +94,7 @@ class _SellerShippingPageState extends State<SellerShippingPage> {
               if (d.zones.isEmpty)
                 const InfoBox(
                   title: 'Using Ikiguzi standard rates',
-                  text: 'Until you add a zone, buyers pay Ikiguzi standard delivery: free in Kigali City and 5,000 RWF elsewhere (express 10,000 RWF). Add zones to set your own fees and coverage.',
+                  text: 'Until you add a zone, buyers pay Ikiguzi standard delivery: 2,000 RWF in Kigali City and 5,000 RWF elsewhere. Add zones to set your own fees and coverage.',
                 ),
               if (usingOther) const InfoBox(title: 'No zones for this store yet', text: "Checkout uses your other stores' zones for its items until you add zones here."),
               Section(
@@ -107,10 +107,9 @@ class _SellerShippingPageState extends State<SellerShippingPage> {
                       title: strOf(z['name']),
                       subtitle: strOf(z['coverage']),
                       lines: [
-                        'Standard ${numOf(z['fee']) == 0 ? 'Free' : money(z['fee'])}'
-                            '${(z['methods'] is List && (z['methods'] as List).contains('EXPRESS')) ? ' · Express ${money(z['expressFee'] ?? z['fee'])}' : ''}'
+                        'Standard ${money(z['fee'])}'
                             '${(z['methods'] is List && (z['methods'] as List).contains('PICKUP')) ? ' · Pickup ${numOf(z['pickupFee']) > 0 ? money(z['pickupFee']) : 'Free'}' : ''}',
-                        '${numOf(z['freeOverAmount']) > 0 ? 'Free from ${money(z['freeOverAmount'])} · ' : ''}Time ${z['eta'] ?? ''}',
+                        'Time ${z['eta'] ?? ''}',
                       ],
                       status: Pill(z['status']),
                       actions: [
@@ -242,7 +241,7 @@ class _PreviewCardState extends State<_PreviewCard> {
         const SizedBox(height: 10),
         TextField(controller: _subtotal, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Order subtotal (RWF)')),
         const SizedBox(height: 10),
-        FilterSelect(label: 'Method', value: _method, options: const [('STANDARD', 'Standard'), ('EXPRESS', 'Express'), ('PICKUP', 'Pickup')], onChanged: (v) => setState(() => _method = v)),
+        FilterSelect(label: 'Method', value: _method, options: const [('STANDARD', 'Delivery'), ('PICKUP', 'Pickup')], onChanged: (v) => setState(() => _method = v)),
         const SizedBox(height: 10),
         OutlineBtn(label: 'Check delivery', loading: _busy, onPressed: _test),
         const SizedBox(height: 10),
@@ -291,7 +290,6 @@ class _ZoneEditorState extends State<_ZoneEditor> {
           : 'ALL';
   late final Set<String> _provinces = {for (final p in (_z['provinces'] is List ? _z['provinces'] as List : const [])) '$p'};
   late final Set<String> _districts = {for (final d in (_z['districts'] is List ? _z['districts'] as List : const [])) '$d'};
-  late bool _express = _z['methods'] is List && (_z['methods'] as List).contains('EXPRESS');
   late bool _pickup = _z['methods'] is List && (_z['methods'] as List).contains('PICKUP');
   late String _status = strOf(_z['status'], 'ACTIVE');
   bool _busy = false;
@@ -310,16 +308,16 @@ class _ZoneEditorState extends State<_ZoneEditor> {
     if (_name.text.trim().isEmpty || _fee.text.trim().isEmpty) return setState(() => _error = 'Enter the zone name and the standard fee.');
     if (_scope == 'PROVINCES' && _provinces.isEmpty) return setState(() => _error = 'Select at least one province.');
     if (_scope == 'DISTRICTS' && _districts.isEmpty) return setState(() => _error = 'Select at least one district.');
-    if (_express && _expressFee.text.isNotEmpty && numOf(_expressFee.text) < numOf(_fee.text)) return setState(() => _error = 'Express delivery should not cost less than standard.');
+    if (!(numOf(_fee.text) > 0)) return setState(() => _error = 'Set a standard delivery fee. Delivery is never free on Ikiguzi.');
     final payload = {
       'name': _name.text.trim(),
       'provinces': _scope == 'PROVINCES' ? _provinces.toList() : <String>[],
       'districts': _scope == 'DISTRICTS' ? _districts.toList() : <String>[],
       'fee': numOf(_fee.text),
-      'expressFee': _express && _expressFee.text.isNotEmpty ? numOf(_expressFee.text) : null,
+      'expressFee': null,
       'pickupFee': _pickup ? numOf(_pickupFee.text) : 0,
-      'methods': ['STANDARD', if (_express) 'EXPRESS', if (_pickup) 'PICKUP'],
-      'freeOverAmount': numOf(_free.text),
+      'methods': ['STANDARD', if (_pickup) 'PICKUP'],
+      'freeOverAmount': 0,
       'eta': _eta.text.trim().isEmpty ? '1–3 days' : _eta.text.trim(),
       'status': _status,
       if (widget.zone == null && widget.storeId.isNotEmpty) 'storeId': widget.storeId,
@@ -398,15 +396,7 @@ class _ZoneEditorState extends State<_ZoneEditor> {
             const SizedBox(height: 10),
             TextField(controller: _eta, decoration: const InputDecoration(labelText: 'Delivery time', hintText: '1–3 days')),
             const SizedBox(height: 10),
-            TextField(
-              controller: _free,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Free standard delivery from (RWF)', hintText: 'No free delivery', helperText: 'Order subtotal from this store.'),
-            ),
-            const SizedBox(height: 10),
             FilterSelect(label: 'Status', value: _status, options: const [('ACTIVE', 'Active'), ('PAUSED', 'Paused')], onChanged: (v) => setState(() => _status = v)),
-            SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Offer express delivery'), value: _express, onChanged: (v) => setState(() => _express = v)),
-            if (_express) TextField(controller: _expressFee, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Express fee (RWF)', hintText: 'Same as standard')),
             SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Allow pickup'), value: _pickup, onChanged: (v) => setState(() => _pickup = v)),
             if (_pickup) TextField(controller: _pickupFee, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Pickup fee (RWF)')),
           ],

@@ -158,7 +158,9 @@ class _SellerOrdersPageState extends State<SellerOrdersPage> {
                         onTap: () => context.push('/vendor/orders/${idOf(o)}'),
                         actions: [
                           for (final s in next)
-                            ActionChipBtn(stepLabelFor(o, s), primary: true, busy: busy, onPressed: () => _update(o, {'status': s}, '${o['orderNumber']}: ${titleCase(s).toLowerCase()}.')),
+                            ActionChipBtn(stepLabelFor(o, s), primary: true, busy: busy, onPressed: () async {
+                              if (await confirmOrderStep(context, s, label: stepLabelFor(o, s))) await _update(o, {'status': s}, '${o['orderNumber']}: ${titleCase(s).toLowerCase()}.');
+                            }),
                           if (canRecordCash(o)) ActionChipBtn('Cash received', busy: busy, onPressed: () => _update(o, {'paymentStatus': 'PAID'}, 'Cash recorded for ${o['orderNumber']}.')),
                           if (next.isEmpty && !canRecordCash(o) && ['SHIPPED', 'OUT_FOR_DELIVERY'].contains(o['orderStatus'])) const Tiny('Awaiting delivery code'),
                           if (cancellable) ActionChipBtn('Cancel', danger: true, busy: busy, onPressed: () => _cancel(o)),
@@ -314,7 +316,9 @@ class _SellerOrderDetailPageState extends ConsumerState<SellerOrderDetailPage> {
                             label: stepLabelFor(o, s),
                             icon: s == 'SHIPPED' || s == 'READY_FOR_SHIPMENT' ? Icons.inventory_2_outlined : Icons.check_rounded,
                             loading: _updating,
-                            onPressed: () => _update({'status': s}),
+                            onPressed: () async {
+                              if (await confirmOrderStep(context, s, label: stepLabelFor(o, s))) await _update({'status': s});
+                            },
                           ),
                         ),
                       if (canRecordCash(o))
@@ -618,8 +622,7 @@ class _ManualOrderPageState extends State<ManualOrderPage> {
               children: [
                 SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'STANDARD', label: Text('Standard')),
-                    ButtonSegment(value: 'EXPRESS', label: Text('Express')),
+                    ButtonSegment(value: 'STANDARD', label: Text('Delivery')),
                     ButtonSegment(value: 'PICKUP', label: Text('Pickup')),
                   ],
                   selected: {_method},

@@ -462,7 +462,11 @@ class _DeliveryTrackingPageState extends ConsumerState<DeliveryTrackingPage> {
                   ActionChipBtn(
                     o.next!.$2,
                     busy: busy,
-                    onPressed: () => _act(o, () => jpatch('/orders/vendor/status', {'orderId': o.id, 'status': o.next!.$1}), 'Updated. The buyer has been notified.'),
+                    onPressed: () async {
+                      final step = o.next!;
+                      if (!await confirmOrderStep(context, step.$1, label: step.$2)) return;
+                      await _act(o, () => jpatch('/orders/vendor/status', {'orderId': o.id, 'status': step.$1}), 'Updated. The buyer has been notified.');
+                    },
                   ),
               ],
             ),

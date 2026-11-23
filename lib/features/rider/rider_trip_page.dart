@@ -73,7 +73,10 @@ class RiderTripPage extends ConsumerWidget {
           SlideToConfirm(
             key: ValueKey(next),
             label: _stepLabels[next] ?? 'Slide to continue',
-            onConfirmed: () => _run(context, () => ref.read(riderBoardProvider.notifier).step(job.id, next)),
+            onConfirmed: () async {
+              if (!await confirmOrderStep(context, next, rider: true)) return;
+              if (context.mounted) await _run(context, () => ref.read(riderBoardProvider.notifier).step(job.id, next));
+            },
           )
         else if (job.canConfirm) ...[
           const InfoBox(title: "The buyer's code", text: 'Ask for the 6-digit code on their order only when the parcel is in their hands. Five wrong codes lock the delivery for Ikiguzi support.'),

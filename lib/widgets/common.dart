@@ -915,14 +915,14 @@ void toast(BuildContext context, String message, {bool error = false}) {
 }
 
 /// Asks "are you sure?" before a destructive action.
-Future<bool> confirmDialog(BuildContext context, String message, {String confirm = 'Confirm', String title = 'Are you sure?', bool danger = false}) async {
+Future<bool> confirmDialog(BuildContext context, String message, {String confirm = 'Confirm', String cancel = 'Cancel', String title = 'Are you sure?', bool danger = false}) async {
   final res = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(title),
       content: Text(message),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(cancel)),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(confirm, style: TextStyle(color: danger ? MvColors.errorText : ctx.mv.accentDeep, fontWeight: FontWeight.w700)),
@@ -956,3 +956,22 @@ Future<String?> promptDialog(BuildContext context, String title, {String? hint, 
   );
   return res;
 }
+
+const _stepWarning = {
+  'PROCESSING': 'Start preparing this order?',
+  'READY_FOR_SHIPMENT': 'Mark this order ready? A rider (or the buyer, for pickup) is told to come for it.',
+  'SHIPPED': 'Mark this order shipped? The buyer is told it has left your store.',
+  'OUT_FOR_DELIVERY': 'Mark this order out for delivery? The buyer is told it is on its way now.',
+  'DELIVERED': 'Mark this order delivered?',
+  'PICKED_UP': 'Do you have the parcel in your hands? The seller and the buyer are told you collected it.',
+};
+
+/// A delivery step can't be taken back, so sellers and riders confirm it
+/// first: a mis-tap on "Out for delivery" or "I have the parcel" would tell
+/// the buyer something that hasn't happened (the website's `confirmStep`).
+Future<bool> confirmOrderStep(BuildContext context, String status, {String? label, bool rider = false}) => confirmDialog(
+      context,
+      '${rider && status == 'OUT_FOR_DELIVERY' ? 'Start the delivery now? The buyer is told you are on your way.' : (_stepWarning[status] ?? '${label ?? status}?')}\n\nOnly continue if this has really happened. It can\'t be undone.',
+      title: 'Please confirm',
+      confirm: 'Yes, continue',
+    );

@@ -57,7 +57,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   final _coupon = TextEditingController();
 
   String _fulfilment = ''; // '' | pickup | delivery
-  String _speed = 'standard';
   String _province = 'Kigali City';
   String _district = '';
   (double, double)? _pin;
@@ -71,7 +70,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   bool _saveAddress = false;
   bool _prefilled = false;
 
-  Map<String, Map<String, dynamic>?> _quotes = {'standard': null, 'express': null, 'pickup': null};
+  Map<String, Map<String, dynamic>?> _quotes = {'standard': null, 'pickup': null};
   bool _quoting = false;
   String _quoteError = '';
   Timer? _quoteTimer;
@@ -133,7 +132,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
   bool get _isPickup => _fulfilment == 'pickup';
   bool get _isDelivery => _fulfilment == 'delivery';
-  String get _method => _isPickup ? 'pickup' : (_isDelivery ? _speed : '');
+  // Two ways only: pick it up, or standard delivery.
+  String get _method => _isPickup ? 'pickup' : (_isDelivery ? 'standard' : '');
   Map<String, dynamic>? get _quote => _method.isEmpty ? null : _quotes[_method];
   bool get _districtValid => rwandaLocations[_province]?.contains(_district) ?? false;
 
@@ -152,7 +152,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     _lastQuoteKey = key;
     _quoteTimer?.cancel();
     if (_quoteItems.isEmpty || _fulfilment.isEmpty || (_isDelivery && !_districtValid)) {
-      setState(() => _quotes = {'standard': null, 'express': null, 'pickup': null});
+      setState(() => _quotes = {'standard': null, 'pickup': null});
       return;
     }
     setState(() {
@@ -163,13 +163,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       try {
         Map<String, Map<String, dynamic>?> next;
         if (_isPickup) {
-          next = {'standard': null, 'express': null, 'pickup': await CheckoutApi.quote(method: 'PICKUP', items: _quoteItems)};
+          next = {'standard': null, 'pickup': await CheckoutApi.quote(method: 'PICKUP', items: _quoteItems)};
         } else {
-          final res = await Future.wait([
-            CheckoutApi.quote(method: 'STANDARD', items: _quoteItems, province: _province, district: _district, pin: _pin),
-            CheckoutApi.quote(method: 'EXPRESS', items: _quoteItems, province: _province, district: _district, pin: _pin),
-          ]);
-          next = {'standard': res[0], 'express': res[1], 'pickup': null};
+          next = {'standard': await CheckoutApi.quote(method: 'STANDARD', items: _quoteItems, province: _province, district: _district, pin: _pin), 'pickup': null};
         }
         if (mounted && key == _lastQuoteKey) setState(() => _quotes = next);
       } catch (e) {
@@ -417,7 +413,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     if (q == null) return _quoting ? '…' : (_districtValid ? '—' : 'Choose your district');
     if (q['deliverable'] == false) return 'Unavailable';
     final fee = numOf(q['shippingFee']);
-    return fee == 0 ? 'FREE' : money(fee);
+    return money(fee);
   }
 
   @override
@@ -596,27 +592,11 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                       title: const Text('Save this address to my account', style: TextStyle(fontSize: 12.5)),
                     ),
                   const SizedBox(height: 6),
-                  Text('Delivery speed', style: TextStyle(color: mv.textMuted, fontSize: 12)),
-                  RadioGroup<String>(
-                    groupValue: _speed,
-                    onChanged: (v) {
-                      setState(() => _speed = v ?? 'standard');
-                      _scheduleQuote();
-                    },
-                    child: Column(
-                      children: [
-                        for (final speed in const [('standard', 'Standard delivery'), ('express', 'Express delivery')])
-                          Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            decoration: BoxDecoration(
-                              color: _speed == speed.$1 ? mv.soft : null,
-                              borderRadius: BorderRadius.circular(MvRadius.field + 2),
-                              border: Border.all(color: _speed == speed.$1 ? mv.accent : mv.border, width: _speed == speed.$1 ? 1.5 : 1),
-                            ),
-                            child: Material(color: Colors.transparent, child: RadioListTile<String>(value: speed.$1, dense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 8), title: Text('${speed.$2}  ·  ${_feeLabel(speed.$1)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)))),
-                          ),
-                      ],
-                    ),
+                  Container(
+                    margin: const EdgeInsets.only(top: 4, bottom: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    decoration: BoxDecoration(color: mv.soft, borderRadius: BorderRadius.circular(MvRadius.field + 2), border: Border.all(color: mv.accent, width: 1.5)),
+                    child: Text('Standard delivery  ·  ${_feeLabel('standard')}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   ),
                   if (_quoteError.isNotEmpty) Notice(text: _quoteError),
                   if (_undeliverable) Notice(text: '$_undeliverableMessage Choose another district, choose pickup, or remove those items.'),
@@ -625,7 +605,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                       _ParcelRow(
                         title: strOf(g['storeName'], 'Store'),
                         subtitle: '${strOf(g['zoneName'])}${strOf(g['eta']).isEmpty ? '' : ' · ${g['eta']}'}',
-                        fee: numOf(g['fee']) == 0 ? 'FREE' : money(g['fee']),
+                        fee: money(g['fee']),
                       ),
                   Text('Delivery fees are set by each seller for your district; items from different stores ship separately. You give the courier your delivery code when it arrives.', style: TextStyle(color: mv.textMuted, fontSize: 11.5, height: 1.4)),
                 ],
@@ -689,7 +669,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             children: [
               const PanelTitle('Order summary'),
               PanelRow('Products', money(_subtotal)),
-              PanelRow(_isPickup ? 'Pickup' : 'Delivery', _fulfilment.isEmpty ? 'Choose pickup or delivery' : (_isPickup ? 'FREE (pickup)' : (_quoting && _quote == null ? '…' : (_undeliverable || _quote == null ? '—' : (_delivery == 0 ? 'FREE' : money(_delivery)))))),
+              PanelRow(_isPickup ? 'Pickup' : 'Delivery', _fulfilment.isEmpty ? 'Choose pickup or delivery' : (_isPickup ? 'FREE (pickup)' : (_quoting && _quote == null ? '…' : (_undeliverable || _quote == null ? '—' : money(_delivery))))),
               if (_discount > 0) PanelRow('Coupon ${_couponResult!['code']}', '−${money(_discount)}'),
               Divider(height: 22, color: Colors.white.withValues(alpha: .22)),
               PanelRow('Total to pay', money(_total), bold: true),

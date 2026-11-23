@@ -80,6 +80,27 @@ class _WholesaleOrdersPageState extends State<WholesaleOrdersPage> {
     if (ok) _data.reload();
   }
 
+  /// Confirm the goods arrived, then ask whether to put them in stock now
+  /// (existing products restocked, new ones listed from the supplier's details).
+  Future<void> _confirmReceipt(Map<String, dynamic> o) async {
+    final number = o['orderNumber'];
+    if (!await confirmDialog(context, 'Confirm you received everything in $number? ${money(o['totalAmount'])} is released to ${partyName(o['supplier'])}. This cannot be undone.')) return;
+    if (!mounted) return;
+    final store = strOf(asMap(o['store'])['storeName'], 'your store');
+    final add = await confirmDialog(
+      context,
+      "Add these goods to $store's stock now? Products you bought before are restocked; new ones are listed for you from the supplier's details, so you don't start from scratch.",
+      title: 'Add to your stock?',
+      confirm: 'Add to my stock',
+      cancel: 'Not now',
+    );
+    if (!mounted) return;
+    setState(() => _busy = idOf(o));
+    final ok = await runAction(context, () => jpost('/wholesale/orders/${idOf(o)}/confirm-receipt', {'addToStock': add}), success: '$number confirmed. The supplier has been paid.${add ? '' : ' Use "Add to my stock" when you want the goods in your store.'}');
+    if (mounted) setState(() => _busy = '');
+    if (ok) _data.reload();
+  }
+
   Future<void> _reason(Map<String, dynamic> o, {required bool problem}) async {
     final ok = await showFormSheet<bool>(
       context,
@@ -128,13 +149,15 @@ class _WholesaleOrdersPageState extends State<WholesaleOrdersPage> {
             icon: Icons.check_rounded,
             primary: true,
             busy: b,
-            onPressed:
-                () => _run(
-                  o,
-                  () => jpost('/wholesale/orders/${idOf(o)}/confirm-receipt'),
-                  '${o['orderNumber']} confirmed. The supplier has been paid.',
-                  'Confirm you received everything in ${o['orderNumber']}? ${money(o['totalAmount'])} is released to ${partyName(o['supplier'])}. This cannot be undone.',
-                ),
+            onPressed: () => _confirmReceipt(o),
+          ),
+        if (s == 'CONFIRMED_RELEASED' && o['stockedAt'] == null)
+          ActionChipBtn(
+            'Add to my stock',
+            icon: Icons.inventory_2_outlined,
+            primary: true,
+            busy: b,
+            onPressed: () => _run(o, () => jpost('/wholesale/orders/${idOf(o)}/add-to-stock'), 'Added to your stock.'),
           ),
         if (['SHIPPED', 'DELIVERED', 'ESCROW_HELD'].contains(s)) ActionChipBtn('Report a problem', busy: b, onPressed: () => _reason(o, problem: true)),
         if (['PENDING_PAYMENT', 'ESCROW_HELD'].contains(s))

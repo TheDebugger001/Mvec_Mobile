@@ -263,7 +263,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                   ),
                 const Divider(height: 18),
                 SummaryRow('Products', money(o['subtotal'] ?? numOf(o['totalAmount']) - numOf(o['shippingFee']))),
-                SummaryRow('${isPickup ? 'Pickup' : 'Delivery'}${o['shippingMethod'] == 'EXPRESS' ? ' (express)' : ''}${breakdown.length > 1 ? ' · ${breakdown.length} parcels' : ''}', numOf(o['shippingFee']) > 0 ? money(o['shippingFee']) : 'FREE'),
+                SummaryRow('${isPickup ? 'Pickup' : 'Delivery'}${breakdown.length > 1 ? ' · ${breakdown.length} parcels' : ''}', numOf(o['shippingFee']) > 0 ? money(o['shippingFee']) : 'FREE'),
                 if (!isPickup) for (final p in breakdown.where((p) => strOf(p['eta']).isNotEmpty)) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('${strOf(p['storeName'], 'Seller')} · arrives in ${p['eta']}', style: TextStyle(color: mv.textMuted, fontSize: 11))),
                 if (numOf(o['discountAmount']) > 0) SummaryRow('Coupon ${asMap(o['coupon'])['code'] ?? ''}', '−${money(o['discountAmount'])}'),
                 SummaryRow('Total', money(o['totalAmount']), bold: true),
