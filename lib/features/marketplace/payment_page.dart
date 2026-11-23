@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../api/commerce_api.dart';
 import '../../core/api_client.dart';
 import '../../core/format.dart';
+import '../../core/payment_mode.dart';
 import '../../core/theme.dart';
 import '../../state/auth_state.dart';
 import '../common/page_frame.dart';
@@ -221,6 +222,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
     final waiting = _stage == 'waiting';
     final provider = mobileProvider(_phone.text);
     final total = order['totalAmount'];
+    final testMode = ref.watch(paymentTestModeProvider).valueOrNull == true;
 
     Widget option(String value, String title, String sub, IconData icon) {
       final on = _method == value;
@@ -263,6 +265,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
         children: [
           CheckoutSteps(current: _stage == 'confirmed' ? 3 : 2),
           PageTitle(eyebrow: 'Payment', title: 'Pay for your order', subtitle: 'Order #${order['orderNumber']}'),
+          if (testMode && !closed && _stage != 'confirmed')
+            const Notice(info: true, text: 'Test payment. Nothing is charged and no prompt is sent to your phone. Any method you pick is confirmed straight away.'),
           if (_error.isNotEmpty) Notice(text: _error),
           if (_notice.isNotEmpty && _stage != 'confirmed') Notice(text: _notice, ok: true),
           if (closed)
@@ -278,9 +282,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with WidgetsBindingOb
           else if (_stage == 'confirmed')
             DataCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Payment confirmed ✓', style: context.mvH1.copyWith(fontSize: 16)),
+                Text(testMode ? 'Test payment confirmed ✓' : 'Payment confirmed ✓', style: context.mvH1.copyWith(fontSize: 16)),
                 const SizedBox(height: 6),
-                Text('Thank you! Your payment is held safely by Ikiguzi. Taking you to your order…', style: TextStyle(color: mv.textMuted, fontSize: 13)),
+                Text(testMode ? 'No money was taken. Taking you to your order…' : 'Thank you! Your payment is held safely by Ikiguzi. Taking you to your order…', style: TextStyle(color: mv.textMuted, fontSize: 13)),
                 const SizedBox(height: 12),
                 GradientButton(label: 'View order', compact: true, onPressed: () => context.pushReplacement('/orders/${widget.orderId}')),
               ]),

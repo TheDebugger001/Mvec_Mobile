@@ -17,6 +17,7 @@ import '../state/notifications_state.dart';
 import '../widgets/common.dart';
 import '../widgets/motion.dart';
 import '../widgets/mv_icon.dart';
+import '../widgets/test_mode_banner.dart';
 import '../widgets/theme_switch.dart';
 
 /// The bottom bar's five destinations, in the reference design's order:
@@ -110,6 +111,7 @@ class _MarketplaceShellState extends ConsumerState<MarketplaceShell> with Single
             ),
             body: Column(
               children: [
+                const TestModeBanner(),
                 if (cartNotice.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
