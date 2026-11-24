@@ -110,6 +110,8 @@ class _SellerStoresPageState extends State<SellerStoresPage> {
           action: register,
           children: [
             if (atLimit) Tiny('You can own up to $max stores.'),
+            if (stores.any((s) => s['riderDelivery'] != true))
+              const Notice(info: true, text: 'Ikiguzi riders are off for some of your stores, so their orders are not offered to riders and you deliver them yourself. Set the pickup pin and tap "Turn riders on".'),
             if (stores.isEmpty)
               EmptyState(icon: Icons.storefront_outlined, title: "You don't have a store yet", message: 'Register your first store to start listing products and receiving orders.', action: register)
             else ...[
@@ -118,7 +120,10 @@ class _SellerStoresPageState extends State<SellerStoresPage> {
                 RecordCard(
                   leading: ProductImage(src: strOf(s['logo']), size: 48, radius: 10),
                   title: strOf(s['storeName']),
-                  badges: [if (s['isPrimary'] == true) const StatusChip('Primary', tone: StatusTone.good)],
+                  badges: [
+                    if (s['isPrimary'] == true) const StatusChip('Primary', tone: StatusTone.good),
+                    s['riderDelivery'] == true ? const StatusChip('Riders on', tone: StatusTone.good) : const StatusChip('Riders off', tone: StatusTone.warn),
+                  ],
                   subtitle: '/${s['slug'] ?? ''} · ${strOf(s['businessCategory'], '—')}',
                   lines: [
                     [
@@ -130,6 +135,21 @@ class _SellerStoresPageState extends State<SellerStoresPage> {
                   ],
                   status: Pill(s['status']),
                   actions: [
+                    // Ikiguzi riders: the switch sellers need to find, right on the card.
+                    if (s['pickupLat'] == null)
+                      ActionChipBtn('Set pickup pin for riders', icon: Icons.place_outlined, primary: true, busy: _busy == idOf(s), onPressed: () => _edit(s))
+                    else
+                      ActionChipBtn(
+                        s['riderDelivery'] == true ? 'Turn riders off' : 'Turn riders on',
+                        icon: Icons.delivery_dining_outlined,
+                        primary: s['riderDelivery'] != true,
+                        busy: _busy == idOf(s),
+                        onPressed: () async {
+                          final on = s['riderDelivery'] == true;
+                          if (on && !await confirmDialog(context, 'Turn off Ikiguzi riders for ${s['storeName']}? Its parcels will use your own delivery zones and you deliver them yourself.', confirm: 'Turn off')) return;
+                          await _act(s, () => jput('/stores/mine/${idOf(s)}', {'riderDelivery': !on}));
+                        },
+                      ),
                     ActionChipBtn('Edit', icon: Icons.edit_outlined, busy: _busy == idOf(s), onPressed: () => _edit(s)),
                     if (s['isPrimary'] != true) ActionChipBtn('Make primary', busy: _busy == idOf(s), onPressed: () => _act(s, () => jpatch('/stores/mine/${idOf(s)}/primary'))),
                     if (s['isPrimary'] != true)

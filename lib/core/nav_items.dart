@@ -177,6 +177,7 @@ const deliveryNavGroups = <NavGroup>[
   ]),
   NavGroup('Support', [
     NavItem('/delivery/messages', 'Messages', 'users'),
+    NavItem('/delivery/notifications', 'Notifications', 'bell'),
     NavItem('/delivery/support', 'Ikiguzi Support', 'bell'),
     NavItem('/profile', 'My Account', 'user'),
   ]),
@@ -191,7 +192,7 @@ const Map<String, List<String>> mobilePrimaryByRole = {
   'supplier': ['/supplier', '/supplier/products', '/supplier/orders', '/supplier/payments'],
   'super_admin': ['/admin', '/admin/orders', '/admin/commissions', '/admin/users'],
   'affiliate': ['/affiliate', '/affiliate/links', '/affiliate/wallet', '/affiliate/withdrawals'],
-  'delivery': ['/delivery', '/delivery/deliveries', '/delivery/history', '/delivery/messages'],
+  'delivery': ['/delivery', '/delivery/trip', '/delivery/earnings', '/delivery/notifications'],
 };
 
 /// Short bottom-bar labels (the sidebar labels are too long for 5 slots).
@@ -200,6 +201,8 @@ const Map<String, String> bottomLabel = {
   '/admin/orders': 'Sales',
   '/admin/commissions': 'Wallet',
   '/admin/users': 'Users',
+  '/delivery/trip': 'Trip',
+  '/delivery/notifications': 'Alerts',
 };
 
 // ─── Permission-aware navigation (mirrors the web sidebar) ───────────────────
