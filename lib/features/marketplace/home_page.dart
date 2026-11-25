@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/format.dart';
 import '../../core/theme.dart';
+import '../../api/catalog_api.dart';
 import '../../models/product.dart';
 import '../../state/catalog_state.dart';
 import '../../state/hero_state.dart';
@@ -285,7 +286,8 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+    // Every slide (each paid ad) stays 5 seconds, as on the website.
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       final count = _slides().length;
       if (!mounted || count < 2 || !_controller.hasClients) return;
       _controller.animateToPage(
@@ -303,9 +305,25 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
     super.dispose();
   }
 
+  /// Paid ads take turns in the banner: the picture on the right, the seller's
+  /// title and description (or the price) on the left. With no paid ad live,
+  /// the banner shows the marketplace pitch and an invitation to advertise.
   List<_HeroSlide> _slides() {
-    final ads = ref.read(heroAdsProvider).valueOrNull ?? const <Product>[];
-    final slides = <_HeroSlide>[
+    final ads = ref.read(heroAdsProvider).valueOrNull ?? const <HeroAd>[];
+    if (ads.isNotEmpty) {
+      return [
+        for (final a in ads)
+          _HeroSlide(
+            eyebrow: 'SPONSORED',
+            title: a.title.isNotEmpty ? a.title : a.product.name,
+            line: a.description.isNotEmpty ? a.description : money(a.product.price),
+            cta: 'View',
+            imageUrl: a.product.image,
+            onTap: () => context.push('/product/${a.product.id}'),
+          ),
+      ];
+    }
+    return [
       _HeroSlide(
         eyebrow: 'MARKETPLACE',
         title: 'Shop. Sell.\nGrow together.',
@@ -314,31 +332,16 @@ class _HeroCarouselState extends ConsumerState<_HeroCarousel> {
         imageAsset: 'assets/images/hero-standin.jpg',
         onTap: () => context.go('/shop'),
       ),
-    ];
-    // "Advertise here": sellers and suppliers book a spot in this banner.
-    slides.add(
+      // "Advertise here": sellers and suppliers book a spot in this banner.
       _HeroSlide(
         eyebrow: 'YOUR PRODUCTS HERE',
         title: 'Advertise\non Ikiguzi',
-        line: 'From 1,000 RWF per product',
+        line: 'Your product in this banner',
         cta: 'Get started',
         imageAsset: 'assets/images/hero-standin.jpg',
         onTap: () => context.push('/advertise'),
       ),
-    );
-    for (final p in ads.take(5)) {
-      slides.add(
-        _HeroSlide(
-          eyebrow: 'SPONSORED',
-          title: p.name,
-          line: money(p.price),
-          cta: 'View',
-          imageUrl: p.image,
-          onTap: () => context.push('/product/${p.id}'),
-        ),
-      );
-    }
-    return slides;
+    ];
   }
 
   @override

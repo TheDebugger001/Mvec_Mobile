@@ -4,6 +4,9 @@ import '../models/product.dart';
 
 /// Everything the storefront shows: products, categories, stores, search,
 /// sponsored placements and reviews (`catalogApi.js` + `API/*` in the web app).
+/// One paid ad in the home banner.
+typedef HeroAd = ({Product product, String title, String description});
+
 class CatalogApi {
   CatalogApi._();
   static final _api = Api.instance;
@@ -79,6 +82,21 @@ class CatalogApi {
         .map(Product.fromJson)
         .where((p) => p.id.isNotEmpty)
         .toList();
+  }
+
+  /// Paid home banner ads: each product with the seller's own title and
+  /// description (older bookings have none, so the product name is used).
+  static Future<List<HeroAd>> heroAds({int limit = 12}) async {
+    final res = asMap(await _api.get('/advertisements', query: {'placement': 'HOMEPAGE_HERO', 'limit': limit}));
+    return [
+      for (final ad in asMaps(res['data']))
+        if (asMap(ad['product']).isNotEmpty)
+          (
+            product: Product.fromJson(asMap(ad['product'])),
+            title: strOf(ad['title']),
+            description: strOf(ad['description']),
+          ),
+    ].where((a) => a.product.id.isNotEmpty).toList();
   }
 
   /// Sponsored product ids for a surface (`shop`, `home`, `search`, `category`).

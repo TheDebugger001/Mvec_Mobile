@@ -47,7 +47,7 @@ This is KitchenLink's delivery-worker app, adapted to Ikiguzi parcels.
 - **Offers from notifications:** a "New delivery" or "parcel waiting near you" notification opens `/delivery/offers/:id` (`rider_offer_page.dart`, `GET /rider/deliveries/:id`) with accept, decline, or go online.
 - **Districts:** riders pick several (`DistrictsPicker`). Riders last seen near the store, or working its district, are woken for a parcel even when offline.
 - **Steps:** the server decides the next step (`allowedNextStatuses`), and each is committed with `SlideToConfirm`. The buyer's 6-digit code completes the parcel.
-- **Early offers:** parcels are offered when the buyer pays. `DeliveryJob.waitingForSeller` means the seller is still preparing it, and pickup waits until the parcel is ready. The trip page shows `ParcelProgress` (order placed to delivered) and "Hand it back" before pickup.
+- **Offers:** a parcel is offered to riders once the seller marks the order preparing (or ready), never at payment. `DeliveryJob.waitingForSeller` means the seller is still preparing it, and pickup waits until the parcel is ready. The trip page shows `ParcelProgress` (order placed to delivered) and "Hand it back" before pickup.
 - **GPS:** `RiderLocation` runs in the foreground only. Online, it sends a position once a minute. During a trip it streams, sending at most every 4 s after moving 8 m and at least every 15 s (`shouldSendLiveFix`).
 - **Riverpod 2:** read `AsyncValue` with `.valueOrNull`, because `.value` throws on an error.
 

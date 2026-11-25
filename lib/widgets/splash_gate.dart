@@ -37,7 +37,7 @@ Future<void> _warmImages(WidgetRef ref, BuildContext context) async {
   final catalog = await ref.read(catalogProvider.future);
   final ads = await ref.read(heroAdsProvider.future);
   final urls = {
-    for (final p in [...ads, ...catalog.deals.take(6), ...catalog.popular.take(8)]) resolveImageUrl(p.image),
+    for (final p in [...ads.map((a) => a.product), ...catalog.deals.take(6), ...catalog.popular.take(8)]) resolveImageUrl(p.image),
   }..remove('');
   // A slow connection must not hold the splash for long: give the pictures a moment.
   await Future.wait([

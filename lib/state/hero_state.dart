@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/catalog_api.dart';
 import '../models/product.dart';
 
-/// Products whose ad campaign Ikiguzi approved for the home-page hero. Empty when
-/// there is none right now (the web shows a stand-in photo in that case).
-final heroAdsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
+/// Paid ads live in the home banner, each shown for 5 seconds. Empty when
+/// there is none right now (the banner then shows the marketplace slides).
+final heroAdsProvider = FutureProvider.autoDispose<List<HeroAd>>((ref) async {
   try {
-    return await CatalogApi.liveAds('HOMEPAGE_HERO', limit: 6);
+    return await CatalogApi.heroAds();
   } catch (_) {
     return const [];
   }

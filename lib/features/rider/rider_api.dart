@@ -98,7 +98,7 @@ class DeliveryJob {
   final DateTime? offerExpiresAt;
   final DateTime? deliveredAt;
 
-  /// Offered when the buyer pays: false while the seller is still preparing it
+  /// Offered once the seller starts preparing it: false while the seller is still preparing it
   /// (collecting waits for ready; the rider gets a message when it is).
   final bool ready;
   final bool waitingForSeller;

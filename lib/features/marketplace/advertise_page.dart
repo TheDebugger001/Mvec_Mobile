@@ -13,9 +13,11 @@ import '../common/page_frame.dart';
 
 const _sellers = ['vendor', 'supplier', 'super_admin'];
 
-/// `/advertise` — "Advertise here" (`pages/Advertise.jsx`): sellers and
-/// suppliers put products in the home page banner for a flat fee per product,
-/// paid by mobile money. Ikiguzi approves it, or rejects it and refunds.
+/// `/advertise` — "Advertise here" (`pages/Advertise.jsx`): a seller or
+/// supplier puts one product in the home page banner. Every ad costs the same
+/// flat price (the server sets it) and shows for 5 seconds each turn: the
+/// picture on the right, the seller's title and description on the left.
+/// Paid by mobile money; the ad goes live once the payment is confirmed.
 class AdvertisePage extends ConsumerStatefulWidget {
   const AdvertisePage({super.key});
 
@@ -24,10 +26,13 @@ class AdvertisePage extends ConsumerStatefulWidget {
 }
 
 class _AdvertisePageState extends ConsumerState<AdvertisePage> {
-  Map<String, dynamic> _price = const {'pricePerProduct': 1000, 'days': 7};
+  Map<String, dynamic> _price = const {'price': 5000, 'seconds': 5, 'days': 7, 'titleMax': 60, 'descriptionMax': 1000};
   List<Map<String, dynamic>> _products = const [];
   List<Map<String, dynamic>> _bookings = const [];
-  final _picked = <String>{};
+  String? _productId;
+  String _method = 'MOMO';
+  final _title = TextEditingController();
+  final _description = TextEditingController();
   final _phone = TextEditingController();
   bool _busy = false;
   ({bool ok, String text})? _notice;
@@ -35,12 +40,14 @@ class _AdvertisePageState extends ConsumerState<AdvertisePage> {
   @override
   void initState() {
     super.initState();
-    jget('/ad-bookings/pricing').then((p) { if (mounted) setState(() => _price = p); }).catchError((_) {});
+    jget('/ad-bookings/pricing').then((p) { if (mounted) setState(() => _price = {..._price, ...p}); }).catchError((_) {});
     Future.microtask(_loadMine);
   }
 
   @override
   void dispose() {
+    _title.dispose();
+    _description.dispose();
     _phone.dispose();
     super.dispose();
   }
@@ -64,17 +71,37 @@ class _AdvertisePageState extends ConsumerState<AdvertisePage> {
     } catch (_) {}
   }
 
+  String? _problem() {
+    if (_productId == null) return 'Choose the product you want to advertise.';
+    if (_title.text.trim().length < 3) return 'Write a title of at least 3 characters.';
+    if (_description.text.trim().length < 5) return 'Write a short description.';
+    if (_phone.text.trim().isEmpty) return 'Enter the MTN or Airtel number that pays.';
+    return null;
+  }
+
   Future<void> _pay() async {
-    if (_picked.isEmpty) return setState(() => _notice = (ok: false, text: 'Choose at least one product.'));
+    final problem = _problem();
+    if (problem != null) return setState(() => _notice = (ok: false, text: problem));
+    final price = money(_price['price']);
+    if (!await confirmDialog(context, 'Pay $price to show this product in the home page banner for ${numOf(_price['days'], 7).toInt()} days?', confirm: 'Pay $price', title: 'Check before you pay')) return;
     setState(() {
       _busy = true;
       _notice = null;
     });
     try {
-      final res = asMap(await jpost('/ad-bookings', {'productIds': _picked.toList(), 'phoneNumber': _phone.text.trim()}));
+      // No price goes to the server: it charges the flat price itself.
+      final res = asMap(await jpost('/ad-bookings', {
+        'productId': _productId,
+        'title': _title.text.trim(),
+        'description': _description.text.trim(),
+        'paymentMethod': _method,
+        'phoneNumber': _phone.text.trim(),
+      }));
       setState(() {
         _notice = (ok: true, text: strOf(res['message']));
-        _picked.clear();
+        _productId = null;
+        _title.clear();
+        _description.clear();
       });
       await _loadMine();
     } catch (e) {
@@ -88,17 +115,22 @@ class _AdvertisePageState extends ConsumerState<AdvertisePage> {
   Widget build(BuildContext context) {
     final mv = context.mv;
     final user = ref.watch(authProvider.select((a) => a.user));
-    final per = numOf(_price['pricePerProduct'], 1000);
+    final price = numOf(_price['price'], 5000);
+    final seconds = numOf(_price['seconds'], 5).toInt();
     final days = numOf(_price['days'], 7).toInt();
+    Widget heading(String text) => Padding(
+          padding: const EdgeInsets.only(top: 14, bottom: 6),
+          child: Text(text, style: TextStyle(fontWeight: FontWeight.w800, color: mv.text)),
+        );
     return PageFrame(
       title: 'Advertise',
       storefront: true,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Put your products on the home page', style: context.mvH1.copyWith(fontSize: 20, fontWeight: FontWeight.w800)),
+          Text('Put your product in the home banner', style: context.mvH1.copyWith(fontSize: 20, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text('Your products show in the banner at the top of the Ikiguzi home page for $days days. It costs ${money(per)} per product: 3 products cost ${money(per * 3)}. Pay by mobile money; Ikiguzi checks the ad and puts it live, or refunds you in full.',
+          Text('Your product takes turns in the banner at the top of the Ikiguzi home page: its picture on the right, your title and description on the left. One ad costs ${money(price)} and runs for $days days; each ad shows for $seconds seconds before the next one. Pay by mobile money; if Ikiguzi takes the ad down, you are refunded in full.',
               style: TextStyle(color: mv.textMuted, fontSize: 13, height: 1.45)),
           const SizedBox(height: 16),
           if (user == null) ...[
@@ -112,35 +144,44 @@ class _AdvertisePageState extends ConsumerState<AdvertisePage> {
             const SizedBox(height: 10),
             GradientButton(label: 'Start selling', expand: true, onPressed: () => context.push('/signup?role=vendor')),
           ] else ...[
-            Text('Choose products', style: TextStyle(fontWeight: FontWeight.w800, color: mv.text)),
-            const SizedBox(height: 6),
+            heading('1. Choose the product'),
             if (_products.isEmpty) const Tiny('You have no products on sale yet. Only live, in-stock products can be advertised.'),
             for (final p in _products)
-              CheckboxListTile(
+              ListTile(
                 contentPadding: EdgeInsets.zero,
-                value: _picked.contains(idOf(p)),
-                onChanged: (v) => setState(() => v == true ? _picked.add(idOf(p)) : _picked.remove(idOf(p))),
-                secondary: ProductImage(src: strOf(asMap(p['media'])['mainImage']), size: 44, radius: 8),
+                selected: _productId == idOf(p),
+                onTap: () => setState(() => _productId = idOf(p)),
+                leading: ProductImage(src: strOf(asMap(p['media'])['mainImage']), size: 44, radius: 8),
                 title: Text(strOf(p['name']), maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(money(p['price'])),
+                trailing: Icon(_productId == idOf(p) ? Icons.radio_button_checked : Icons.radio_button_off, color: _productId == idOf(p) ? mv.accent : mv.border),
               ),
+            heading('2. Write your banner'),
+            TextField(controller: _title, maxLength: numOf(_price['titleMax'], 60).toInt(), decoration: const InputDecoration(labelText: 'Title (the big text)', hintText: 'Fresh coffee, direct from Huye')),
+            TextField(controller: _description, maxLines: 3, maxLength: numOf(_price['descriptionMax'], 1000).toInt(), decoration: const InputDecoration(labelText: 'Description (smaller text under the title)')),
+            heading('3. Pay'),
+            Wrap(spacing: 8, children: [
+              for (final m in const [('MOMO', 'MTN Mobile Money'), ('AIRTEL', 'Airtel Money')])
+                ChoiceChip(showCheckmark: false, selected: _method == m.$1, label: Text(m.$2), onSelected: (_) => setState(() => _method = m.$1)),
+            ]),
             const SizedBox(height: 8),
-            TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile money number that pays', hintText: '07xx xxx xxx')),
+            TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: 'Mobile money number that pays', hintText: _method == 'MOMO' ? '078 or 079…' : '072 or 073…')),
             const SizedBox(height: 10),
-            Text('${_picked.length} × ${money(per)} = ${money(per * _picked.length)}', style: context.mvH1.copyWith(fontSize: 17, fontWeight: FontWeight.w800)),
+            Text('One ad = ${money(price)} for $days days', style: context.mvH1.copyWith(fontSize: 17, fontWeight: FontWeight.w800)),
             if (_notice != null) ...[const SizedBox(height: 10), Notice(text: _notice!.text, ok: _notice!.ok)],
             const SizedBox(height: 12),
-            GradientButton(label: 'Pay ${money(per * _picked.length)}', expand: true, loading: _busy, onPressed: _busy || _picked.isEmpty ? null : _pay),
+            GradientButton(label: 'Pay ${money(price)}', expand: true, loading: _busy, onPressed: _busy ? null : _pay),
             if (_bookings.isNotEmpty) ...[
               const SizedBox(height: 20),
               Text('My ads', style: TextStyle(fontWeight: FontWeight.w800, color: mv.text)),
               const SizedBox(height: 6),
               for (final b in _bookings)
                 RecordCard(
-                  title: '${b['bookingNumber']} · ${b['statusLabel']}',
-                  subtitle: '${asMaps(b['products']).map((p) => p['name']).join(', ')} · ${money(b['amount'])}',
+                  title: '${strOf(b['title'], strOf(b['bookingNumber']))} · ${b['statusLabel']}',
+                  subtitle: '${asMaps(b['products']).map((p) => p['name']).join(', ')} · ${money(b['amount'])} · ${b['paymentLabel'] ?? ''}',
                   lines: [
                     if (b['status'] == 'LIVE') 'On the home page until ${formatDate(b['endsAt'])}',
+                    if (b['status'] == 'LIVE' && b['views'] != null) '${numOf(b['views']).toInt()} views · ${numOf(b['clicks']).toInt()} presses',
                     if (b['status'] == 'REJECTED') 'Reason: ${b['rejectionReason']}. Refunded to ${strOf(b['payerPhone'], 'the paying number')}.',
                   ],
                 ),
